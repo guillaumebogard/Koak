@@ -5,25 +5,27 @@
 -- CLIArguments Error
 --
 
-module CLIArguments.Error ( ArgException(..), exceptionHandler ) where
+module CLIArguments.Error ( ArgException(..)
+                          , exceptionHandler
+                          ) where
 
 import GHC.Exception      ( Exception )
-import System.Exit (ExitCode (ExitFailure), exitWith)
+import System.Exit        ( ExitCode ( ExitSuccess, ExitFailure )
+                          , exitWith
+                          )
 
-type OptionName = String
-
-data ArgException = ArgumentParsingError String
-           | InvalidOption OptionName
-           | Help
+data ArgException = InvalidOption String
+                  | Help
 
 instance Exception ArgException
 
-exceptionHandler :: ArgException -> IO ()
-exceptionHandler Help = print Help >> exitWith (ExitFailure 0)
-exceptionHandler exception = print exception >> exitWith (ExitFailure 84)
-
 instance Show ArgException where
-  show (InvalidOption         optionName) = "Invalid option :'" ++ optionName ++ "'"
-  show (ArgumentParsingError  str)        = str
-  show Help                               = "help message"
+    show (InvalidOption optionName) = "Invalid Option: '" ++ optionName ++ "'"
+    show Help                       = usage
 
+usage :: String
+usage = "Help message"
+
+exceptionHandler :: ArgException -> IO ()
+exceptionHandler Help      = print Help      >> exitWith  ExitSuccess
+exceptionHandler exception = print exception >> exitWith (ExitFailure 84)

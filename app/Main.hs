@@ -7,14 +7,15 @@
 
 module Main where
 
-import CLIArguments.Error (exceptionHandler)
-import CLIArguments.Handler (handleArgs)
-import Control.Exception (catch)
-import System.Environment (getArgs)
+import Control.Exception    ( handle )
+import System.Environment   ( getArgs )
+
+import CLIArguments.Error   ( exceptionHandler )
+import CLIArguments.Handler ( handleArgs )
 
 main :: IO ()
-main = catch (getArgs >>= handleExecution . handleArgs) exceptionHandler
+main = handle exceptionHandler $ getArgs >>= handleExecution . handleArgs
 
 handleExecution :: [String] -> IO ()
-handleExecution (x : _) = readFile x >>= \content -> putStrLn content
+handleExecution (x : _) = readFile x >>= putStrLn
 handleExecution _       = putStrLn "No arguments"

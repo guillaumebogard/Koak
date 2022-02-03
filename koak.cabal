@@ -27,7 +27,6 @@ library
   exposed-modules:
       CLIArguments.Error
       CLIArguments.Handler
-      Lib
   other-modules:
       Paths_koak
   hs-source-dirs:
