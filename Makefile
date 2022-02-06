@@ -8,24 +8,34 @@
 MAKEFLAGS	+=	--no-print-directory
 BINARY_PATH	:=	$(shell stack path --local-install-root)
 
-all:
-	stack build
-	cp $(BINARY_PATH)/bin/koak-exe ./koak
+STACK_NAME	=	koak
+
+NAME		=	koak
+
+all:	$(NAME)
+.PHONY:	all
+
+$(NAME):
+	stack build --pedantic
+	cp $(BINARY_PATH)/bin/$(STACK_NAME)-exe ./$(NAME)
 
 debug:
-	stack build --pedantic
-	cp $(BINARY_PATH)/bin/koak-exe ./koak
+	stack ghci
+.PHONY:	debug
 
 clean:
-	stack purge
 	stack clean
+.PHONY:	clean
 
 fclean:	clean
+	stack purge
 	rm -f koak
+.PHONY:	fclean
 
-tests_run:	clean
-	stack test
+tests_run:
+	stack test --coverage
+.PHONY:	tests_run
 
-re:	fclean all
-
-.PHONY:	all clean fclean re debug test
+re::	fclean
+re::	all
+.PHONY:	re

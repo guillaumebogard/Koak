@@ -7,15 +7,16 @@
 
 module Main where
 
-import Control.Exception    ( handle )
-import System.Environment   ( getArgs )
+import Control.Exception  ( handle )
+import System.Environment ( getArgs )
 
-import CLIArguments.Error   ( exceptionHandler )
-import CLIArguments.Handler ( handleArgs )
+import Error              ( errorHandler )
+import Argument.Parser    ( KoakArguments(..)
+                          , parseArguments
+                          )
 
 main :: IO ()
-main = handle exceptionHandler $ getArgs >>= handleExecution . handleArgs
+main = handle errorHandler $ getArgs >>= handleExecution . parseArguments
 
-handleExecution :: [String] -> IO ()
-handleExecution (x : _) = readFile x >>= putStrLn
-handleExecution _       = putStrLn "No arguments"
+handleExecution :: KoakArguments -> IO ()
+handleExecution (KoakArguments file) = readFile file >>= putStrLn
