@@ -6,22 +6,14 @@ cabal-version: 1.12
 
 name:           koak
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/githubuser/koak#readme>
-homepage:       https://github.com/githubuser/koak#readme
-bug-reports:    https://github.com/githubuser/koak/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2022 Author name here
+description:    Please see the README on GitHub at <https://github.com/EpitechPromo2024/B-YEP-500-BDX-5-1-koak-matheo.lucak/blob/master/README.md>
+author:         guillaumebgd, gdnathan & matheo-lucak
+maintainer:     guillaumebgd, gdnathan & matheo-lucak
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
-    ChangeLog.md
-
-source-repository head
-  type: git
-  location: https://github.com/githubuser/koak
 
 library
   exposed-modules:
