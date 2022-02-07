@@ -45,6 +45,7 @@ test-suite koak-test
   main-is: Spec.hs
   other-modules:
       Argument.LexerSpec
+      Argument.ParserSpec
       Paths_koak
   hs-source-dirs:
       test

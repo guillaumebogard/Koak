@@ -7,16 +7,17 @@
 
 module Main where
 
-import Control.Exception  ( handle )
-import System.Environment ( getArgs )
+import Control.Exception     ( handle )
+import System.Environment    ( getArgs )
 
-import Error              ( errorHandler )
-import Argument.Parser    ( KoakArguments(..)
-                          , parseArguments
-                          )
+import Error                 ( errorHandler )
+import Argument.Parser as AP ( Filepath(..)
+                             , KoakArguments(..)
+                             , parseArguments
+                             )
 
 main :: IO ()
 main = handle errorHandler $ getArgs >>= handleExecution . parseArguments
 
 handleExecution :: KoakArguments -> IO ()
-handleExecution (KoakArguments file) = readFile file >>= putStrLn
+handleExecution (KoakArguments (AP.Filepath file)) = readFile file >>= putStrLn
