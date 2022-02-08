@@ -28,6 +28,7 @@ library
       Argument.Lexer
       Argument.Parser
       Error
+      Koak.Lexer
   other-modules:
       Paths_koak
   hs-source-dirs:
@@ -53,6 +54,7 @@ test-suite koak-test
   main-is: Spec.hs
   other-modules:
       Argument.LexerSpec
+      Koak.LexerSpec
       Paths_koak
   hs-source-dirs:
       test
