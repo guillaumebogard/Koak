@@ -56,17 +56,17 @@ tokenizeKoak ('>'      :xs) = Greater           : tokenizeKoak xs
 tokenizeKoak ('<':'='  :xs) = LowerEqual        : tokenizeKoak xs
 tokenizeKoak ('<'      :xs) = Lower             : tokenizeKoak xs
 tokenizeKoak ('=':'='  :xs) = Equal             : tokenizeKoak xs
-tokenizeKoak ('!':'='  :xs) = LogicalNot        : tokenizeKoak xs
-tokenizeKoak ('!'      :xs) = NotEqual          : tokenizeKoak xs
 tokenizeKoak ('='      :xs) = Assign            : tokenizeKoak xs
+tokenizeKoak ('!':'='  :xs) = NotEqual          : tokenizeKoak xs
+tokenizeKoak ('!'      :xs) = LogicalNot        : tokenizeKoak xs
 tokenizeKoak (','      :xs) = Comma             : tokenizeKoak xs
 tokenizeKoak (':'      :xs) = Colon             : tokenizeKoak xs
 tokenizeKoak (';'      :xs) = SemiColon         : tokenizeKoak xs
 tokenizeKoak ('.'      :xs) = Dot               : tokenizeKoak xs
-tokenizeKoak line@(x:xs)   
+tokenizeKoak line@(x:xs)
     | isSpace x = tokenizeKoak xs
-    | isAlpha x = let (token, rest) = parseWord  line in token : tokenizeKoak rest
-    | isDigit x = let (token, rest) = parseDigit line in token : tokenizeKoak rest
+    | isAlpha x = let (token, leftover) = parseWord  line in token : tokenizeKoak leftover
+    | isDigit x = let (token, leftover) = parseDigit line in token : tokenizeKoak leftover
     | otherwise = [] -- Error
 
 parseWord :: String -> (Token, String)
@@ -75,7 +75,7 @@ parseWord s = let (l, r) = parseWord' ("", s) in (Words l, r)
 parseWord' :: (String, String) -> (String, String)
 parseWord' (l, [])  = (l, [])
 parseWord' (l, line@(r:rs))
-    | isAlphaNum r  = (r:l, rs)
+    | isAlphaNum r  = parseWord' (l ++ [r], rs)
     | otherwise     = (l, line)
 
 parseDigit :: String -> (Token, String)

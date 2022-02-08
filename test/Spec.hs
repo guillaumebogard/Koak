@@ -12,6 +12,7 @@ import Test.Hspec         ( Spec
                           , describe )
 
 import Argument.LexerSpec ( spec )
+import Koak.LexerSpec     ( spec )
 
 main :: IO ()
 main = hspec Main.spec
@@ -19,3 +20,4 @@ main = hspec Main.spec
 spec :: Spec
 spec = do
     describe "Argument.Lexer"  Argument.LexerSpec.spec
+    describe "Koak.Lexer"      Koak.LexerSpec.spec
