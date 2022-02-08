@@ -11,12 +11,12 @@ module Koak.Lexer   ( Token(..)
 
 import Data.Char (isAlphaNum, isNumber, isAlpha, isSpace, isDigit)
 import GHC.Conc (numCapabilities)
-import Text.Read (readMaybe)
+import Text.Read (readMaybe, Lexeme (Number))
 import Control.Exception (throw)
 
 import Error ( KoakError(KoalaInvalidToken) )
 
-data Token  = Words String              -- 'if', 'def', 'FooBar', 'i'
+data Token  = Word String              -- 'if', 'def', 'FooBar', 'i'
             | Number Double             -- '0', '0123456789', '3.14159265'
             | OpenParenthesis           -- '('
             | ClosedParenthesis         -- '('
@@ -65,12 +65,12 @@ tokenizeKoak (';'      :xs) = SemiColon         : tokenizeKoak xs
 tokenizeKoak ('.'      :xs) = Dot               : tokenizeKoak xs
 tokenizeKoak line@(x:xs)
     | isSpace x = tokenizeKoak xs
-    | isAlpha x = let (token, leftover) = parseWord  line in token : tokenizeKoak leftover
-    | isDigit x = let (token, leftover) = parseDigit line in token : tokenizeKoak leftover
+    | isAlpha x = let (token, leftover) = parseWord   line in token : tokenizeKoak leftover
+    | isDigit x = let (token, leftover) = parseNumber line in token : tokenizeKoak leftover
     | otherwise = [] -- Error
 
 parseWord :: String -> (Token, String)
-parseWord s = let (l, r) = parseWord' ("", s) in (Words l, r)
+parseWord s = let (l, r) = parseWord' ("", s) in (Word l, r)
 
 parseWord' :: (String, String) -> (String, String)
 parseWord' (l, [])  = (l, [])
@@ -78,21 +78,26 @@ parseWord' (l, line@(r:rs))
     | isAlphaNum r  = parseWord' (l ++ [r], rs)
     | otherwise     = (l, line)
 
-parseDigit :: String -> (Token, String)
-parseDigit s = (Dot, "")
+parseNumber :: String -> (Token, String)
+parseNumber s = let (l, r) = parseNumber' ("", s) in (Koak.Lexer.Number $ readAndCheck l, r)
 
+parseNumber' :: (String, String) -> (String, String)
+parseNumber' (l, [])            = (l, [])
+parseNumber' (l, line@(r:rs))
+    | isDigit r || r == '.'     = parseWord' (l ++ [r], rs)
+    | otherwise                 = (l, line)
+
+readAndCheck :: String -> Double
+readAndCheck t = readAndCheck' (readMaybe t) t
+
+readAndCheck' :: Maybe Double -> String -> Double
+readAndCheck' (Just x) _ = x
+readAndCheck' Nothing  t = throw $ KoalaInvalidToken t
 
 
 -- parseTemporaryToken :: TemporaryToken -> Token
--- parseTemporaryToken (TemporaryWord w)   = Words w
+-- parseTemporaryToken (TemporaryWord w)   = Word w
 -- parseTemporaryToken (TemporaryNumber n) = Number $ readAndCheck n
-
--- readAndCheck :: String -> Double
--- readAndCheck t = readAndCheck' (readMaybe t) t
-
--- readAndCheck' :: Maybe Double -> String -> Double
--- readAndCheck' (Just x) _ = x
--- readAndCheck' Nothing  t = throw $ KoalaInvalidToken t
 
 
 --     | isAlphaNum x                   = tokenizeKoak xs $ Just $ TemporaryWord [x]
@@ -104,6 +109,6 @@ parseDigit s = (Dot, "")
 --     | isNumber x || x == '.'         = tokenizeKoak xs $ Just $ TemporaryNumber [x]
 
 
---                                     is Words [x]    : tokenizeKoak xs t
--- tokenizeKoak (x:xs)         (Just (TemporaryWord t))   = Words [x]    : tokenizeKoak xs t
+--                                     is Word [x]    : tokenizeKoak xs t
+-- tokenizeKoak (x:xs)         (Just (TemporaryWord t))   = Word [x]    : tokenizeKoak xs t
 -- tokenizeKoak (x:xs)         t              = Number [x]   : tokenizeKoak xs t
