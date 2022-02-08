@@ -14,7 +14,7 @@ import GHC.Conc (numCapabilities)
 import Text.Read (readMaybe, Lexeme (Number))
 import Control.Exception (throw)
 
-import Error ( KoakError(KoalaInvalidToken) )
+import Error ( KoakError(KoaKUnknownToken, KoaKInvalidNumber) )
 
 data Token  = Word String              -- 'if', 'def', 'FooBar', 'i'
             | Number Double             -- '0', '0123456789', '3.14159265'
@@ -67,7 +67,7 @@ tokenizeKoak line@(x:xs)
     | isSpace x = tokenizeKoak xs
     | isAlpha x = let (token, leftover) = parseWord   line in token : tokenizeKoak leftover
     | isDigit x = let (token, leftover) = parseNumber line in token : tokenizeKoak leftover
-    | otherwise = [] -- Error
+    | otherwise = throw $ KoaKUnknownToken [x]
 
 parseWord :: String -> (Token, String)
 parseWord s = let (l, r) = parseWord' ("", s) in (Word l, r)
@@ -92,23 +92,4 @@ readAndCheck t = readAndCheck' (readMaybe t) t
 
 readAndCheck' :: Maybe Double -> String -> Double
 readAndCheck' (Just x) _ = x
-readAndCheck' Nothing  t = throw $ KoalaInvalidToken t
-
-
--- parseTemporaryToken :: TemporaryToken -> Token
--- parseTemporaryToken (TemporaryWord w)   = Word w
--- parseTemporaryToken (TemporaryNumber n) = Number $ readAndCheck n
-
-
---     | isAlphaNum x                   = tokenizeKoak xs $ Just $ TemporaryWord [x]
---     | isNumber x || x == '.'         = tokenizeKoak xs $ Just $ TemporaryNumber [x]
---     | isNumber x || x == '.'         = tokenizeKoak xs $ Just $ TemporaryNumber [x]
--- tokenizeKoak (x:xs)         Nothing
---     | isAlphaNum x                   = tokenizeKoak xs $ Just $ TemporaryWord [x]
---     | isNumber x || x == '.'         = tokenizeKoak xs $ Just $ TemporaryNumber [x]
---     | isNumber x || x == '.'         = tokenizeKoak xs $ Just $ TemporaryNumber [x]
-
-
---                                     is Word [x]    : tokenizeKoak xs t
--- tokenizeKoak (x:xs)         (Just (TemporaryWord t))   = Word [x]    : tokenizeKoak xs t
--- tokenizeKoak (x:xs)         t              = Number [x]   : tokenizeKoak xs t
+readAndCheck' Nothing  t = throw $ KoaKInvalidNumber t
