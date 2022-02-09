@@ -15,7 +15,7 @@ import Control.Exception (throw)
 
 import Error ( KoakError(KoaKUnknownToken, KoaKInvalidNumber) )
 
-data Token  = Word String              -- 'if', 'def', 'FooBar', 'i'
+data Token  = Word String               -- 'if', 'def', 'FooBar', 'i'
             | Number Double             -- '0', '0123456789', '3.14159265'
             | OpenParenthesis           -- '('
             | ClosedParenthesis         -- '('
@@ -69,7 +69,7 @@ tokenizeKoak line@(x:xs)
     | otherwise = throw $ KoaKUnknownToken [x]
 
 parseWord :: String -> (Token, String)
-parseWord s = let (l, r) = parseWord' ("", s) in (Word l, r)
+parseWord s = let (l, r)        = parseWord' ("", s) in (Word l, r)
 
 parseWord' :: (String, String) -> (String, String)
 parseWord' (l, [])              = (l, [])
@@ -78,7 +78,7 @@ parseWord' (l, line@(r:rs))
     | otherwise                 = (l, line)
 
 parseNumber :: String -> (Token, String)
-parseNumber s = let (l, r) = parseNumber' ("", s) in (Koak.Lexer.Number $ readAndCheck l, r)
+parseNumber s = let (l, r)      = parseNumber' ("", s) in (Koak.Lexer.Number $ readAndCheck l, r)
 
 parseNumber' :: (String, String) -> (String, String)
 parseNumber' (l, [])            = (l, [])
@@ -88,7 +88,7 @@ parseNumber' (l, line@(r:rs))
     | otherwise                 = (l, line)
 
 readAndCheck :: String -> Double
-readAndCheck n@('.':_) = readAndCheck $ '0':n
+readAndCheck n@('.':_)  = readAndCheck $ '0':n
 readAndCheck t          = readAndCheck' (readMaybe t) t
 
 readAndCheck' :: Maybe Double -> String -> Double
