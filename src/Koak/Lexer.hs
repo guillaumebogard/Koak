@@ -39,34 +39,38 @@ data Token  = Word String               -- 'if', 'def', 'FooBar', 'i'
             deriving(Show)
 
 tokenizeKoak :: String -> [Token]
-tokenizeKoak []                         = []
-tokenizeKoak ('('      :xs)             = OpenParenthesis   : tokenizeKoak xs
-tokenizeKoak (')'      :xs)             = ClosedParenthesis : tokenizeKoak xs
-tokenizeKoak ('+'      :xs)             = Plus              : tokenizeKoak xs
-tokenizeKoak ('-'      :xs)             = Minus             : tokenizeKoak xs
-tokenizeKoak ('*'      :xs)             = Multiply          : tokenizeKoak xs
-tokenizeKoak ('/'      :xs)             = Divide            : tokenizeKoak xs
-tokenizeKoak ('^'      :xs)             = Power             : tokenizeKoak xs
-tokenizeKoak ('>':'='  :xs)             = GreaterEqual      : tokenizeKoak xs
-tokenizeKoak ('>'      :xs)             = Greater           : tokenizeKoak xs
-tokenizeKoak ('<':'='  :xs)             = LowerEqual        : tokenizeKoak xs
-tokenizeKoak ('<'      :xs)             = Lower             : tokenizeKoak xs
-tokenizeKoak ('=':'='  :xs)             = Equal             : tokenizeKoak xs
-tokenizeKoak ('='      :xs)             = Assign            : tokenizeKoak xs
-tokenizeKoak ('!':'='  :xs)             = NotEqual          : tokenizeKoak xs
-tokenizeKoak ('!'      :xs)             = LogicalNot        : tokenizeKoak xs
-tokenizeKoak (','      :xs)             = Comma             : tokenizeKoak xs
-tokenizeKoak (':'      :xs)             = Colon             : tokenizeKoak xs
-tokenizeKoak (';'      :xs)             = SemiColon         : tokenizeKoak xs
-tokenizeKoak line@('.':x:xs)
-    | isDigit x = let (token, leftover) = parseNumber line in token : tokenizeKoak leftover
-    | otherwise                         = Dot               : tokenizeKoak (x:xs)
-tokenizeKoak ('.'      :xs)             = Dot               : tokenizeKoak xs
+tokenizeKoak []             = []
+tokenizeKoak ('('      :xs) = OpenParenthesis   : tokenizeKoak xs
+tokenizeKoak (')'      :xs) = ClosedParenthesis : tokenizeKoak xs
+tokenizeKoak ('+'      :xs) = Plus              : tokenizeKoak xs
+tokenizeKoak ('-'      :xs) = Minus             : tokenizeKoak xs
+tokenizeKoak ('*'      :xs) = Multiply          : tokenizeKoak xs
+tokenizeKoak ('/'      :xs) = Divide            : tokenizeKoak xs
+tokenizeKoak ('^'      :xs) = Power             : tokenizeKoak xs
+tokenizeKoak ('>':'='  :xs) = GreaterEqual      : tokenizeKoak xs
+tokenizeKoak ('>'      :xs) = Greater           : tokenizeKoak xs
+tokenizeKoak ('<':'='  :xs) = LowerEqual        : tokenizeKoak xs
+tokenizeKoak ('<'      :xs) = Lower             : tokenizeKoak xs
+tokenizeKoak ('=':'='  :xs) = Equal             : tokenizeKoak xs
+tokenizeKoak ('='      :xs) = Assign            : tokenizeKoak xs
+tokenizeKoak ('!':'='  :xs) = NotEqual          : tokenizeKoak xs
+tokenizeKoak ('!'      :xs) = LogicalNot        : tokenizeKoak xs
+tokenizeKoak (','      :xs) = Comma             : tokenizeKoak xs
+tokenizeKoak (':'      :xs) = Colon             : tokenizeKoak xs
+tokenizeKoak (';'      :xs) = SemiColon         : tokenizeKoak xs
+tokenizeKoak line@('.' :_) = let (token, leftover) = parseDot    line in token : tokenizeKoak leftover
 tokenizeKoak line@(x:xs)
-    | isSpace x = tokenizeKoak xs
-    | isAlpha x = let (token, leftover) = parseWord   line in token : tokenizeKoak leftover
-    | isDigit x = let (token, leftover) = parseNumber line in token : tokenizeKoak leftover
-    | otherwise = throw $ KoaKUnknownToken x
+    | isSpace x             = tokenizeKoak xs
+    | isAlpha x             = let (token, leftover) = parseWord   line in token : tokenizeKoak leftover
+    | isDigit x             = let (token, leftover) = parseNumber line in token : tokenizeKoak leftover
+    | otherwise             = throw $ KoaKUnknownToken x
+
+parseDot :: String -> (Token, String)
+parseDot line@(_:x:xs)
+    | isDigit x   = parseNumber line
+    | otherwise   = (Dot, x:xs)
+parseDot (_:xs) = (Dot, xs)
+parseDot _      = (Dot, [])
 
 parseWord :: String -> (Token, String)
 parseWord s = let (l, r)        = parseWord' "" s in (Word l, r)
