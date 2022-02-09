@@ -9,9 +9,8 @@ module Koak.Lexer   ( Token(..)
                     , tokenizeKoak
                     ) where
 
-import Data.Char (isAlphaNum, isNumber, isAlpha, isSpace, isDigit)
-import GHC.Conc (numCapabilities)
-import Text.Read (readMaybe, Lexeme (Number))
+import Data.Char (isAlphaNum, isAlpha, isSpace, isDigit)
+import Text.Read (readMaybe)
 import Control.Exception (throw)
 
 import Error ( KoakError(KoaKUnknownToken, KoaKInvalidNumber) )
@@ -38,9 +37,6 @@ data Token  = Word String              -- 'if', 'def', 'FooBar', 'i'
             | SemiColon                 -- ';'
             | Dot                       -- '.'
             deriving(Show)
-
-data TemporaryToken = TemporaryWord String
-                    | TemporaryNumber String
 
 tokenizeKoak :: String -> [Token]
 tokenizeKoak []                         = []
@@ -92,7 +88,7 @@ parseNumber' (l, line@(r:rs))
     | otherwise                 = (l, line)
 
 readAndCheck :: String -> Double
-readAndCheck n@('.':xs) = readAndCheck $ '0':n
+readAndCheck n@('.':_) = readAndCheck $ '0':n
 readAndCheck t          = readAndCheck' (readMaybe t) t
 
 readAndCheck' :: Maybe Double -> String -> Double
