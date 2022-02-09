@@ -8,12 +8,13 @@
 module Koak.LexerSpec   ( spec ) where
 
 import Test.Hspec       ( Spec
-                        , it, shouldBe
+                        , it, shouldBe, shouldThrow, anyException
                         )
 
 import Koak.Lexer as KL ( Token(..)
                         , tokenizeKoak
                         )
+
 import qualified Data.Ord as KL
 import qualified GHC.IO.Handle.Internals as KL
 
@@ -45,9 +46,6 @@ instance Eq TestToken where
 
 spec :: Spec
 spec = do
-    it "Empty tokens" $ do
-        map TestToken (tokenizeKoak "")
-            == []
     it "One simple token" $ do
         map TestToken (tokenizeKoak "(")
             == [TestToken KL.OpenParenthesis]
@@ -110,6 +108,38 @@ spec = do
                 TestToken KL.Dot,
                 TestToken KL.Assign,
                 TestToken $ KL.Word "WORDS",
+                TestToken KL.LogicalNot]
+    it "Simple number (integer)" $ do
+        map TestToken (tokenizeKoak "3")
+            == [TestToken $ KL.Number 3]
+    it "Large number (integer)" $ do
+        map TestToken (tokenizeKoak "2147483647")
+            == [TestToken $ KL.Number 2147483647]
+    it "Simple number (float)" $ do
+        map TestToken (tokenizeKoak "3.14")
+            == [TestToken $ KL.Number 3.14]
+    it "Simple number 2 (float)" $ do
+        map TestToken (tokenizeKoak ".1618033988749")
+            == [TestToken $ KL.Number 0.1618033988749]
+    it "Few numbers with few blank symbols" $ do
+        map TestToken (tokenizeKoak "\t\r45.0 \n  \t\t\t  7874583 \r\n10.00058 .1778\r")
+            == [TestToken $ KL.Number 45.0,
+                TestToken $ KL.Number 7874583,
+                TestToken $ KL.Number 10.00058,
+                TestToken $ KL.Number 0.1778]
+    it "Few numbers with few simple tokens" $ do
+        map TestToken (tokenizeKoak "==3545.15<=. <1129>=(.58=8!\r")
+            == [TestToken KL.Equal,
+                TestToken $ KL.Number 3545.15,
+                TestToken KL.LowerEqual,
+                TestToken KL.Dot,
+                TestToken KL.Lower,
+                TestToken $ KL.Number 1129,
+                TestToken KL.GreaterEqual,
+                TestToken KL.OpenParenthesis,
+                TestToken $ KL.Number 0.58,
+                TestToken KL.Assign,
+                TestToken $ KL.Number 8,
                 TestToken KL.LogicalNot]
     it "Real world basic example" $ do
         map TestToken (
