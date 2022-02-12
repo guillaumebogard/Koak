@@ -58,7 +58,7 @@ tokenizeKoak ('!'      :xs) = LogicalNot        : tokenizeKoak xs
 tokenizeKoak (','      :xs) = Comma             : tokenizeKoak xs
 tokenizeKoak (':'      :xs) = Colon             : tokenizeKoak xs
 tokenizeKoak (';'      :xs) = SemiColon         : tokenizeKoak xs
-tokenizeKoak line@('.' :_) = let (token, leftover) = parseDot    line in token : tokenizeKoak leftover
+tokenizeKoak line@('.' :_)  = let (token, leftover) = parseDot    line in token : tokenizeKoak leftover
 tokenizeKoak line@(x:xs)
     | isSpace x             = tokenizeKoak xs
     | isAlpha x             = let (token, leftover) = parseWord   line in token : tokenizeKoak leftover
@@ -67,34 +67,34 @@ tokenizeKoak line@(x:xs)
 
 parseDot :: String -> (Token, String)
 parseDot line@(_:x:xs)
-    | isDigit x   = parseNumber line
-    | otherwise   = (Dot, x:xs)
+    | isDigit x = parseNumber line
+    | otherwise = (Dot, x:xs)
 parseDot (_:xs) = (Dot, xs)
 parseDot _      = (Dot, [])
 
 parseWord :: String -> (Token, String)
-parseWord s = let (l, r)        = parseWord' "" s in (Word l, r)
+parseWord s = let (l, r) = parseWord' "" s in (Word l, r)
 
 parseWord' :: String -> String -> (String, String)
-parseWord' l []                 = (reverse l, [])
+parseWord' l []          = (reverse l, [])
 parseWord' l line@(r:rs)
-    | isAlphaNum r              = parseWord' (r:l) rs
-    | otherwise                 = (reverse l, line)
+    | isAlphaNum r       = parseWord' (r:l) rs
+    | otherwise          = (reverse l, line)
 
 parseNumber :: String -> (Token, String)
-parseNumber s = let (l, r)      = parseNumber' "" s in (Koak.Lexer.Number $ readAndCheck l, r)
+parseNumber s = let (l, r) = parseNumber' "" s in (Koak.Lexer.Number $ readAndCheck l, r)
 
 parseNumber' :: String -> String -> (String, String)
-parseNumber' l []               = (reverse l, [])
-parseNumber' l ('.':rs)         = parseNumber' ('.':l) rs
+parseNumber' l []          = (reverse l, [])
+parseNumber' l ('.':rs)    = parseNumber' ('.':l) rs
 parseNumber' l line@(r:rs)
-    | isDigit r                 = parseNumber' (r:l) rs
-    | otherwise                 = (reverse l, line)
+    | isDigit r            = parseNumber' (r:l) rs
+    | otherwise            = (reverse l, line)
 
 readAndCheck :: String -> Double
-readAndCheck n@('.':_)          = readAndCheck' (readMaybe $ '0':n) $ '0':n
-readAndCheck t                  = readAndCheck' (readMaybe t) t
+readAndCheck n@('.':_) = readAndCheck' (readMaybe $ '0':n) $ '0':n
+readAndCheck t         = readAndCheck' (readMaybe t) t
 
 readAndCheck' :: Maybe Double -> String -> Double
-readAndCheck' (Just x) _        = x
-readAndCheck' Nothing  t        = throw $ KoaKInvalidNumber t
+readAndCheck' (Just x) _ = x
+readAndCheck' Nothing  t = throw $ KoaKInvalidNumber t
