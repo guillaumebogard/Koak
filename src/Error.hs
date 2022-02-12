@@ -17,11 +17,15 @@ import System.Exit   ( ExitCode ( ExitFailure )
 
 data KoakError = KoakArgumentParserError String
                | KoakHelpError
+               | KoaKUnknownToken Char
+               | KoaKInvalidNumber String
 
 instance Exception KoakError
 
 instance Show KoakError where
     show (KoakArgumentParserError err) = "Argument Parser Error: " ++ err
+    show  (KoaKUnknownToken token)     = "Unknown token: " ++ [token]
+    show  (KoaKInvalidNumber token)    = "Invalid number: " ++ token
     show  KoakHelpError                = usage
 
 usage :: String
