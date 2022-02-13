@@ -48,99 +48,125 @@ spec :: Spec
 spec = do
     it "One simple token" $ do
         map TestToken (tokenizeKoak "(")
-            == [TestToken KL.OpenParenthesis]
+            == map TestToken [
+                KL.OpenParenthesis
+            ]
     it "Few simple token" $ do
         map TestToken (tokenizeKoak "(),!====")
-            == [TestToken KL.OpenParenthesis,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.Comma,
-                TestToken KL.NotEqual,
-                TestToken KL.Equal,
-                TestToken KL.Assign]
+            == map TestToken [
+                KL.OpenParenthesis,
+                KL.ClosedParenthesis,
+                KL.Comma,
+                KL.NotEqual,
+                KL.Equal,
+                KL.Assign
+            ]
     it "All simple tokens with spaces" $ do
         map TestToken (tokenizeKoak "( ) + - * / ^ >= > <= < == = != ! , : ; .")
-            == [TestToken KL.OpenParenthesis,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.Plus,
-                TestToken KL.Minus,
-                TestToken KL.Multiply,
-                TestToken KL.Divide,
-                TestToken KL.Power,
-                TestToken KL.GreaterEqual,
-                TestToken KL.Greater,
-                TestToken KL.LowerEqual,
-                TestToken KL.Lower,
-                TestToken KL.Equal,
-                TestToken KL.Assign,
-                TestToken KL.NotEqual,
-                TestToken KL.LogicalNot,
-                TestToken KL.Comma,
-                TestToken KL.Colon,
-                TestToken KL.SemiColon,
-                TestToken KL.Dot]
+            == map TestToken [
+                KL.OpenParenthesis,
+                KL.ClosedParenthesis,
+                KL.Plus,
+                KL.Minus,
+                KL.Multiply,
+                KL.Divide,
+                KL.Power,
+                KL.GreaterEqual,
+                KL.Greater,
+                KL.LowerEqual,
+                KL.Lower,
+                KL.Equal,
+                KL.Assign,
+                KL.NotEqual,
+                KL.LogicalNot,
+                KL.Comma,
+                KL.Colon,
+                KL.SemiColon,
+                KL.Dot
+            ]
     it "Simple word" $ do
         map TestToken (tokenizeKoak "hello")
-            == [TestToken $ KL.Word "hello"]
+            == map TestToken [
+                KL.Word "hello"
+            ]
     it "Few words with space" $ do
         map TestToken (tokenizeKoak "This is few WORDS")
-            == [TestToken $ KL.Word "This",
-                TestToken $ KL.Word "is",
-                TestToken $ KL.Word "few",
-                TestToken $ KL.Word "WORDS"]
+            == map TestToken [
+                KL.Word "This",
+                KL.Word "is",
+                KL.Word "few",
+                KL.Word "WORDS"
+            ]
     it "Few words with few blank symbols" $ do
         map TestToken (tokenizeKoak "\t\r\nThis \n  \t\t\t  is \r\nfew WORDS\r")
-            == [TestToken $ KL.Word "This",
-                TestToken $ KL.Word "is",
-                TestToken $ KL.Word "few",
-                TestToken $ KL.Word "WORDS"]
+            == map TestToken [
+                KL.Word "This",
+                KL.Word "is",
+                KL.Word "few",
+                KL.Word "WORDS"
+            ]
     it "Few words with few simple tokens" $ do
         map TestToken (tokenizeKoak "==This<=. <is>=(.few12.=WORDS!\r")
-            == [TestToken KL.Equal,
-                TestToken $ KL.Word "This",
-                TestToken KL.LowerEqual,
-                TestToken KL.Dot,
-                TestToken KL.Lower,
-                TestToken $ KL.Word "is",
-                TestToken KL.GreaterEqual,
-                TestToken KL.OpenParenthesis,
-                TestToken KL.Dot,
-                TestToken $ KL.Word "few12",
-                TestToken KL.Dot,
-                TestToken KL.Assign,
-                TestToken $ KL.Word "WORDS",
-                TestToken KL.LogicalNot]
+            == map TestToken [
+                KL.Equal,
+                KL.Word "This",
+                KL.LowerEqual,
+                KL.Dot,
+                KL.Lower,
+                KL.Word "is",
+                KL.GreaterEqual,
+                KL.OpenParenthesis,
+                KL.Dot,
+                KL.Word "few12",
+                KL.Dot,
+                KL.Assign,
+                KL.Word "WORDS",
+                KL.LogicalNot
+            ]
     it "Simple number (integer)" $ do
         map TestToken (tokenizeKoak "3")
-            == [TestToken $ KL.Number 3]
+            == map TestToken [
+                KL.Number 3
+            ]
     it "Large number (integer)" $ do
         map TestToken (tokenizeKoak "2147483647")
-            == [TestToken $ KL.Number 2147483647]
+            == map TestToken [
+                KL.Number 2147483647
+            ]
     it "Simple number (float)" $ do
         map TestToken (tokenizeKoak "3.14")
-            == [TestToken $ KL.Number 3.14]
+            == map TestToken [
+                KL.Number 3.14
+            ]
     it "Simple number 2 (float)" $ do
         map TestToken (tokenizeKoak ".1618033988749")
-            == [TestToken $ KL.Number 0.1618033988749]
+            == map TestToken [
+                KL.Number 0.1618033988749
+            ]
     it "Few numbers with few blank symbols" $ do
         map TestToken (tokenizeKoak "\t\r45.0 \n  \t\t\t  7874583 \r\n10.00058 .1778\r")
-            == [TestToken $ KL.Number 45.0,
-                TestToken $ KL.Number 7874583,
-                TestToken $ KL.Number 10.00058,
-                TestToken $ KL.Number 0.1778]
+            == map TestToken [
+                KL.Number 45.0,
+                KL.Number 7874583,
+                KL.Number 10.00058,
+                KL.Number 0.1778
+            ]
     it "Few numbers with few simple tokens" $ do
         map TestToken (tokenizeKoak "==3545.15<=. <1129>=(.58=8!\r")
-            == [TestToken KL.Equal,
-                TestToken $ KL.Number 3545.15,
-                TestToken KL.LowerEqual,
-                TestToken KL.Dot,
-                TestToken KL.Lower,
-                TestToken $ KL.Number 1129,
-                TestToken KL.GreaterEqual,
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 0.58,
-                TestToken KL.Assign,
-                TestToken $ KL.Number 8,
-                TestToken KL.LogicalNot]
+            == map TestToken [
+                KL.Equal,
+                KL.Number 3545.15,
+                KL.LowerEqual,
+                KL.Dot,
+                KL.Lower,
+                KL.Number 1129,
+                KL.GreaterEqual,
+                KL.OpenParenthesis,
+                KL.Number 0.58,
+                KL.Assign,
+                KL.Number 8,
+                KL.LogicalNot
+            ]
     it "Real world basic example" $ do
         map TestToken (
             tokenizeKoak $
@@ -159,87 +185,89 @@ spec = do
             "       printdensity(4): printdensity(5): printdensity(9):"     ++
             "       putchard(10);"
             )
-            == [TestToken $ KL.Word "extern",
-                TestToken $ KL.Word "putchard",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Word "char",
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.SemiColon,
-                TestToken $ KL.Word "def",
-                TestToken $ KL.Word "printdensity",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Word "d",
-                TestToken KL.ClosedParenthesis,
-                TestToken $ KL.Word "if",
-                TestToken $ KL.Word "d",
-                TestToken KL.Greater,
-                TestToken $ KL.Number 8,
-                TestToken $ KL.Word "then",
-                TestToken $ KL.Word "putchard",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 32,
-                TestToken KL.ClosedParenthesis,
-                TestToken $ KL.Word "else",
-                TestToken $ KL.Word "if",
-                TestToken $ KL.Word "d",
-                TestToken KL.Greater,
-                TestToken $ KL.Number 4,
-                TestToken $ KL.Word "then",
-                TestToken $ KL.Word "putchard",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 46,
-                TestToken KL.ClosedParenthesis,
-                TestToken $ KL.Word "else",
-                TestToken $ KL.Word "if",
-                TestToken $ KL.Word "d",
-                TestToken KL.Greater,
-                TestToken $ KL.Number 2,
-                TestToken $ KL.Word "then",
-                TestToken $ KL.Word "putchard",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 43,
-                TestToken KL.ClosedParenthesis,
-                TestToken $ KL.Word "else",
-                TestToken $ KL.Word "putchard",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 42,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.SemiColon,
-                TestToken $ KL.Word "printdensity",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 1,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.Colon,
-                TestToken $ KL.Word "printdensity",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 2,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.Colon,
-                TestToken $ KL.Word "printdensity",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 3,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.Colon,
-                TestToken $ KL.Word "printdensity",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 4,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.Colon,
-                TestToken $ KL.Word "printdensity",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 5,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.Colon,
-                TestToken $ KL.Word "printdensity",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 9,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.Colon,
-                TestToken $ KL.Word "putchard",
-                TestToken KL.OpenParenthesis,
-                TestToken $ KL.Number 10,
-                TestToken KL.ClosedParenthesis,
-                TestToken KL.SemiColon]
+            == map TestToken [
+                KL.Word "extern",
+                KL.Word "putchard",
+                KL.OpenParenthesis,
+                KL.Word "char",
+                KL.ClosedParenthesis,
+                KL.SemiColon,
+                KL.Word "def",
+                KL.Word "printdensity",
+                KL.OpenParenthesis,
+                KL.Word "d",
+                KL.ClosedParenthesis,
+                KL.Word "if",
+                KL.Word "d",
+                KL.Greater,
+                KL.Number 8,
+                KL.Word "then",
+                KL.Word "putchard",
+                KL.OpenParenthesis,
+                KL.Number 32,
+                KL.ClosedParenthesis,
+                KL.Word "else",
+                KL.Word "if",
+                KL.Word "d",
+                KL.Greater,
+                KL.Number 4,
+                KL.Word "then",
+                KL.Word "putchard",
+                KL.OpenParenthesis,
+                KL.Number 46,
+                KL.ClosedParenthesis,
+                KL.Word "else",
+                KL.Word "if",
+                KL.Word "d",
+                KL.Greater,
+                KL.Number 2,
+                KL.Word "then",
+                KL.Word "putchard",
+                KL.OpenParenthesis,
+                KL.Number 43,
+                KL.ClosedParenthesis,
+                KL.Word "else",
+                KL.Word "putchard",
+                KL.OpenParenthesis,
+                KL.Number 42,
+                KL.ClosedParenthesis,
+                KL.SemiColon,
+                KL.Word "printdensity",
+                KL.OpenParenthesis,
+                KL.Number 1,
+                KL.ClosedParenthesis,
+                KL.Colon,
+                KL.Word "printdensity",
+                KL.OpenParenthesis,
+                KL.Number 2,
+                KL.ClosedParenthesis,
+                KL.Colon,
+                KL.Word "printdensity",
+                KL.OpenParenthesis,
+                KL.Number 3,
+                KL.ClosedParenthesis,
+                KL.Colon,
+                KL.Word "printdensity",
+                KL.OpenParenthesis,
+                KL.Number 4,
+                KL.ClosedParenthesis,
+                KL.Colon,
+                KL.Word "printdensity",
+                KL.OpenParenthesis,
+                KL.Number 5,
+                KL.ClosedParenthesis,
+                KL.Colon,
+                KL.Word "printdensity",
+                KL.OpenParenthesis,
+                KL.Number 9,
+                KL.ClosedParenthesis,
+                KL.Colon,
+                KL.Word "putchard",
+                KL.OpenParenthesis,
+                KL.Number 10,
+                KL.ClosedParenthesis,
+                KL.SemiColon
+            ]
 
 -- ready> ;
 -- ...
