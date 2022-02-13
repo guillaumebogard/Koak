@@ -15,8 +15,8 @@ import Koak.Lexer as KL ( Token(..)
                         , tokenizeKoak
                         )
 
-import qualified Data.Ord as KL
-import qualified GHC.IO.Handle.Internals as KL
+import qualified Data.Ord
+import qualified GHC.IO.Handle.Internals
 
 newtype TestToken = TestToken KL.Token
 
