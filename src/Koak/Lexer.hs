@@ -23,6 +23,7 @@ data Token  = Word String               -- 'if', 'def', 'FooBar', 'i'
             | Minus                     -- '-'
             | Multiply                  -- '*'
             | Divide                    -- '/'
+            | Modulo                    -- '%'
             | Power                     -- '^'
             | Greater                   -- '>'
             | GreaterEqual              -- '>='
@@ -46,6 +47,7 @@ tokenizeKoak ('+'      :xs) = Plus              : tokenizeKoak xs
 tokenizeKoak ('-'      :xs) = Minus             : tokenizeKoak xs
 tokenizeKoak ('*'      :xs) = Multiply          : tokenizeKoak xs
 tokenizeKoak ('/'      :xs) = Divide            : tokenizeKoak xs
+tokenizeKoak ('%'      :xs) = Modulo            : tokenizeKoak xs
 tokenizeKoak ('^'      :xs) = Power             : tokenizeKoak xs
 tokenizeKoak ('>':'='  :xs) = GreaterEqual      : tokenizeKoak xs
 tokenizeKoak ('>'      :xs) = Greater           : tokenizeKoak xs

@@ -29,6 +29,7 @@ instance Eq TestToken where
     (==) (TestToken Minus)              (TestToken Minus)                   = True
     (==) (TestToken Multiply)           (TestToken Multiply)                = True
     (==) (TestToken Divide)             (TestToken Divide)                  = True
+    (==) (TestToken Modulo)             (TestToken Modulo)                  = True
     (==) (TestToken Power)              (TestToken Power)                   = True
     (==) (TestToken Greater)            (TestToken Greater)                 = True
     (==) (TestToken GreaterEqual)       (TestToken GreaterEqual)            = True
@@ -52,14 +53,17 @@ spec = do
                 KL.OpenParenthesis
             ]
     it "Few simple token" $ do
-        map TestToken (tokenizeKoak "(),!====")
+        map TestToken (tokenizeKoak "(),!====%^/")
             == map TestToken [
                 KL.OpenParenthesis,
                 KL.ClosedParenthesis,
                 KL.Comma,
                 KL.NotEqual,
                 KL.Equal,
-                KL.Assign
+                KL.Assign,
+                KL.Modulo,
+                KL.Power,
+                KL.Divide
             ]
     it "All simple tokens with spaces" $ do
         map TestToken (tokenizeKoak "( ) + - * / ^ >= > <= < == = != ! , : ; .")
