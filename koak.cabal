@@ -25,7 +25,10 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      Argument.Lexer
+      Argument.Parser
+      Error
+      Koak.Lexer
   other-modules:
       Paths_koak
   hs-source-dirs:
@@ -50,11 +53,14 @@ test-suite koak-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Argument.LexerSpec
+      Koak.LexerSpec
       Paths_koak
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , hspec
     , koak
   default-language: Haskell2010
