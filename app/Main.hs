@@ -7,16 +7,24 @@
 
 module Main where
 
-import Control.Exception  ( handle )
 import System.Environment ( getArgs )
+import System.Exit        ( ExitCode ( ExitFailure )
+                          , exitWith
+                          , exitSuccess
+                          )
+import Control.Exception  ( handle )
 
-import Error              ( errorHandler )
+import Exception          ( KoakException(..) )
 import Argument.Parser    ( KoakArguments(..)
                           , parseArguments
                           )
 
 main :: IO ()
-main = handle errorHandler $ getArgs >>= handleExecution . parseArguments
+main = handle exceptionHandler $ getArgs >>= handleExecution . parseArguments
 
 handleExecution :: KoakArguments -> IO ()
 handleExecution (KoakArguments file) = readFile file >>= putStrLn
+
+exceptionHandler :: KoakException -> IO ()
+exceptionHandler KoakHelpException = print KoakHelpException >> exitSuccess
+exceptionHandler err               = print err               >> exitWith (ExitFailure 84)

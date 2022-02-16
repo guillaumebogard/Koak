@@ -18,4 +18,4 @@ main = hspec Main.spec
 
 spec :: Spec
 spec = do
-    describe "Argument.Lexer"  Argument.LexerSpec.spec
+    describe "Argument.Lexer" Argument.LexerSpec.spec

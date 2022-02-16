@@ -27,7 +27,7 @@ library
   exposed-modules:
       Argument.Lexer
       Argument.Parser
-      Error
+      Exception
   other-modules:
       Paths_koak
   hs-source-dirs:
