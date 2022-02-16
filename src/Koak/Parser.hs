@@ -85,14 +85,24 @@ data LITERAL          = LITERAL_DECIMAL DECIMAL_CONST
 
 parseKoak :: [Token] -> [KDEFS]
 parseKoak [] = []
-parseKoak tokens = [parseKdefs tokens]
+parseKoak tokens = let (kdefs, rest) = parseKdefs tokens in kdefs : parseKoak rest
 
-parseKdefs :: [Token] -> KDEFS
+parseKdefs :: [Token] -> (KDEFS, [Token])
 parseKdefs [] = error "parseKdefs: empty list"
-parseKdefs (x:xs)
-    | x == Word "def" = KDEFS_DEFS $ parseDefs xs
-    | otherwise = KDEFS_EXPR $ parseExpression xs
+parseKdefs list@(x:xs)
+    | x == Word "def" = let (def, rest) = parseDefs xs in (KDEFS_DEFS def, rest)
+    | otherwise = let (expr, rest) = parseExpressions list in (KDEFS_EXPR expr, rest)
 
-parseDefs :: [Token] -> DEFS
+parseDefs :: [Token] -> (DEFS, [Token])
 parseDefs [] = error "parseDefs: empty list"
-parseDefs tokens = DEFS (parsePrototype tokens) (parseExpressions tokens)
+parseDefs tokens = let (proto, rest) = parsePrototype tokens in
+                   let (expr, rest2) = parseExpressions rest in
+                   DEFS proto expr
+
+parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
+parseExpressions [] = error "parseExpressions: empty list"
+parseExpressions list@(x:xs)
+    | x == Word "for" = let (for, rest) = parseFor xs in (FOR_EXPR for, rest)
+    | x == Word "if" = let (if_, rest) = parseIf xs in (IF_EXPR if_, rest)
+    | x == Word "while" = let (while, rest) = parseWhile xs in (WHILE_EXPR while, rest)
+    | otherwise = let (expr, rest) = parseExpression list in (EXPRESSIONS expr [], rest)
