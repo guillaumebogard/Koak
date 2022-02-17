@@ -1,72 +1,82 @@
-data KDEFS          = KDEFS_DEFS DEFS
-                    | KDEFS_EXPR EXPRESSIONS
+--
+-- EPITECH PROJECT, 2022
+-- B-YEP-500-BDX-5-1-koak-matheo.lucak
+-- File description:
+-- Types
+--
 
-data DEFS           = DEFS PROTOTYPE EXPRESSIONS
+module Types   () where
 
-newtype PRECEDENCE  = PRECEDENCE Int
 
-data PROTOTYPE      = PROTOTYPE_REDEFINE_UNARY  UN_OP  (Maybe PRECEDENCE) IDENTIFIER PROTOTYPE_ARGS
-                    | PROTOTYPE_REDEFINE_BINARY BIN_OP (Maybe PRECEDENCE) IDENTIFIER PROTOTYPE_ARGS
-                    | PROTOTYPE IDENTIFIER PROTOTYPE_ARGS
+-- data KDEFS          = KDEFS_DEFS DEFS
+--                     | KDEFS_EXPR EXPRESSIONS
 
-data PROTOTYPE_ARGS = PROTOTYPE_ARGS [PROTOTYPE_ID] TYPE
+-- data DEFS           = DEFS PROTOTYPE EXPRESSIONS
 
-data PROTOTYPE_ID   = PROTOTYPE_ID IDENTIFIER TYPE
+-- newtype PRECEDENCE  = PRECEDENCE Int
 
-data TYPE           = INT
-                    | DOUBLE
-                    | VOID
+-- data PROTOTYPE      = PROTOTYPE_REDEFINE_UNARY  UN_OP  (Maybe PRECEDENCE) IDENTIFIER PROTOTYPE_ARGS
+--                     | PROTOTYPE_REDEFINE_BINARY BIN_OP (Maybe PRECEDENCE) IDENTIFIER PROTOTYPE_ARGS
+--                     | PROTOTYPE IDENTIFIER PROTOTYPE_ARGS
 
-data FOR            = FOR IDENTIFIER EXPRESSION IDENTIFIER EXPRESSION EXPRESSION EXPRESSION
+-- data PROTOTYPE_ARGS = PROTOTYPE_ARGS [PROTOTYPE_ID] TYPE
 
-data IF             = IF EXPRESSION EXPRESSIONS (Maybe EXPRESSIONS)
+-- data PROTOTYPE_ID   = PROTOTYPE_ID IDENTIFIER TYPE
 
-data WHILE          = WHILE EXPRESSION EXPRESSIONS
+-- data TYPE           = INT
+--                     | DOUBLE
+--                     | VOID
 
-data EXPRESSIONS    = FOR_EXPR FOR
-                    | IF_EXPR IF
-                    | WHILE_EXPR WHILE
-                    | EXPRESSIONS EXPRESSION [EXPRESSION]
+-- data FOR            = FOR IDENTIFIER EXPRESSION IDENTIFIER EXPRESSION EXPRESSION EXPRESSION
 
-data BIN_OP         = PLUS
-                    | MINUS
-                    | MULT
-                    | DIV
-                    | MOD
-                    | LT
-                    | GT
-                    | EQ
-                    | NEQ
-                    | ASSIGN
+-- data IF             = IF EXPRESSION EXPRESSIONS (Maybe EXPRESSIONS)
 
-data BINARY_OP      = BINARY_OP_UN BIN_OP UNARY
-                    | BINARY_OP_EXPR BIN_OP EXPRESSION
+-- data WHILE          = WHILE EXPRESSION EXPRESSIONS
 
-data EXPRESSION     = EXPRESSION UNARY [BINARY_OP]
+-- data EXPRESSIONS    = FOR_EXPR FOR
+--                     | IF_EXPR IF
+--                     | WHILE_EXPR WHILE
+--                     | EXPRESSIONS EXPRESSION [EXPRESSION]
 
-data UN_OP          = NOT
-                    | NEG
+-- data BIN_OP         = PLUS
+--                     | MINUS
+--                     | MULT
+--                     | DIV
+--                     | MOD
+--                     | LT
+--                     | GT
+--                     | EQ
+--                     | NEQ
+--                     | ASSIGN
 
-data UNARY          = UNARY_UN UN_OP UNARY
-                    | UNARY_POSTFIX POSTFIX
+-- data BINARY_OP      = BINARY_OP_UN BIN_OP UNARY
+--                     | BINARY_OP_EXPR BIN_OP EXPRESSION
 
-data POSTFIX        = POSTFIX PRIMARY (Maybe CALL_EXPR)
+-- data EXPRESSION     = EXPRESSION UNARY [BINARY_OP]
 
-newtype CALL_EXPR   = CALL_EXPR (Maybe CALL_EXPR_ARGS)
+-- data UN_OP          = NOT
+--                     | NEG
 
-data CALL_EXPR_ARGS = CALL_EXPR_ARGS EXPRESSION [EXPRESSION]
+-- data UNARY          = UNARY_UN UN_OP UNARY
+--                     | UNARY_POSTFIX POSTFIX
 
-data PRIMARY        = PRIMARY_IDENTIFIER IDENTIFIER
-                    | PRIMARY_LITERAL LITERAL
-                    | PRIMARY_EXPRS EXPRESSIONS
+-- data POSTFIX        = POSTFIX PRIMARY (Maybe CALL_EXPR)
 
-newtype IDENTIFIER  = IDENTIFIER String
+-- newtype CALL_EXPR   = CALL_EXPR (Maybe CALL_EXPR_ARGS)
 
-data DOT
+-- data CALL_EXPR_ARGS = CALL_EXPR_ARGS EXPRESSION [EXPRESSION]
 
-newtype DECIMAL_CONST = DECIMAL_CONST Int
+-- data PRIMARY        = PRIMARY_IDENTIFIER IDENTIFIER
+--                     | PRIMARY_LITERAL LITERAL
+--                     | PRIMARY_EXPRS EXPRESSIONS
 
-newtype DOUBLE_CONST  = DOUBLE_CONST Double
+-- newtype IDENTIFIER  = IDENTIFIER String
 
-data LITERAL          = LITERAL_DECIMAL DECIMAL_CONST
-                      | LITERAL_DOUBLE DOUBLE_CONST
+-- data DOT
+
+-- newtype DECIMAL_CONST = DECIMAL_CONST Int
+
+-- newtype DOUBLE_CONST  = DOUBLE_CONST Double
+
+-- data LITERAL          = LITERAL_DECIMAL DECIMAL_CONST
+--                       | LITERAL_DOUBLE DOUBLE_CONST

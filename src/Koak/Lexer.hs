@@ -37,7 +37,7 @@ data Token  = Word String               -- 'if', 'def', 'FooBar', 'i'
             | Colon                     -- ':'
             | SemiColon                 -- ';'
             | Dot                       -- '.'
-            deriving(Show)
+            deriving(Eq, Show)
 
 tokenizeKoak :: String -> [Token]
 tokenizeKoak []             = []

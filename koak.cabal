@@ -57,6 +57,7 @@ test-suite koak-test
   other-modules:
       Argument.LexerSpec
       Koak.LexerSpec
+      Koak.ParserSpec
       Paths_koak
   hs-source-dirs:
       test
