@@ -5,15 +5,19 @@
 -- Koak.Lexer
 --
 
-module Koak.Lexer   ( Token(..)
-                    , tokenizeKoak
-                    ) where
+module Koak.Lexer           ( Token(..)
+                            , tokenizeKoak
+                            ) where
 
-import Data.Char (isAlphaNum, isAlpha, isSpace, isDigit)
-import Text.Read (readMaybe)
-import Control.Exception (throw)
+import Data.Char            ( isAlphaNum
+                            , isAlpha
+                            , isSpace
+                            , isDigit
+                            )
+import Text.Read            ( readMaybe )
+import Control.Exception    ( throw )
 
-import Exception ( KoakException(KoakUnknownTokenException, KoakInvalidNumberException) )
+import Exception            ( KoakException(KoakUnknownTokenException, KoakInvalidNumberException) )
 
 data Token  = Word String               -- 'if', 'def', 'FooBar', 'i'
             | Number Double             -- '0', '0123456789', '3.14159265'
