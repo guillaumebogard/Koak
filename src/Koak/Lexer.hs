@@ -5,15 +5,19 @@
 -- Koak.Lexer
 --
 
-module Koak.Lexer   ( Token(..)
-                    , tokenizeKoak
-                    ) where
+module Koak.Lexer           ( Token(..)
+                            , tokenizeKoak
+                            ) where
 
-import Data.Char (isAlphaNum, isAlpha, isSpace, isDigit)
-import Text.Read (readMaybe)
-import Control.Exception (throw)
+import Data.Char            ( isAlphaNum
+                            , isAlpha
+                            , isSpace
+                            , isDigit
+                            )
+import Text.Read            ( readMaybe )
+import Control.Exception    ( throw )
 
-import Error ( KoakError(KoaKUnknownToken, KoaKInvalidNumber) )
+import Exception            ( KoakException(KoakUnknownTokenException, KoakInvalidNumberException) )
 
 data Token  = Word String               -- 'if', 'def', 'FooBar', 'i'
             | Number Double             -- '0', '0123456789', '3.14159265'
@@ -65,7 +69,7 @@ tokenizeKoak line@(x:xs)
     | isSpace x             = tokenizeKoak xs
     | isAlpha x             = let (token, leftover) = parseWord   line in token : tokenizeKoak leftover
     | isDigit x             = let (token, leftover) = parseNumber line in token : tokenizeKoak leftover
-    | otherwise             = throw $ KoaKUnknownToken x
+    | otherwise             = throw $ KoakUnknownTokenException x
 
 parseDot :: String -> (Token, String)
 parseDot line@(_:x:xs)
@@ -99,4 +103,4 @@ readAndCheck t         = readAndCheck' (readMaybe t) t
 
 readAndCheck' :: Maybe Double -> String -> Double
 readAndCheck' (Just x) _ = x
-readAndCheck' Nothing  t = throw $ KoaKInvalidNumber t
+readAndCheck' Nothing  t = throw $ KoakInvalidNumberException t
