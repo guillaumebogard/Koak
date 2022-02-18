@@ -1,13 +1,14 @@
-name: build
-
+name: builds
 on:
-  push: {branches: master, dev }
-  pull_request: {branches: master, dev }
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Check build
     steps:
       - uses: actions/checkout@v2
 
@@ -16,7 +17,6 @@ jobs:
   
   tests:
     runs-on: ubuntu-latest
-    name: Check tests
     steps:
       - uses: actions/checkout@v2
 
