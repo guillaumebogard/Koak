@@ -13,16 +13,11 @@ import Test.Hspec            ( Spec
                              , shouldThrow
                              )
 
-import Error                 ( KoakError(KoakArgumentParserError, KoakHelpError) )
+import Exception             ( KoakException(KoakArgumentParserException, KoakHelpException) )
 import Argument.Parser as AP ( Filepath(..)
                              , KoakArguments(..)
                              , parseArguments
                              )
-
-instance Eq KoakError where
-    (KoakArgumentParserError _) == (KoakArgumentParserError _) = True
-    KoakHelpError               == KoakHelpError               = True
-    _                           == _                           = False
 
 newtype TestKoakArguments = TestKoakArguments AP.KoakArguments
 instance Eq TestKoakArguments where
@@ -32,25 +27,31 @@ spec :: Spec
 spec = do
     it "Empty arguments" $ do
         evaluate (parseArguments [])
-            `shouldThrow` (== KoakArgumentParserError "Incorrect arguments, retry with -h to display usage")
+            `shouldThrow` (== KoakArgumentParserException "Invalid arguments, retry with -h to display usage")
     it "Several filepaths" $ do
         evaluate (parseArguments ["file1.koak", "file2.koak"])
-            `shouldThrow` (== KoakArgumentParserError "Incorrect arguments, retry with -h to display usage")
+            `shouldThrow` (== KoakArgumentParserException "Invalid arguments, retry with -h to display usage")
     it "Short help flag" $ do
         evaluate (parseArguments ["-h"])
-            `shouldThrow` (== KoakHelpError)
+            `shouldThrow` (== KoakHelpException)
     it "Long help flag" $ do
         evaluate (parseArguments ["--help"])
-            `shouldThrow` (== KoakHelpError)
-    it "Show instance KoakArgumentParserError" $ do
-        show (KoakArgumentParserError "Incorrect file")
-            == "Argument Parser Error: Incorrect file"
-    it "Show instance KoakHelpError" $ do
-        show KoakHelpError
-            == "Usage: ./koak file\n" ++
-               "Description:\n" ++
+            `shouldThrow` (== KoakHelpException)
+    it "Unknown short option with one filepath" $ do
+        evaluate (parseArguments ["-a", "file1.koak"])
+            `shouldThrow` (== KoakArgumentParserException "Invalid arguments, retry with -h to display usage")
+    it "Unknown short option with one filepath reversed" $ do
+        evaluate (parseArguments ["file1.koak", "-a"])
+            `shouldThrow` (== KoakArgumentParserException "Invalid arguments, retry with -h to display usage")
+    it "Show instance KoakArgumentParserException" $ do
+        show (KoakArgumentParserException "Invalid file")
+            == "Argument Parser Exception: Invalid file"
+    it "Show instance KoakHelpException" $ do
+        show KoakHelpException
+            == "Usage: ./koak file\n"                     ++
+               "Description:\n"                           ++
                "\tAn interpreter of the KOAK language.\n" ++
-               "Options:\n" ++
+               "Options:\n"                               ++
                "\t--help\t\tDisplay this information."
     it "One filepath" $ do
         TestKoakArguments (parseArguments ["file1.koak"])
