@@ -11,12 +11,16 @@ import GHC.Exception ( Exception )
 
 data KoakException = KoakArgumentParserException String
                    | KoakHelpException
+                   | KoakUnknownTokenException Char
+                   | KoakInvalidNumberException String
 
 instance Exception KoakException
 
 instance Show KoakException where
-    show (KoakArgumentParserException err) = "Argument Parser Exception: " ++ err
-    show  KoakHelpException                = usage
+    show (KoakArgumentParserException err)  = "Argument Parser Exception: " ++ err
+    show (KoakUnknownTokenException token)  = "Unknown token: "             ++ [token]
+    show (KoakInvalidNumberException token) = "Invalid number: "            ++ token
+    show  KoakHelpException                 = usage
 
 instance Eq KoakException where
     (KoakArgumentParserException left) == (KoakArgumentParserException right) = left == right
