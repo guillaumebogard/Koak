@@ -1,0 +1,15 @@
+name: build
+
+on:
+  push: {branches: master, dev }
+  pull_request: {branches: master, dev }
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Check build
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Builds project using make
+        run: make
