@@ -19,9 +19,9 @@ instance Show KoakException where
     show  KoakHelpException                = usage
 
 instance Eq KoakException where
-    (KoakArgumentParserException _) == (KoakArgumentParserException _) = True
-    KoakHelpException               == KoakHelpException               = True
-    _                               == _                               = False
+    (KoakArgumentParserException left) == (KoakArgumentParserException right) = left == right
+    KoakHelpException                  == KoakHelpException                   = True
+    _                                  == _                                   = False
 
 usage :: String
 usage = "Usage: ./koak file\n"                     ++

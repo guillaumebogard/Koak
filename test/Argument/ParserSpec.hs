@@ -27,10 +27,10 @@ spec :: Spec
 spec = do
     it "Empty arguments" $ do
         evaluate (parseArguments [])
-            `shouldThrow` (== KoakArgumentParserException "Invalid arguments, retry with -h to display usage")
+            `shouldThrow` (== KoakArgumentParserException "Invalid arguments: requires at least 1 filepath")
     it "Several filepaths" $ do
         evaluate (parseArguments ["file1.koak", "file2.koak"])
-            `shouldThrow` (== KoakArgumentParserException "Invalid arguments, retry with -h to display usage")
+            `shouldThrow` (== KoakArgumentParserException "Invalid arguments: can only take 1 filepath")
     it "Short help flag" $ do
         evaluate (parseArguments ["-h"])
             `shouldThrow` (== KoakHelpException)
@@ -39,10 +39,10 @@ spec = do
             `shouldThrow` (== KoakHelpException)
     it "Unknown short option with one filepath" $ do
         evaluate (parseArguments ["-a", "file1.koak"])
-            `shouldThrow` (== KoakArgumentParserException "Invalid arguments, retry with -h to display usage")
+            `shouldThrow` (== KoakArgumentParserException "Invalid arguments: unknown option '-a'")
     it "Unknown short option with one filepath reversed" $ do
         evaluate (parseArguments ["file1.koak", "-a"])
-            `shouldThrow` (== KoakArgumentParserException "Invalid arguments, retry with -h to display usage")
+            `shouldThrow` (== KoakArgumentParserException "Invalid arguments: unknown option '-a'")
     it "Show instance KoakArgumentParserException" $ do
         show (KoakArgumentParserException "Invalid file")
             == "Argument Parser Exception: Invalid file"

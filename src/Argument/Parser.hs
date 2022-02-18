@@ -29,18 +29,19 @@ parseTokenizedArguments = checkTokensInLayers
 
 checkTokensInLayers :: [Token] -> KoakArguments
 checkTokensInLayers []     = throw $ KoakArgumentParserException "Invalid arguments: requires at least 1 filepath"
-checkTokensInLayers tokens = checkTokensInLayers' tokens tokens
+checkTokensInLayers tokens = checkTokensInLayers' tokens
 
-checkTokensInLayers' :: [Token] -> [Token] -> KoakArguments
-checkTokensInLayers' tokens []          = checkTokensInLayers'' tokens
-checkTokensInLayers' _      (AL.Help:_) = throw KoakHelpException
-checkTokensInLayers' tokens (_:xs)      = checkTokensInLayers' tokens xs
+checkTokensInLayers' :: [Token] -> KoakArguments
+checkTokensInLayers' = multipleFilepathsHandler . filter helpHandler . filter unknownOptionHandler
 
-checkTokensInLayers'' :: [Token] -> KoakArguments
-checkTokensInLayers'' [AL.Filepath filepath] = KoakArguments $ Argument.Parser.Filepath filepath
-checkTokensInLayers'' tokens                 = checkTokensInLayers''' tokens
+helpHandler :: Token -> Bool
+helpHandler AL.Help = throw KoakHelpException
+helpHandler _       = True
 
-checkTokensInLayers''' :: [Token] -> KoakArguments
-checkTokensInLayers''' []                            = throw $ KoakArgumentParserException   "Invalid arguments: can only take 1 filepath"
-checkTokensInLayers''' ((AL.UnknownOption option):_) = throw $ KoakArgumentParserException $ "Invalid arguments: unknown option '" ++ option ++ "'"
-checkTokensInLayers''' (_:xs)                        = checkTokensInLayers''' xs
+unknownOptionHandler :: Token -> Bool
+unknownOptionHandler (AL.UnknownOption option) = throw $ KoakArgumentParserException $ "Invalid arguments: unknown option '" ++ option ++ "'"
+unknownOptionHandler _                         = True
+
+multipleFilepathsHandler :: [Token] -> KoakArguments
+multipleFilepathsHandler [AL.Filepath filepath] = KoakArguments $ Argument.Parser.Filepath filepath
+multipleFilepathsHandler _                      = throw $ KoakArgumentParserException   "Invalid arguments: can only take 1 filepath"
