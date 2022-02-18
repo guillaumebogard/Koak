@@ -13,3 +13,12 @@ jobs:
 
       - name: Builds project using make
         run: make
+  
+  tests:
+    runs-on: ubuntu-latest
+    name: Check tests
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Launches tests using make with tests_run rule
+        run: make tests_run
