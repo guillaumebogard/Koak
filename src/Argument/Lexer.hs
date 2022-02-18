@@ -10,10 +10,13 @@ module Argument.Lexer ( Token(..)
                       ) where
 
 data Token = Filepath String
+           | UnknownOption String
            | Help
 
 tokenizeArguments :: [String] -> [Token]
 tokenizeArguments []            = []
-tokenizeArguments ("-h":xs)     = Help       : tokenizeArguments xs
-tokenizeArguments ("--help":xs) = Help       : tokenizeArguments xs
-tokenizeArguments (x:xs)        = Filepath x : tokenizeArguments xs
+tokenizeArguments ("-h":xs)     = Help : tokenizeArguments xs
+tokenizeArguments ("--help":xs) = Help : tokenizeArguments xs
+tokenizeArguments (x:xs)
+    | head x == '-' = UnknownOption x : tokenizeArguments xs
+    | otherwise     = Filepath x      : tokenizeArguments xs
