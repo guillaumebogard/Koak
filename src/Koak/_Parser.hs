@@ -156,6 +156,13 @@ parseDefs tokens = let (proto, rest1) = parsePrototype tokens  in
                    (DEFS proto exprs, rest2)
 
 
+-- identity :: a -> a
+-- toto :: Char -> Int
+-- tutu :: Int -> Char
+
+-- wawa :: Int -> Int
+-- wawa a = identity identity identity identity identity identity toto identity identity identity identity identity identity tutu identity identity identity identity identity a
+
 parsePrototype :: [Token] -> (PROTOTYPE, [Token])
 parsePrototype []                   = error "parseDefs: empty list"
 parsePrototype ((Word "unary"):xs)  = parsePrototypeUnary  xs
@@ -164,78 +171,143 @@ parsePrototype ((Word w):xs)        = parsePrototype'      xs
 
 parsePrototypeUnary :: [Token] -> (PROTOTYPE, [Token])
 parsePrototypeUnary [] = error "parsePrototypeUnary: empty list"
-parsePrototypeUnary list =  let (unop,       rest1) = parseUnOp             list  in 
-                            let (prec,       rest2) = parseMaybePrecedence  rest1 in 
-                            let (id,         rest3) = parseIdentifier       rest2 in 
-                            let (proto_args, rest4) = parsePrototypeArgs    rest3 in
-                            parsePrototypeUnary' unop prec id proto_args rest4
+parsePrototypeUnary list    = parsePrototypeArgs <<<< parseIdentifier <<<< parsePrecedence <<<< parseUnOp <<<< (PROTOTYPE_UNARY, list)
+-- parsePrototypeUnary list    = (PROTOTYPE_UNARY, list) >>>> parseUnOp >>>> parsePrecedence >>>> parseIdentifier >>>> parsePrototypeArgs
 
-parsePrototypeUnary' :: UN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
-parsePrototypeUnary' unop (Nothing)   id proto_args list = (PROTOTYPE_UNARY unop (getDefaultUnaryPrecedence unop) id proto_args, list)
-parsePrototypeUnary' unop (Just prec) id proto_args list = (PROTOTYPE_UNARY unop prec id proto_args, list)
+
+-- parsePrototypeUnary list    = parsePrototypeArgs <<<< parseIdentifier <<<< parsePrecedence <<<< parseUnOp <<<< (PROTOTYPE_UNARY, list)
+    --  parseUnop (\x y -> PROTOTYPE_UNARY x y )
+                                            --   let (unop, rest1) = parseUnOp          xs    in
+                                            --   let (prec, rest2) = parsePrecedence    rest1 in
+                                            --   let (id,   rest3) = parseIdentifier    rest2 in
+                                            --   let (args, rest4) = parsePrototypeArgs rest3 in
+                                            --   PROTOTYPE_UNARY unop (Just prec) id args rest4
+-- parsePrototypeUnary list                    = let (unop, rest1) = parseUnOp          xs    in
+--                                               let (id,   rest2) = parseIdentifier    rest1 in
+--                                               let (args, rest3) = parsePrototypeArgs rest2 in
+--                                               PROTOTYPE_UNARY unop (getDefaultUnaryPrecedence unop) id args rest3
+
+(<<<<) ::   ([Token] -> (elementParsed, [Token])) ->
+            ([Token] , (elementParsed -> partialParsed)) ->
+            ([Token], (partialParsed))
+(<<<<) fparse (t, f1)  = let (result, rest) = fparse t in (rest, f1 result)
+
+
+(>>>>) ::   ([Token] , (elementParsed -> partialParsed)) ->
+            ([Token] -> (elementParsed, [Token])) ->
+            ((partialParsed), [Token])
+(>>>>) (t, f1) fparse = let (result, rest) = fparse t in (f1 result, rest)
+
+
+-- parseUnary' :: (UN_OP -> PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> PROTOTYPE) -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary' f1 t = let (unop, rest) = parseUnOp t in (parseUnary'' (f1 unop) rest)
+
+-- parseUnary'' :: (PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> PROTOTYPE) -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary'' f1 t = let (prec, rest) = parsePrecedence t in (parseUnary''' (f1 prec) rest)
+
+-- parseUnary''' :: (IDENTIFIER -> PROTOTYPE_ARGS -> PROTOTYPE) -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary''' f1 t = let (id, rest) = parseIdentifier t in (parseUnary''' (f1 id) rest)
+
+-- parseUnary'''' :: (PROTOTYPE_ARGS -> PROTOTYPE) -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary'''' f1 t =
+
+-- parseUnary' :: UN_OP -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary'' :: UN_OP -> PRECEDENCE -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary''' :: UN_OP -> PRECEDENCE -> IDENTIFIER -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary'''' :: UN_OP -> PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
+
+
+
+
+-- parseUnary' :: UN_OP -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary' u t = escalier (parseUnary'' u) parsePrecedence t
+
+-- parseUnary'' :: UN_OP -> PRECEDENCE -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary'' u p t = escalier (parseUnary''' u p)  parseIdentifier t
+
+-- parseUnary''' :: UN_OP -> PRECEDENCE -> IDENTIFIER -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary''' u p i t = escalier (parseUnary'''' u p i) parsePrototypeArgs t
+
+-- parseUnary'''' :: UN_OP -> PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
+-- parseUnary'''' u p i a t = (PROTOTYPE_UNARY u p i a, t)
+
+-- data PROTOTYPE      = PROTOTYPE_UNARY  UN_OP  PRECEDENCE IDENTIFIER PROTOTYPE_ARGS
+--                     | PROTOTYPE_BINARY BIN_OP PRECEDENCE IDENTIFIER PROTOTYPE_ARGS
+--                     | PROTOTYPE IDENTIFIER PROTOTYPE_ARGS
+
+-- parsePrecedence :: [Token] -> (PRECEDENCE, [Token])
+-- parsePrecedence [] = error "parsePrecedence: empty list"
+-- parsePrecedence _ = error "Not Implemented"
+
+
+-- parseUnOpPrototypeUnary :: (UN_OP -> PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> PROTOTYPE) -> (PROTOTYPE, [Token])
+
+-- escalier :: (a -> b -> [Token] -> (c, [Token])) -> ([Token] -> (b, [Token])) -> [Token] -> (c, [TOKEN])
+-- escalier f1 f2 t = uncurry f1 $ f2 t
+
+-- (==>>) :: (a -> b -> [Token] -> (c, [Token])) -> (Token -> a) -> [Token] -> b -> (c, [Token])
+-- (==>>) f i (x:xs) j = f (i x) $ j xs
+
+
+-- parseUnary''' u p i t = uncurry (parseUnary'''' u p i) $ parsePrototypeArgs t
+
+-- [Token] -> (PROTOTYPE_ARGS, [Token])
+
+
+-- parseUnOp :: (UN_OP -> a -> [Token] -> b) -> [Token] -> (b, [Token])
+-- parseUnOp _ [] = error "parseUnOp: empty list"
+-- parseUnOp f (x:xs) = f x xs
+
+-- parseUnary' :: (UN_OP -> a -> [Token] -> b) -> [Token] -> (b, [Token])
+-- parseUnary' _ [] = error "parseUnOp: empty list"
+-- parseUnary' f (x:xs) = f x xs
+
+
+
+
+-- parsePrecedence :: (PRECEDENCE -> a -> [Token] -> b) -> [Token] -> a -> (b, [Token])
+-- parsePrecedence _ [] = error "parsePrecedence: empty list"
+-- parsePrecedence f (x:xs) = f x xs
+
+-- f(a, b, c, d) = f(a(b(c(d))))
+
+-- data PROTOTYPE      = PROTOTYPE_UNARY  UN_OP  PRECEDENCE IDENTIFIER PROTOTYPE_ARGS
+--                     | PROTOTYPE_BINARY BIN_OP PRECEDENCE IDENTIFIER PROTOTYPE_ARGS
+--                     | PROTOTYPE IDENTIFIER PROTOTYPE_ARGS
 
 parsePrototypeBinary :: [Token] -> (PROTOTYPE, [Token])
-parsePrototypeBinary [] = error "parsePrototypeUnary: empty list"
-parsePrototypeBinary list = let (binop,      rest1) = parseBinOp            list  in 
-                            let (prec,       rest2) = parseMaybePrecedence  rest1 in 
-                            let (id,         rest3) = parseIdentifier       rest2 in 
-                            let (proto_args, rest4) = parsePrototypeArgs    rest3 in
-                            parsePrototypeBinary' binop prec id proto_args rest4
-
-parsePrototypeBinary' :: BIN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
-parsePrototypeBinary' binop (Nothing)   id proto_args list = (PROTOTYPE_BINARY binop (getDefaultBinaryPrecedence binop) id proto_args, list)
-parsePrototypeBinary' binop (Just prec) id proto_args list = (PROTOTYPE_BINARY binop prec id proto_args, list)
+parsePrototypeBinary [] = error "parsePrototypeBinary: empty list"
+parsePrototypeBinary list@((Number n):xs)   = let (binop, rest1) = parseBinOp          xs   in
+                                              let (prec,  rest2) = parsePrecedence    rest1 in
+                                              let (id,    rest3) = parseIdentifier    rest2 in
+                                              let (args,  rest4) = parsePrototypeArgs rest3 in
+                                              (PROTOTYPE_BINARY binop prec id args, rest4) 
+parsePrototypeBinary list                   = let (binop, rest1) = parseBinOp         list  in
+                                              let (id,    rest2) = parseIdentifier    rest1 in
+                                              let (args,  rest3) = parsePrototypeArgs rest2 in
+                                              (PROTOTYPE_BINARY binop (getDefaultBinaryPrecedence binop) id args, rest3)
 
 parsePrototype' :: [Token] -> (PROTOTYPE, [Token])
 parsePrototype' [] = error "parsePrototypeBinary: empty list"
 parsePrototype' list    = let (id,    rest1) = parseIdentifier    list  in
                           let (args,  rest2) = parsePrototypeArgs rest1 in
-                          (PROTOTYPE id args, rest2)
-
-parsePrototypeArgs :: [Token] -> (PROTOTYPE_ARGS, [Token])
-parsePrototypeArgs []     = error "parsePrototypeArgs: empty list"
-parsePrototypeArgs (x:xs) = let (p_list,      rest1) = parsePrototypeArgsList xs    in
-                            let (return_type, rest2) = parsePrototypeArgsType rest1 in
-                            parsePrototypeArgs' p_list return_type rest2
-
-parsePrototypeArgs' :: [PROTOTYPE_ID] -> TYPE -> [Token] -> (PROTOTYPE_ARGS, [Token])
-parsePrototypeArgs' p_list return_type (OpenParenthesis:ClosedParenthesis:xs) = (PROTOTYPE_ARGS p_list return_type, xs)
-parsePrototypeArgs' _      _    (_:ClosedParenthesis:xs)                      = error "parsePrototypeArgs: missing '('"
-parsePrototypeArgs' _      _    (OpenParenthesis:_:xs)                        = error "parsePrototypeArgs: missing ')'"
-parsePrototypeArgs' _      _    _                                             = error "parsePrototypeArgs: missing '(' ')'"
-
-parsePrototypeArgsList :: [Token] -> ([PROTOTYPE_ID], [Token])
-parsePrototypeArgsList list = let (p_list, tokens) = parsePrototypeArgsList' list [] in (reverse p_list, tokens)
-
-parsePrototypeArgsList' :: [Token] -> [PROTOTYPE_ID] -> ([PROTOTYPE_ID], [Token])
-parsePrototypeArgsList' list@(Word _:_) p_list = let (proto_id, rest) = parsePrototypeId list in parsePrototypeArgsList' rest (proto_id:p_list)
-parsePrototypeArgsList' list            p_list = (p_list, list)
-
-parsePrototypeArgsType :: [Token] -> (TYPE, [Token])
-parsePrototypeArgsType []         = error "parsePrototypeArgs: empty list"
-parsePrototypeArgsType (Colon:xs) = parseType xs
+                          (PROTOTYPE id args, rest2) 
 
 parsePrecedence :: [Token] -> (PRECEDENCE, [Token])
-parsePrecedence list = parsePrecedence' $ parseMaybePrecedence list
+parsePrecedence [] = error "parsePrecedence: empty list"
+parsePrecedence _ = error "Not Implemented"
 
-parsePrecedence' :: (Maybe PRECEDENCE, [Token]) -> (PRECEDENCE, [Token])
-parsePrecedence' (Nothing,   list) = error "parsePrecedence: precedence is missing"
-parsePrecedence' (Just p,    list) = (p, list)
-
-parseMaybePrecedence :: [Token] -> (Maybe PRECEDENCE, [Token])
-parseMaybePrecedence (Number n:xs)   = (Just $ PRECEDENCE $ round n, xs)
-parseMaybePrecedence (_:list)        = (Nothing,                     list)
+parsePrototypeArgs :: [Token] -> (PROTOTYPE_ARGS, [Token])
+parsePrototypeArgs [] = error "parsePrototypeArgs: empty list"
+parsePrototypeArgs _ = error "Not Implemented"
 
 parsePrototypeId :: [Token] -> (PROTOTYPE_ID, [Token])
 parsePrototypeId [] = error "parsePrototypeId: empty list"
 parsePrototypeId _ = error "Not Implemented"
 
 parseType :: [Token] -> (TYPE, [Token])
-parseType []                 = error "parseType: empty list"
-parseType (Word "int":xs)    = (INT, xs)
-parseType (Word "double":xs) = (DOUBLE, xs)
-parseType (Word "void":xs)   = (VOID, xs)
-parseType _                  = error "parseType: Invalid Token"
+parseType [] = error "parseType: empty list"
+parseType _ = error "Not Implemented"
 
 parseFor :: [Token] -> (FOR, [Token])
 parseFor [] = error "parseFor: empty list"
@@ -293,10 +365,6 @@ parseIdentifier :: [Token] -> (IDENTIFIER, [Token])
 parseIdentifier [] = error "parseIdentifier: empty list"
 parseIdentifier ((Word w):xs) = (IDENTIFIER w, xs)
 parseIdentifier _  = error "parseIdentifier: expecting ';'"
-
-isValidIdentifier :: [Token] -> Bool
-isValidIdentifier ((Word w):xs) = True
-isValidIdentifier _             = False
 
 parseDot :: [Token] -> (DOT, [Token])
 parseDot [] = error "parseDot: empty list"
