@@ -1,8 +1,8 @@
 ##
 ## EPITECH PROJECT, 2022
-## makefile
+## Makefile
 ## File description:
-## KOAK
+## koak
 ##
 
 MAKEFLAGS	+=	--no-print-directory
@@ -18,6 +18,7 @@ all:	$(NAME)
 $(NAME):
 	stack build --pedantic
 	cp $(BINARY_PATH)/bin/$(STACK_NAME)-exe ./$(NAME)
+.PHONY:	$(NAME)
 
 debug:
 	stack ghci
@@ -29,7 +30,7 @@ clean:
 
 fclean:	clean
 	stack purge
-	rm -f koak
+	rm -f $(NAME)
 .PHONY:	fclean
 
 tests_run:
