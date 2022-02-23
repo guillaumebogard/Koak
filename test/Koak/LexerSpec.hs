@@ -8,53 +8,24 @@
 module Koak.LexerSpec   ( spec ) where
 
 import Test.Hspec       ( Spec
-                        , it, shouldBe, shouldThrow, anyException
+                        , it
+                        , shouldThrow
                         )
 
 import Koak.Lexer as KL ( Token(..)
                         , tokenizeKoak
                         )
 
-import qualified Data.Ord
-import qualified GHC.IO.Handle.Internals
-
-newtype TestToken = TestToken KL.Token
-
-instance Eq TestToken where
-    (==) (TestToken (Word l))           (TestToken (Word r))                = l == r 
-    (==) (TestToken (Number l))         (TestToken (Number r))              = l == r
-    (==) (TestToken OpenParenthesis)    (TestToken OpenParenthesis)         = True
-    (==) (TestToken ClosedParenthesis)  (TestToken ClosedParenthesis)       = True
-    (==) (TestToken Plus)               (TestToken Plus)                    = True
-    (==) (TestToken Minus)              (TestToken Minus)                   = True
-    (==) (TestToken Multiply)           (TestToken Multiply)                = True
-    (==) (TestToken Divide)             (TestToken Divide)                  = True
-    (==) (TestToken Modulo)             (TestToken Modulo)                  = True
-    (==) (TestToken Power)              (TestToken Power)                   = True
-    (==) (TestToken Greater)            (TestToken Greater)                 = True
-    (==) (TestToken GreaterEqual)       (TestToken GreaterEqual)            = True
-    (==) (TestToken Lower)              (TestToken Lower)                   = True
-    (==) (TestToken LowerEqual)         (TestToken LowerEqual)              = True
-    (==) (TestToken Equal)              (TestToken Equal)                   = True
-    (==) (TestToken NotEqual)           (TestToken NotEqual)                = True
-    (==) (TestToken LogicalNot)         (TestToken LogicalNot)              = True
-    (==) (TestToken Assign)             (TestToken Assign)                  = True
-    (==) (TestToken Comma)              (TestToken Comma)                   = True
-    (==) (TestToken Colon)              (TestToken Colon)                   = True
-    (==) (TestToken SemiColon)          (TestToken SemiColon)               = True
-    (==) (TestToken Dot)                (TestToken Dot)                     = True
-    (==) _                              _                                   = False
-
 spec :: Spec
 spec = do
     it "One simple token" $ do
-        map TestToken (tokenizeKoak "(")
-            == map TestToken [
+        tokenizeKoak "("
+            == [
                 KL.OpenParenthesis
             ]
     it "Few simple token" $ do
-        map TestToken (tokenizeKoak "(),!====%^/")
-            == map TestToken [
+        tokenizeKoak "(),!====%^/"
+            == [
                 KL.OpenParenthesis,
                 KL.ClosedParenthesis,
                 KL.Comma,
@@ -66,8 +37,8 @@ spec = do
                 KL.Divide
             ]
     it "All simple tokens with spaces" $ do
-        map TestToken (tokenizeKoak "( ) + - * / ^ >= > <= < == = != ! , : ; .")
-            == map TestToken [
+        tokenizeKoak "( ) + - * / ^ >= > <= < == = != ! , : ; ."
+            == [
                 KL.OpenParenthesis,
                 KL.ClosedParenthesis,
                 KL.Plus,
@@ -85,33 +56,33 @@ spec = do
                 KL.LogicalNot,
                 KL.Comma,
                 KL.Colon,
-                KL.SemiColon,
+                KL.Semicolon,
                 KL.Dot
             ]
     it "Simple word" $ do
-        map TestToken (tokenizeKoak "hello")
-            == map TestToken [
+        tokenizeKoak "hello"
+            == [
                 KL.Word "hello"
             ]
     it "Few words with space" $ do
-        map TestToken (tokenizeKoak "This is few WORDS")
-            == map TestToken [
+        tokenizeKoak "This is few WORDS"
+            == [
                 KL.Word "This",
                 KL.Word "is",
                 KL.Word "few",
                 KL.Word "WORDS"
             ]
     it "Few words with few blank symbols" $ do
-        map TestToken (tokenizeKoak "\t\r\nThis \n  \t\t\t  is \r\nfew WORDS\r")
-            == map TestToken [
+        tokenizeKoak "\t\r\nThis \n  \t\t\t  is \r\nfew WORDS\r"
+            == [
                 KL.Word "This",
                 KL.Word "is",
                 KL.Word "few",
                 KL.Word "WORDS"
             ]
     it "Few words with few simple tokens" $ do
-        map TestToken (tokenizeKoak "==This<=. <is>=(.few12.=WORDS!\r")
-            == map TestToken [
+        tokenizeKoak "==This<=. <is>=(.few12.=WORDS!\r"
+            == [
                 KL.Equal,
                 KL.Word "This",
                 KL.LowerEqual,
@@ -128,36 +99,36 @@ spec = do
                 KL.LogicalNot
             ]
     it "Simple number (integer)" $ do
-        map TestToken (tokenizeKoak "3")
-            == map TestToken [
+        tokenizeKoak "3"
+            == [
                 KL.Number 3
             ]
     it "Large number (integer)" $ do
-        map TestToken (tokenizeKoak "2147483647")
-            == map TestToken [
+        tokenizeKoak "2147483647"
+            == [
                 KL.Number 2147483647
             ]
     it "Simple number (float)" $ do
-        map TestToken (tokenizeKoak "3.14")
-            == map TestToken [
+        tokenizeKoak "3.14"
+            == [
                 KL.Number 3.14
             ]
     it "Simple number 2 (float)" $ do
-        map TestToken (tokenizeKoak ".1618033988749")
-            == map TestToken [
+        tokenizeKoak ".1618033988749"
+            == [
                 KL.Number 0.1618033988749
             ]
     it "Few numbers with few blank symbols" $ do
-        map TestToken (tokenizeKoak "\t\r45.0 \n  \t\t\t  7874583 \r\n10.00058 .1778\r")
-            == map TestToken [
+        tokenizeKoak "\t\r45.0 \n  \t\t\t  7874583 \r\n10.00058 .1778\r"
+            == [
                 KL.Number 45.0,
                 KL.Number 7874583,
                 KL.Number 10.00058,
                 KL.Number 0.1778
             ]
     it "Few numbers with few simple tokens" $ do
-        map TestToken (tokenizeKoak "==3545.15<=. <1129>=(.58=8!\r")
-            == map TestToken [
+        tokenizeKoak "==3545.15<=. <1129>=(.58=8!\r"
+            == [
                 KL.Equal,
                 KL.Number 3545.15,
                 KL.LowerEqual,
@@ -172,30 +143,29 @@ spec = do
                 KL.LogicalNot
             ]
     it "Real world basic example" $ do
-        map TestToken (
-            tokenizeKoak $
-            "extern putchard(char);" ++
-            "def printdensity(d)"                                           ++
-            "  if d > 8 then"                                               ++
-            "    putchard(32)"                                              ++
-            "  else if d > 4 then"                                          ++
-            "    putchard(46)"                                              ++
-            "  else if d > 2 then"                                          ++
-            "    putchard(43)"                                              ++
-            "  else"                                                        ++
-            "    putchard(42);"                                             ++
-            "\n\n"                                                          ++
-            "       printdensity(1): printdensity(2): printdensity(3):"     ++
-            "       printdensity(4): printdensity(5): printdensity(9):"     ++
+        tokenizeKoak (
+            "extern putchard(char);"                                    ++
+            "def printdensity(d)"                                       ++
+            "  if d > 8 then"                                           ++
+            "    putchard(32)"                                          ++
+            "  else if d > 4 then"                                      ++
+            "    putchard(46)"                                          ++
+            "  else if d > 2 then"                                      ++
+            "    putchard(43)"                                          ++
+            "  else"                                                    ++
+            "    putchard(42);"                                         ++
+            "\n\n"                                                      ++
+            "       printdensity(1): printdensity(2): printdensity(3):" ++
+            "       printdensity(4): printdensity(5): printdensity(9):" ++
             "       putchard(10);"
             )
-            == map TestToken [
+            == [
                 KL.Word "extern",
                 KL.Word "putchard",
                 KL.OpenParenthesis,
                 KL.Word "char",
                 KL.ClosedParenthesis,
-                KL.SemiColon,
+                KL.Semicolon,
                 KL.Word "def",
                 KL.Word "printdensity",
                 KL.OpenParenthesis,
@@ -235,7 +205,7 @@ spec = do
                 KL.OpenParenthesis,
                 KL.Number 42,
                 KL.ClosedParenthesis,
-                KL.SemiColon,
+                KL.Semicolon,
                 KL.Word "printdensity",
                 KL.OpenParenthesis,
                 KL.Number 1,
@@ -270,8 +240,5 @@ spec = do
                 KL.OpenParenthesis,
                 KL.Number 10,
                 KL.ClosedParenthesis,
-                KL.SemiColon
+                KL.Semicolon
             ]
-
--- ready> ;
--- ...
