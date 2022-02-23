@@ -61,7 +61,7 @@ data TYPE           = INT
                     | VOID
     deriving (Eq, Show)
 
-data FOR            = FOR IDENTIFIER EXPRESSION IDENTIFIER EXPRESSION EXPRESSION EXPRESSION
+data FOR            = FOR IDENTIFIER EXPRESSION IDENTIFIER EXPRESSION EXPRESSION EXPRESSIONS
     deriving (Eq, Show)
 
 data IF             = IF EXPRESSION EXPRESSIONS (Maybe EXPRESSIONS)
@@ -141,20 +141,15 @@ parseKoak [] = []
 parseKoak tokens = let (kdefs, rest) = parseKdefs tokens in kdefs : parseKoak rest
 
 parseKdefs :: [Token] -> (KDEFS, [Token])
-parseKdefs []                  = error "parseKdefs: empty list"
-parseKdefs ((Word "def"):xs)
-    | (last xs)   == SemiColon = error "parseKdefs: expecting ';'"
-    | otherwise                = let (def, rest)   = parseDefs xs          in (KDEFS_DEFS def, rest)
-parseKdefs list
-    | (last list) == SemiColon = error "parseKdefs: expecting ';'"
-    | otherwise                = let (exprs, rest) = parseExpressions list in (KDEFS_EXPR exprs, rest)
+parseKdefs []                = error "parseKdefs: empty list"
+parseKdefs ((Word "def"):xs) = let (def, rest)  = parseDefs xs          in (KDEFS_DEFS def, rest)
+parseKdefs (x:xs)            = let (expr, rest) = parseExpressions list in (KDEFS_EXPR expr, rest)
 
 parseDefs :: [Token] -> (DEFS, [Token])
-parseDefs [] = error "parseDefs: empty list"
-parseDefs tokens = let (proto, rest1) = parsePrototype tokens  in
-                   let (exprs, rest2) = parseExpressions rest1 in
-                   (DEFS proto exprs, rest2)
-
+parseDefs []     = error "parseDefs: empty list"
+parseDefs tokens = let (prototype  , rest1) = parsePrototype   tokens in
+                   let (expressions, rest2) = parseExpressions rest1  in
+                   (DEFS prototype expressions, rest2)
 
 parsePrototype :: [Token] -> (PROTOTYPE, [Token])
 parsePrototype []                   = error "parseDefs: empty list"
@@ -163,12 +158,12 @@ parsePrototype ((Word "binary"):xs) = parsePrototypeBinary xs
 parsePrototype ((Word w):xs)        = parsePrototype'      xs
 
 parsePrototypeUnary :: [Token] -> (PROTOTYPE, [Token])
-parsePrototypeUnary [] = error "parsePrototypeUnary: empty list"
-parsePrototypeUnary list =  let (unop,       rest1) = parseUnOp             list  in 
-                            let (prec,       rest2) = parseMaybePrecedence  rest1 in 
-                            let (id,         rest3) = parseIdentifier       rest2 in 
-                            let (proto_args, rest4) = parsePrototypeArgs    rest3 in
-                            parsePrototypeUnary' unop prec id proto_args rest4
+parsePrototypeUnary []     = error "parsePrototypeUnary: empty list"
+parsePrototypeUnary tokens = let (unop,       rest1) = parseUnOp            tokens in
+                             let (prec,       rest2) = parseMaybePrecedence rest1  in
+                             let (id,         rest3) = parseIdentifier      rest2  in
+                             let (proto_args, rest4) = parsePrototypeArgs   rest3  in
+                             parsePrototypeUnary' unop prec id proto_args rest4
 
 parsePrototypeUnary' :: UN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
 parsePrototypeUnary' unop (Nothing)   id proto_args list = (PROTOTYPE_UNARY unop (getDefaultUnaryPrecedence unop) id proto_args, list)
@@ -176,9 +171,9 @@ parsePrototypeUnary' unop (Just prec) id proto_args list = (PROTOTYPE_UNARY unop
 
 parsePrototypeBinary :: [Token] -> (PROTOTYPE, [Token])
 parsePrototypeBinary [] = error "parsePrototypeUnary: empty list"
-parsePrototypeBinary list = let (binop,      rest1) = parseBinOp            list  in 
-                            let (prec,       rest2) = parseMaybePrecedence  rest1 in 
-                            let (id,         rest3) = parseIdentifier       rest2 in 
+parsePrototypeBinary list = let (binop,      rest1) = parseBinOp            list  in
+                            let (prec,       rest2) = parseMaybePrecedence  rest1 in
+                            let (id,         rest3) = parseIdentifier       rest2 in
                             let (proto_args, rest4) = parsePrototypeArgs    rest3 in
                             parsePrototypeBinary' binop prec id proto_args rest4
 
@@ -251,43 +246,90 @@ parseWhile _ = error "Not Implemented"
 
 parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
 parseExpressions [] = error "parseExpressions: empty list"
-parseExpressions _ = error "Not Implemented"
+parseExpressions list@(x : xs)
+  | x == Word "for" = let (for, rest) = parseFor xs in (FOR_EXPR for, rest)
+  | x == Word "if" = let (if_, rest) = parseIf xs in (IF_EXPR if_, rest)
+  | x == Word "while" = let (while, rest) = parseWhile xs in (WHILE_EXPR while, rest)
+  | otherwise = let (expr, rest) = parseExpression list in
+                let (arrExpr, rest2) = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest2)
 
-parseBinOp :: [Token] -> (BIN_OP, [Token])
-parseBinOp [] = error "parseBinOp: empty list"
-parseBinOp _ = error "Not Implemented"
-
-parseBinaryOp :: [Token] -> (BINARY_OP, [Token])
-parseBinaryOp [] = error "parseBinaryOp: empty list"
-parseBinaryOp _ = error "Not Implemented"
 
 parseExpression :: [Token] -> (EXPRESSION, [Token])
 parseExpression [] = error "parseExpression: empty list"
-parseExpression _ = error "Not Implemented"
+parseExpression tokens = let (unary, rest) = parseUnary tokens in
+                         let (binops, rest2) = parseArrBinOp rest in
+                         (EXPRESSION unary binops, rest2)
 
-parseUnOp :: [Token] -> (UN_OP, [Token])
-parseUnOp [] = error "parseUnOp: empty list"
-parseUnOp _ = error "Not Implemented"
+parseArrExpression :: [Token] -> ([EXPRESSION], [Token])
+parseArrExpression [] = error "parseArrExpression: empty list"
+parseArrExpression tokens = let (first, rest) = parseExpression tokens in
+                              let (next, rest2) = parseArrExpression' rest in (first : next, rest2)
+
+parseArrExpression' :: [Token] -> ([EXPRESSION], [Token])
+parseArrExpression' [] = error "parseArrExpression: empty list"
+parseArrExpression' (x : xs)
+  | x == Comma = let (first, rest) = parseExpression xs in
+                 let (next, rest2) = parseArrExpression' rest in (first : next, rest2)
+  | otherwise = ([], x:xs)
+
+parseArrBinaryOp :: [Token] -> ([BINARY_OP], [Token])
+parseArrBinaryOp [] = ([], [])
+parseArrBinaryOp    = parseArrBinaryOp' []
+
+parseArrBinaryOp' :: [BINARY_OP] -> [Token] -> ([BINARY_OP], [Token])
+parseArrBinaryOp' [] _ = ([], [])
+parseArrBinaryOp' ops [] = (reverse ops, [])
+parseArrBinaryOp' ops (Plus:xs) = let (newbinop, rest) = parseBinaryOp PLUS xs in parseArrBinaryOp' (newbinop : ops) xs
+parseArrBinaryOp' ops (Minus:xs) = let (newbinop, rest) = parseBinaryOp MINUS xs in parseArrBinaryOp' (newbinop : ops) xs
+parseArrBinaryOp' ops (Multiply:xs) = let (newbinop, rest) = parseBinaryOp MULT xs in parseArrBinaryOp' (newbinop : ops) xs
+parseArrBinaryOp' ops (Divide:xs) = let (newbinop, rest) = parseBinaryOp DIV xs in parseArrBinaryOp' (newbinop : ops) xs
+parseArrBinaryOp' ops (Greater:xs) = let (newbinop, rest) = parseBinaryOp GT xs in parseArrBinaryOp' (newbinop : ops) xs
+parseArrBinaryOp' ops (Lower:xs) = let (newbinop, rest) = parseBinaryOp LT xs in parseArrBinaryOp' (newbinop : ops) xs
+parseArrBinaryOp' ops (Equal:xs) = let (newbinop, rest) = parseBinaryOp EQ xs in parseArrBinaryOp' (newbinop : ops) xs
+parseArrBinaryOp' ops (NotEqual:xs) = let (newbinop, rest) = parseBinaryOp NEQ xs in parseArrBinaryOp' (newbinop : ops) xs
+parseArrBinaryOp' ops (Assign:xs) = let (newbinop, rest) = parseBinaryOp ASSIGN xs in parseArrBinaryOp' (newbinop : ops) xs
+parseArrBinaryOp' ops tokens = (reverse ops, tokens)
 
 parseUnary :: [Token] -> (UNARY, [Token])
 parseUnary [] = error "parseUnary: empty list"
-parseUnary _ = error "Not Implemented"
+parseUnary list@(x : xs)
+  | x == LogicalNot = let (un, rest) = parseUnary xs in (UNARY_OP NOT un, rest)
+  | x == Minus = let (un, rest) = parseUnary xs in (UNARY_OP NEG un, rest)
+  | otherwise = let (postfix, rest) = parsePostfix list in (UNARY_POSTFIX postfix, rest)
 
 parsePostfix :: [Token] -> (POSTFIX, [Token])
 parsePostfix [] = error "parsePostfix: empty list"
-parsePostfix _ = error "Not Implemented"
+parsePostfix tokens = let (prim, rest) = parsePrimary tokens in
+  let (callExpr, rest2) = parseMaybeCallExpr rest in
+  (POSTFIX prim callExpr, rest)
+
+parseMaybeCallExpr :: [Token] -> (Maybe CALL_EXPR, [Token])
+parseMaybeCallExpr [] = (Nothing, [])
+parseMaybeCallExpr list@(x : xs)
+  | x == OpenParenthesis = let (callExpr, rest) = parseCallExpr list in (Just callExpr, rest)
+  | otherwise = (Nothing, list)
 
 parseCallExpr :: [Token] -> (CALL_EXPR, [Token])
 parseCallExpr [] = error "parseCallExpr: empty list"
-parseCallExpr _ = error "Not Implemented"
+parseCallExpr (OpenParenthesis : ClosedParenthesis : xs) = (CALL_EXPR Nothing, xs)
+parseCallExpr (OpenParenthesis : xs) =
+  let (callExpr, rest) = parseCallExprArg xs
+   in (CALL_EXPR (Just callExpr), rest)
+parseCallExpr _ = error "parseCallExpr: invalid syntax"
 
-parseCallExprArgs :: [Token] -> (CALL_EXPR_ARGS, [Token])
-parseCallExprArgs [] = error "parseCallExprArgs: empty list"
-parseCallExprArgs _ = error "Not Implemented"
+parseCallExprArg :: [Token] -> (CALL_EXPR_ARGS, [Token])
+parseCallExprArg [] = error "parseCallExprArg: empty list"
+parseCallExprArg tokens@(x : xs) = let (x : xs, rest) = parseArrExpression tokens in (CALL_EXPR_ARGS x xs, rest)
+
 
 parsePrimary :: [Token] -> (PRIMARY, [Token])
 parsePrimary [] = error "parsePrimary: empty list"
-parsePrimary _ = error "Not Implemented"
+parsePrimary (Word x : xs)          = (PRIMARY_IDENTIFIER (IDENTIFIER x), xs)
+parsePrimary (Number x : xs)        = (PRIMARY_LITERAL x, xs)
+parsePrimary (OpenParenthesis : xs) =
+                let (expr, rest)    = parseExpressions xs
+                in (PRIMARY_EXPRS expr, rest)
+parsePrimary _                      = error "parsePrimary: unexpected token"
 
 parseIdentifier :: [Token] -> (IDENTIFIER, [Token])
 parseIdentifier [] = error "parseIdentifier: empty list"
@@ -298,6 +340,7 @@ isValidIdentifier :: [Token] -> Bool
 isValidIdentifier ((Word w):xs) = True
 isValidIdentifier _             = False
 
+{--
 parseDot :: [Token] -> (DOT, [Token])
 parseDot [] = error "parseDot: empty list"
 parseDot _ = error "Not Implemented"
@@ -309,11 +352,12 @@ parseDecimalConst _ = error "Not Implemented"
 parseDoubleConst :: [Token] -> (DOUBLE_CONST, [Token])
 parseDoubleConst [] = error "parseDoubleConst: empty list"
 parseDoubleConst _ = error "Not Implemented"
+--}
 
-parseLitteral :: [Token] -> (LITERAL, [Token])
-parseLitteral [] = error "parseLitteral: empty list"
-parseLitteral _ = error "Not Implemented"
-
+parseLitteral :: [Token] -> (LITERAL', [Token])
+parseLitteral []                = error "parseLitteral: empty list"
+parseLitteral ((Number x) : xs) = (LITERAL' x, xs)
+parseLitteral _                 = error "parseLitteral: not a number"
 
 -- parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
 -- parseExpressions _ = error "parseExpressions: empty list"
