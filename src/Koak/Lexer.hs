@@ -19,27 +19,27 @@ import Control.Exception    ( throw )
 
 import Exception            ( KoakException(KoakUnknownTokenException, KoakInvalidNumberException) )
 
-data Token  = Word String               -- 'if', 'def', 'FooBar', 'i'
+data Token  = Word String               -- 'if', 'def', 'foobar', 'i'
             | Number Double             -- '0', '0123456789', '3.14159265', '.01'
             | OpenParenthesis           -- '('
-            | ClosedParenthesis         -- '('
+            | ClosedParenthesis         -- ')'
             | Plus                      -- '+'
             | Minus                     -- '-'
             | Multiply                  -- '*'
             | Divide                    -- '/'
             | Modulo                    -- '%'
             | Power                     -- '^'
-            | Greater                   -- '>'
             | GreaterEqual              -- '>='
-            | Lower                     -- '<'
+            | Greater                   -- '>'
             | LowerEqual                -- '<='
+            | Lower                     -- '<'
             | Equal                     -- '=='
             | NotEqual                  -- '!='
             | LogicalNot                -- '!'
             | Assign                    -- '='
             | Comma                     -- ','
             | Colon                     -- ':'
-            | SemiColon                 -- ';'
+            | Semicolon                 -- ';'
             | Dot                       -- '.'
             deriving (Show, Eq)
 
@@ -63,20 +63,13 @@ tokenizeKoak ('!':'=' :xs) = NotEqual          : tokenizeKoak xs
 tokenizeKoak ('!'     :xs) = LogicalNot        : tokenizeKoak xs
 tokenizeKoak (','     :xs) = Comma             : tokenizeKoak xs
 tokenizeKoak (':'     :xs) = Colon             : tokenizeKoak xs
-tokenizeKoak (';'     :xs) = SemiColon         : tokenizeKoak xs
+tokenizeKoak (';'     :xs) = Semicolon         : tokenizeKoak xs
 tokenizeKoak line@('.':_)  = let (token, leftover) = parseDot    line in token : tokenizeKoak leftover
 tokenizeKoak line@(x:xs)
     | isSpace x            = tokenizeKoak xs
     | isAlpha x            = let (token, leftover) = parseWord   line in token : tokenizeKoak leftover
     | isDigit x            = let (token, leftover) = parseNumber line in token : tokenizeKoak leftover
     | otherwise            = throw $ KoakUnknownTokenException x
-
-parseDot :: String -> (Token, String)
-parseDot line@(_:x2:xs)
-    | isDigit x2 = parseNumber line
-    | otherwise  = (Dot, x2:xs)
-parseDot (_:xs)  = (Dot, xs)
-parseDot _       = (Dot, [])
 
 parseWord :: String -> (Token, String)
 parseWord unparsed = let (parsed, rest) = parseWord' "" unparsed in (Word parsed, rest)
@@ -86,6 +79,13 @@ parseWord' parsed []          = (reverse parsed, [])
 parseWord' parsed rest@(r:rs)
     | isAlphaNum r            = parseWord' (r:parsed) rs
     | otherwise               = (reverse parsed, rest)
+
+parseDot :: String -> (Token, String)
+parseDot line@(_:x2:xs)
+    | isDigit x2 = parseNumber line
+    | otherwise  = (Dot, x2:xs)
+parseDot (_:xs)  = (Dot, xs)
+parseDot _       = (Dot, [])
 
 parseNumber :: String -> (Token, String)
 parseNumber unparsed = let (parsed, rest) = parseNumber' "" unparsed in (Koak.Lexer.Number $ refineNumber parsed, rest)
