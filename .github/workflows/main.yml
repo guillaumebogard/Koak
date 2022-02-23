@@ -1,0 +1,24 @@
+name: builds
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Builds project using make
+        run: make
+  
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Launches tests using make with tests_run rule
+        run: make tests_run
