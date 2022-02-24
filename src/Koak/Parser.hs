@@ -76,25 +76,21 @@ data EXPRESSIONS    = FOR_EXPR FOR
                     | EXPRESSIONS EXPRESSION [EXPRESSION]
     deriving (Eq, Show)
 
-data BIN_OP         = BI_PLUS
-                    | BI_MINUS
-                    | BI_MULT
-                    | BI_DIV
-                    | BI_MOD
-                    | BI_LT
-                    | BI_LTE
-                    | BI_GT
-                    | BI_GTE
-                    | BI_EQ
-                    | BI_NEQ
-                    | BI_ASSIGN
+data BIN_OP         = BIN_PLUS
+                    | BIN_MINUS
+                    | BIN_MULT
+                    | BIN_DIV
+                    | BIN_MOD
+                    | BIN_LT
+                    | BIN_LTE
+                    | BIN_GT
+                    | BIN_GTE
+                    | BIN_EQ
+                    | BIN_NEQ
+                    | BIN_ASSIGN
     deriving (Eq, Show)
 
-data BINARY_OP      = BINARY_OP_UN BIN_OP UNARY
-                    | BINARY_OP_EXPR BIN_OP EXPRESSION
-    deriving (Eq, Show)
-
-data EXPRESSION     = EXPRESSION UNARY [BINARY_OP]
+data EXPRESSION     = EXPRESSION UNARY [(BIN_OP, UNARY)]
     deriving (Eq, Show)
 
 data UN_OP          = U_NOT
@@ -257,8 +253,39 @@ parseExpressions list@(x : xs)
 parseExpression :: [Token] -> (EXPRESSION, [Token])
 parseExpression [] = error "parseExpression: empty list"
 parseExpression tokens = let (unary, rest) = parseUnary tokens in
-                         let (binops, rest2) = parseArrBinOp rest in
+                         let (binops, rest2) = parseExpression' rest in
                          (EXPRESSION unary binops, rest2)
+
+parseExpression' :: [Token] -> ([(BIN_OP, UNARY)], [Token])
+parseExpression' [] = ([], [])
+parseExpression' (x:xs)
+    | isBinOp x = let (unary, rest) = parseUnary rest in
+                  let (binops, rest2) = parseExpression' rest2 in
+                  ((getBinOp x, unary) : binops, rest3)
+    | otherwise = ([], tokens)
+
+isBinOp :: Token -> Bool
+isBinOp Plus = True
+isBinOp Minus = True
+isBinOp Multiply = True
+isBinOp Divide = True
+isBinOp Lower = True
+isBinOp Greater = True
+isBinOp Equal = True
+isBinOp NotEqual = True
+isBinOp Assign = True
+isBinOp _ = False
+
+getBinOp :: Token -> BIN_OP
+getBinOp Plus = BIN_PLUS
+getBinOp Minus = BIN_MINUS
+getBinOp Multiply = BIN_MULT
+getBinOp Divide = BIN_DIV
+getBinOp Lower = BIN_LT
+getBinOp Greater = BIN_GT
+getBinOp Equal = BIN_EQ
+getBinOp NotEqual = BIN_NEQ
+getBinOp Assign = BIN_ASSIGN
 
 parseArrExpression :: [Token] -> ([EXPRESSION], [Token])
 parseArrExpression [] = error "parseArrExpression: empty list"
@@ -271,24 +298,6 @@ parseArrExpression' (x : xs)
   | x == Comma = let (first, rest) = parseExpression xs in
                  let (next, rest2) = parseArrExpression' rest in (first : next, rest2)
   | otherwise = ([], x:xs)
-
-parseArrBinaryOp :: [Token] -> ([BINARY_OP], [Token])
-parseArrBinaryOp [] = ([], [])
-parseArrBinaryOp    = parseArrBinaryOp' []
-
-parseArrBinaryOp' :: [BINARY_OP] -> [Token] -> ([BINARY_OP], [Token])
-parseArrBinaryOp' [] _ = ([], [])
-parseArrBinaryOp' ops [] = (reverse ops, [])
-parseArrBinaryOp' ops (Plus:xs) = let (newbinop, rest) = parseBinaryOp PLUS xs in parseArrBinaryOp' (newbinop : ops) xs
-parseArrBinaryOp' ops (Minus:xs) = let (newbinop, rest) = parseBinaryOp MINUS xs in parseArrBinaryOp' (newbinop : ops) xs
-parseArrBinaryOp' ops (Multiply:xs) = let (newbinop, rest) = parseBinaryOp MULT xs in parseArrBinaryOp' (newbinop : ops) xs
-parseArrBinaryOp' ops (Divide:xs) = let (newbinop, rest) = parseBinaryOp DIV xs in parseArrBinaryOp' (newbinop : ops) xs
-parseArrBinaryOp' ops (Greater:xs) = let (newbinop, rest) = parseBinaryOp GT xs in parseArrBinaryOp' (newbinop : ops) xs
-parseArrBinaryOp' ops (Lower:xs) = let (newbinop, rest) = parseBinaryOp LT xs in parseArrBinaryOp' (newbinop : ops) xs
-parseArrBinaryOp' ops (Equal:xs) = let (newbinop, rest) = parseBinaryOp EQ xs in parseArrBinaryOp' (newbinop : ops) xs
-parseArrBinaryOp' ops (NotEqual:xs) = let (newbinop, rest) = parseBinaryOp NEQ xs in parseArrBinaryOp' (newbinop : ops) xs
-parseArrBinaryOp' ops (Assign:xs) = let (newbinop, rest) = parseBinaryOp ASSIGN xs in parseArrBinaryOp' (newbinop : ops) xs
-parseArrBinaryOp' ops tokens = (reverse ops, tokens)
 
 parseUnary :: [Token] -> (UNARY, [Token])
 parseUnary [] = error "parseUnary: empty list"
