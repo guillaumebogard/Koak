@@ -56,7 +56,7 @@ spec = do
                 KL.LogicalNot,
                 KL.Comma,
                 KL.Colon,
-                KL.Semicolon,
+                KL.SemiColon,
                 KL.Dot
             ]
     it "Simple word" $ do
@@ -165,7 +165,7 @@ spec = do
                 KL.OpenParenthesis,
                 KL.Word "char",
                 KL.ClosedParenthesis,
-                KL.Semicolon,
+                KL.SemiColon,
                 KL.Word "def",
                 KL.Word "printdensity",
                 KL.OpenParenthesis,
@@ -205,7 +205,7 @@ spec = do
                 KL.OpenParenthesis,
                 KL.Number 42,
                 KL.ClosedParenthesis,
-                KL.Semicolon,
+                KL.SemiColon,
                 KL.Word "printdensity",
                 KL.OpenParenthesis,
                 KL.Number 1,
@@ -240,5 +240,5 @@ spec = do
                 KL.OpenParenthesis,
                 KL.Number 10,
                 KL.ClosedParenthesis,
-                KL.Semicolon
+                KL.SemiColon
             ]

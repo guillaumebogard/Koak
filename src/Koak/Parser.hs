@@ -18,7 +18,6 @@ module Koak.Parser  ( parseKoak
                     , WHILE(..)
                     , EXPRESSIONS(..)
                     , BIN_OP(..)
-                    , BINARY_OP(..)
                     , EXPRESSION(..)
                     , UN_OP(..)
                     , UNARY(..)
@@ -93,10 +92,9 @@ data BIN_OP         = BIN_PLUS
 data EXPRESSION     = EXPRESSION UNARY [(BIN_OP, UNARY)]
     deriving (Eq, Show)
 
-data UN_OP          = U_NOT
-                    | U_NEG
-                    | U_MINUS
-                    | U_PLUS
+data UN_OP          = UN_NOT
+                    | UN_MINUS
+                    | UN_PLUS
     deriving (Eq, Show)
 
 data UNARY          = UNARY_UN UN_OP UNARY
@@ -139,7 +137,7 @@ parseKoak tokens = let (kdefs, rest) = parseKdefs tokens in kdefs : parseKoak re
 parseKdefs :: [Token] -> (KDEFS, [Token])
 parseKdefs []                = error "parseKdefs: empty list"
 parseKdefs ((Word "def"):xs) = let (def, rest)  = parseDefs xs          in (KDEFS_DEFS def, rest)
-parseKdefs (x:xs)            = let (expr, rest) = parseExpressions list in (KDEFS_EXPR expr, rest)
+parseKdefs list              = let (expr, rest) = parseExpressions list in (KDEFS_EXPR expr, rest)
 
 parseDefs :: [Token] -> (DEFS, [Token])
 parseDefs []     = error "parseDefs: empty list"
@@ -218,8 +216,10 @@ parseMaybePrecedence (Number n:xs)   = (Just $ PRECEDENCE $ round n, xs)
 parseMaybePrecedence (_:list)        = (Nothing,                     list)
 
 parsePrototypeId :: [Token] -> (PROTOTYPE_ID, [Token])
-parsePrototypeId [] = error "parsePrototypeId: empty list"
-parsePrototypeId _ = error "Not Implemented"
+parsePrototypeId []   = error "parsePrototypeId: empty list"
+parsePrototypeId list = let (id,     rest1) = parseIdentifier list in
+                        let (p_type, rest2) = parseType rest1 in
+                        (PROTOTYPE_ID id p_type, rest2)
 
 parseType :: [Token] -> (TYPE, [Token])
 parseType []                 = error "parseType: empty list"
@@ -243,80 +243,81 @@ parseWhile _ = error "Not Implemented"
 parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
 parseExpressions [] = error "parseExpressions: empty list"
 parseExpressions list@(x : xs)
-  | x == Word "for" = let (for, rest) = parseFor xs in (FOR_EXPR for, rest)
-  | x == Word "if" = let (if_, rest) = parseIf xs in (IF_EXPR if_, rest)
-  | x == Word "while" = let (while, rest) = parseWhile xs in (WHILE_EXPR while, rest)
-  | otherwise = let (expr, rest) = parseExpression list in
-                let (arrExpr, rest2) = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest2)
+  | x == Word "for"   = let (for, rest)      = parseFor xs             in (FOR_EXPR for, rest)
+  | x == Word "if"    = let (if_, rest)      = parseIf xs              in (IF_EXPR if_, rest)
+  | x == Word "while" = let (while, rest)    = parseWhile xs           in (WHILE_EXPR while, rest)
+  | otherwise         = let (expr, rest)     = parseExpression list    in
+                        let (arrExpr, rest2) = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest2)
 
 
 parseExpression :: [Token] -> (EXPRESSION, [Token])
 parseExpression [] = error "parseExpression: empty list"
-parseExpression tokens = let (unary, rest) = parseUnary tokens in
+parseExpression tokens = let (unary, rest)   = parseUnary tokens     in
                          let (binops, rest2) = parseExpression' rest in
                          (EXPRESSION unary binops, rest2)
 
 parseExpression' :: [Token] -> ([(BIN_OP, UNARY)], [Token])
-parseExpression' [] = ([], [])
-parseExpression' (x:xs)
-    | isBinOp x = let (unary, rest) = parseUnary rest in
-                  let (binops, rest2) = parseExpression' rest2 in
-                  ((getBinOp x, unary) : binops, rest3)
-    | otherwise = ([], tokens)
+parseExpression' []            = ([], [])
+parseExpression' tokens@(x:xs)
+    | isBinaryOp x             = let (unary, rest1)  = parseUnary xs          in
+                                 let (binops, rest2) = parseExpression' rest1 in
+                                 ((getBinaryOp x, unary) : binops, rest2)
+    | otherwise                = ([], tokens)
 
-isBinOp :: Token -> Bool
-isBinOp Plus = True
-isBinOp Minus = True
-isBinOp Multiply = True
-isBinOp Divide = True
-isBinOp Lower = True
-isBinOp Greater = True
-isBinOp Equal = True
-isBinOp NotEqual = True
-isBinOp Assign = True
-isBinOp _ = False
+parseBinOp :: [Token] -> (BIN_OP, [Token])
+parseBinOp []                = error "parseBinOp: empty list"
+parseBinOp (Plus:xs)         = (BIN_PLUS,   xs)
+parseBinOp (Minus:xs)        = (BIN_MINUS,  xs)
+parseBinOp (Multiply:xs)     = (BIN_MULT,   xs)
+parseBinOp (Divide:xs)       = (BIN_DIV,    xs)
+parseBinOp (Modulo:xs)       = (BIN_MOD,    xs)
+parseBinOp (Lower:xs)        = (BIN_LT,     xs)
+parseBinOp (LowerEqual:xs)   = (BIN_LTE,    xs)
+parseBinOp (Greater:xs)      = (BIN_GT,     xs)
+parseBinOp (GreaterEqual:xs) = (BIN_GTE,    xs)
+parseBinOp (Equal:xs)        = (BIN_EQ,     xs)
+parseBinOp (NotEqual:xs)     = (BIN_NEQ,    xs)
+parseBinOp (Assign:xs)       = (BIN_ASSIGN, xs)
+parseBinOp _                 = error "parseBinOp: missing binary operator"
 
-getBinOp :: Token -> BIN_OP
-getBinOp Plus = BIN_PLUS
-getBinOp Minus = BIN_MINUS
-getBinOp Multiply = BIN_MULT
-getBinOp Divide = BIN_DIV
-getBinOp Lower = BIN_LT
-getBinOp Greater = BIN_GT
-getBinOp Equal = BIN_EQ
-getBinOp NotEqual = BIN_NEQ
-getBinOp Assign = BIN_ASSIGN
+parseUnOp :: [Token] -> (UN_OP, [Token])
+parseUnOp []                 = error "parseUnOp: empty list"
+parseUnOp (KL.Plus:xs)       = (UN_PLUS,  xs)
+parseUnOp (KL.Minus:xs)      = (UN_MINUS, xs)
+parseUnOp (KL.LogicalNot:xs) = (UN_NOT,   xs)
+parseUnOp _                  = error "parseUnOp: missing binary operator"
 
 parseArrExpression :: [Token] -> ([EXPRESSION], [Token])
 parseArrExpression [] = error "parseArrExpression: empty list"
-parseArrExpression tokens = let (first, rest) = parseExpression tokens in
-                              let (next, rest2) = parseArrExpression' rest in (first : next, rest2)
+parseArrExpression tokens = let (first, rest) = parseExpression tokens   in
+                            let (next, rest2) = parseArrExpression' rest in (first : next, rest2)
 
 parseArrExpression' :: [Token] -> ([EXPRESSION], [Token])
 parseArrExpression' [] = error "parseArrExpression: empty list"
 parseArrExpression' (x : xs)
-  | x == Comma = let (first, rest) = parseExpression xs in
+  | x == Comma = let (first, rest) = parseExpression xs       in
                  let (next, rest2) = parseArrExpression' rest in (first : next, rest2)
-  | otherwise = ([], x:xs)
+  | otherwise  = ([], x:xs)
 
 parseUnary :: [Token] -> (UNARY, [Token])
 parseUnary [] = error "parseUnary: empty list"
-parseUnary list@(x : xs)
-  | x == LogicalNot = let (un, rest) = parseUnary xs in (UNARY_OP NOT un, rest)
-  | x == Minus = let (un, rest) = parseUnary xs in (UNARY_OP NEG un, rest)
-  | otherwise = let (postfix, rest) = parsePostfix list in (UNARY_POSTFIX postfix, rest)
+parseUnary list@(x:xs)
+  | isBinaryOp x    = let (unop, rest)    = parseUnary xs     in
+                      (UNARY_UN (getUnaryOp x) unop, rest)
+  | otherwise       = let (postfix, rest) = parsePostfix list in
+                      (UNARY_POSTFIX postfix, rest)
 
 parsePostfix :: [Token] -> (POSTFIX, [Token])
 parsePostfix [] = error "parsePostfix: empty list"
-parsePostfix tokens = let (prim, rest) = parsePrimary tokens in
-  let (callExpr, rest2) = parseMaybeCallExpr rest in
-  (POSTFIX prim callExpr, rest)
+parsePostfix tokens = let (prim, rest)      = parsePrimary tokens     in
+                      let (callExpr, rest2) = parseMaybeCallExpr rest in
+                      (POSTFIX prim callExpr, rest)
 
 parseMaybeCallExpr :: [Token] -> (Maybe CALL_EXPR, [Token])
 parseMaybeCallExpr [] = (Nothing, [])
 parseMaybeCallExpr list@(x : xs)
   | x == OpenParenthesis = let (callExpr, rest) = parseCallExpr list in (Just callExpr, rest)
-  | otherwise = (Nothing, list)
+  | otherwise            = (Nothing, list)
 
 parseCallExpr :: [Token] -> (CALL_EXPR, [Token])
 parseCallExpr [] = error "parseCallExpr: empty list"
@@ -334,7 +335,7 @@ parseCallExprArg tokens@(x : xs) = let (x : xs, rest) = parseArrExpression token
 parsePrimary :: [Token] -> (PRIMARY, [Token])
 parsePrimary [] = error "parsePrimary: empty list"
 parsePrimary (Word x : xs)          = (PRIMARY_IDENTIFIER (IDENTIFIER x), xs)
-parsePrimary (Number x : xs)        = (PRIMARY_LITERAL x, xs)
+parsePrimary (Number x : xs)        = (PRIMARY_LITERAL $ LITERAL_DOUBLE $ DOUBLE_CONST  x, xs)
 parsePrimary (OpenParenthesis : xs) =
                 let (expr, rest)    = parseExpressions xs
                 in (PRIMARY_EXPRS expr, rest)
@@ -343,7 +344,7 @@ parsePrimary _                      = error "parsePrimary: unexpected token"
 parseIdentifier :: [Token] -> (IDENTIFIER, [Token])
 parseIdentifier [] = error "parseIdentifier: empty list"
 parseIdentifier ((Word w):xs) = (IDENTIFIER w, xs)
-parseIdentifier _  = error "parseIdentifier: expecting ';'"
+parseIdentifier _             = error "parseIdentifier: expecting ';'"
 
 isValidIdentifier :: [Token] -> Bool
 isValidIdentifier ((Word w):xs) = True
@@ -363,9 +364,9 @@ parseDoubleConst [] = error "parseDoubleConst: empty list"
 parseDoubleConst _ = error "Not Implemented"
 --}
 
-parseLitteral :: [Token] -> (LITERAL', [Token])
+parseLitteral :: [Token] -> (LITERAL, [Token])
 parseLitteral []                = error "parseLitteral: empty list"
-parseLitteral ((Number x) : xs) = (LITERAL' x, xs)
+parseLitteral ((Number x) : xs) = (LITERAL_DOUBLE $ DOUBLE_CONST x, xs)
 parseLitteral _                 = error "parseLitteral: not a number"
 
 -- parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
@@ -391,28 +392,48 @@ isBinaryOp KL.NotEqual      = True
 isBinaryOp KL.Assign        = True
 isBinaryOp _                = False
 
+getBinaryOp :: Token -> BIN_OP
+getBinaryOp KL.Plus          = BIN_PLUS
+getBinaryOp KL.Minus         = BIN_MINUS
+getBinaryOp KL.Multiply      = BIN_MULT
+getBinaryOp KL.Divide        = BIN_DIV
+getBinaryOp KL.Modulo        = BIN_MOD
+getBinaryOp KL.Lower         = BIN_LT
+getBinaryOp KL.LowerEqual    = BIN_LTE
+getBinaryOp KL.Greater       = BIN_GT
+getBinaryOp KL.GreaterEqual  = BIN_GTE
+getBinaryOp KL.Equal         = BIN_EQ
+getBinaryOp KL.NotEqual      = BIN_NEQ
+getBinaryOp KL.Assign        = BIN_ASSIGN
+getBinaryOp _                = error "getBinaryOp: expected binary op"
+
 isUnaryOp :: Token -> Bool
 isUnaryOp KL.Plus       = True
 isUnaryOp KL.Minus      = True
 isUnaryOp KL.LogicalNot = True
 isUnaryOp _             = False
 
+getUnaryOp :: Token -> UN_OP
+getUnaryOp KL.Plus          = UN_PLUS
+getUnaryOp KL.Minus         = UN_MINUS
+getUnaryOp KL.LogicalNot    = UN_NOT
+getUnaryOp _                = error "getUnaryOp: expected unary op"
+
 getDefaultUnaryPrecedence :: UN_OP -> PRECEDENCE
-getDefaultUnaryPrecedence U_PLUS    = PRECEDENCE 0
-getDefaultUnaryPrecedence U_MINUS   = PRECEDENCE 0
-getDefaultUnaryPrecedence U_NOT     = PRECEDENCE 0
-getDefaultUnaryPrecedence U_NEG     = PRECEDENCE 0
+getDefaultUnaryPrecedence UN_PLUS    = PRECEDENCE 0
+getDefaultUnaryPrecedence UN_MINUS   = PRECEDENCE 0
+getDefaultUnaryPrecedence UN_NOT     = PRECEDENCE 0
 
 getDefaultBinaryPrecedence :: BIN_OP -> PRECEDENCE
-getDefaultBinaryPrecedence BI_PLUS     = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_MINUS    = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_MULT     = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_DIV      = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_MOD      = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_LT       = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_LTE      = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_GT       = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_GTE      = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_EQ       = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_NEQ      = PRECEDENCE 0
-getDefaultBinaryPrecedence BI_ASSIGN   = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_PLUS     = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_MINUS    = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_MULT     = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_DIV      = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_MOD      = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_LT       = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_LTE      = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_GT       = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_GTE      = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_EQ       = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_NEQ      = PRECEDENCE 0
+getDefaultBinaryPrecedence BIN_ASSIGN   = PRECEDENCE 0

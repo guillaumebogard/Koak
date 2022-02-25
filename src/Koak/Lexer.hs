@@ -39,13 +39,9 @@ data Token  = Word String               -- 'if', 'def', 'foobar', 'i'
             | Assign                    -- '='
             | Comma                     -- ','
             | Colon                     -- ':'
-            | Semicolon                 -- ';'
+            | SemiColon                 -- ';'
             | Dot                       -- '.'
-<<<<<<< HEAD
             deriving(Eq, Show)
-=======
-            deriving (Show, Eq)
->>>>>>> origin
 
 tokenizeKoak :: String -> [Token]
 tokenizeKoak []            = []
@@ -67,7 +63,7 @@ tokenizeKoak ('!':'=' :xs) = NotEqual          : tokenizeKoak xs
 tokenizeKoak ('!'     :xs) = LogicalNot        : tokenizeKoak xs
 tokenizeKoak (','     :xs) = Comma             : tokenizeKoak xs
 tokenizeKoak (':'     :xs) = Colon             : tokenizeKoak xs
-tokenizeKoak (';'     :xs) = Semicolon         : tokenizeKoak xs
+tokenizeKoak (';'     :xs) = SemiColon         : tokenizeKoak xs
 tokenizeKoak line@('.':_)  = let (token, leftover) = parseDot    line in token : tokenizeKoak leftover
 tokenizeKoak line@(x:xs)
     | isSpace x            = tokenizeKoak xs

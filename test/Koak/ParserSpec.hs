@@ -11,8 +11,7 @@ import Test.Hspec       ( Spec
                         , it, shouldBe, shouldThrow, anyException
                         )
 
-import Koak.Lexer as KL ( Token(..)
-                        )
+import Koak.Lexer as KL ( Token(..) )
 import Koak.Parser as KP
 
 import qualified Data.Ord
@@ -273,13 +272,13 @@ spec = do
                         (KP.EXPRESSIONS
                             (KP.EXPRESSION
                                 (KP.UNARY_UN
-                                    (KP.U_MINUS)
+                                    (KP.UN_MINUS)
                                     (KP.UNARY_UN
-                                        (KP.U_PLUS)
+                                        (KP.UN_PLUS)
                                         (KP.UNARY_UN
-                                            (KP.U_PLUS)
+                                            (KP.UN_PLUS)
                                             (KP.UNARY_UN
-                                                (KP.U_MINUS)
+                                                (KP.UN_MINUS)
                                                 (KP.UNARY_POSTFIX
                                                     (KP.POSTFIX
                                                         (KP.PRIMARY_LITERAL
