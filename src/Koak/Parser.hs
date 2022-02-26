@@ -141,18 +141,18 @@ parseKoak tokens = let (kdefs, rest) = parseKdefs tokens in kdefs : parseKoak re
 parseKdefs :: [Token] -> (KDEFS, [Token])
 parseKdefs []                = throw $ newParsingError "parseKdefs" [Word "def"] Nothing []
 parseKdefs ((Word "def"):xs) = let (def, rest)  = parseDefs xs          in (KDEFS_DEFS def, rest)
-parseKdefs list              = let (expr, rest) = parseExpressions list in (KDEFS_EXPR expr, rest)
+parseKdefs list              = let (expr, rest) = parseExpressions list in (KDEFS_EXPR expr, parseKDefsSemiColon rest)
 
 parseDefs :: [Token] -> (DEFS, [Token])
 parseDefs []     = throw $ newParsingError "parseDefs" [] Nothing []
 parseDefs tokens = let (prototype  , rest ) = parsePrototype   tokens in
                    let (expressions, rest') = parseExpressions rest   in
-                   (DEFS prototype expressions, parseDefsSemiColon rest')
+                   (DEFS prototype expressions, parseKDefsSemiColon rest')
 
-parseDefsSemiColon :: [Token] -> [Token]
-parseDefsSemiColon []             = throw $ newParsingError "parseDefs" [SemiColon] Nothing []
-parseDefsSemiColon (SemiColon:xs) = xs
-parseDefsSemiColon (x:xs)         = throw $ newParsingError "parseDefs" [SemiColon] (Just x) xs
+parseKDefsSemiColon :: [Token] -> [Token]
+parseKDefsSemiColon []             = throw $ newParsingError "parseDefs" [SemiColon] Nothing []
+parseKDefsSemiColon (SemiColon:xs) = xs
+parseKDefsSemiColon (x:xs)         = throw $ newParsingError "parseDefs" [SemiColon] (Just x) xs
 
 parsePrototype :: [Token] -> (PROTOTYPE, [Token])
 parsePrototype []                   = throw $ newParsingError "parsePrototype" [Word "unary", Word "binary", Word "{function name}"] Nothing []
