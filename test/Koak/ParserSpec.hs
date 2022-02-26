@@ -31,7 +31,7 @@ spec = do
                 KL.ClosedParenthesis,
                 KL.Colon,
                 KL.Word "int",
-                KL.Number 42,
+                KL.Number 42.0,
                 KL.SemiColon
             ] == [
                     (KP.KDEFS_DEFS
@@ -86,11 +86,12 @@ spec = do
                         )
                     )
                 ]
-    it "Simple function call with one number as argument: foo(1);" $ do
+    it "Simple function call with one number as argument: foo(1.0);" $ do
         parseKoak
             [
                 KL.Word "foo",
                 KL.OpenParenthesis,
+                KL.Number 1.0,
                 KL.ClosedParenthesis,
                 KL.SemiColon
             ] == [
@@ -108,8 +109,8 @@ spec = do
                                                     (KP.UNARY_POSTFIX
                                                         (KP.POSTFIX
                                                             (KP.PRIMARY_LITERAL
-                                                                (KP.LITERAL_DECIMAL
-                                                                    (KP.DECIMAL_CONST 1)
+                                                                (KP.LITERAL_DOUBLE
+                                                                    (KP.DOUBLE_CONST 1.0)
                                                                 )
                                                             )
                                                             Nothing

@@ -310,7 +310,20 @@ parseCallExpr (x:xs) = throw $ newParsingError "parseCallExpr" [OpenParenthesis,
 
 parseCallExprArg :: [Token] -> (CALL_EXPR_ARGS, [Token])
 parseCallExprArg []            = throw $ newParsingError "parseCallExprArg" [] Nothing []
-parseCallExprArg tokens@(x:xs) = let (x':xs', rest) = parseArrExpression tokens in (CALL_EXPR_ARGS x' xs', rest)
+parseCallExprArg tokens@(x:xs) = let (first, other , rest) = parseCallExprArg' tokens in (CALL_EXPR_ARGS first other, rest)
+
+parseCallExprArg' :: [Token] -> (EXPRESSION, [EXPRESSION], [Token])
+parseCallExprArg' list = let (expr,     rest ) = parseExpression list    in
+                         let (exprList, rest') = parseCallExprArg'' rest in
+                         (expr, reverse exprList, rest')
+
+parseCallExprArg'' :: [Token] -> ([EXPRESSION], [Token])
+parseCallExprArg'' []                     = throw $ newParsingError "parseCallExprArg" [Comma, ClosedParenthesis] Nothing []
+parseCallExprArg'' (ClosedParenthesis:xs) = ([], xs)
+parseCallExprArg'' (Comma:xs)             = let (expr, rest ) = parseExpression xs      in
+                                            let (next, rest') = parseCallExprArg'' rest in
+                                            (expr : next, rest')
+parseCallExprArg'' (x:xs)                 = throw $ newParsingError "parseCallExprArg" [Comma, ClosedParenthesis] (Just x) xs
 
 parsePrimary :: [Token] -> (PRIMARY, [Token])
 parsePrimary []                     = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] Nothing []
