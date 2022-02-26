@@ -111,33 +111,33 @@ spec = do
     it "Simple number (float)" $ do
         tokenizeKoak "3.14"
             == [
-                KL.Number 3.14
+                KL.FloatingNumber 3.14
             ]
     it "Simple number 2 (float)" $ do
         tokenizeKoak ".1618033988749"
             == [
-                KL.Number 0.1618033988749
+                KL.FloatingNumber 0.1618033988749
             ]
     it "Few numbers with few blank symbols" $ do
         tokenizeKoak "\t\r45.0 \n  \t\t\t  7874583 \r\n10.00058 .1778\r"
             == [
-                KL.Number 45.0,
+                KL.FloatingNumber 45.0,
                 KL.Number 7874583,
-                KL.Number 10.00058,
-                KL.Number 0.1778
+                KL.FloatingNumber 10.00058,
+                KL.FloatingNumber 0.1778
             ]
     it "Few numbers with few simple tokens" $ do
         tokenizeKoak "==3545.15<=. <1129>=(.58=8!\r"
             == [
                 KL.Equal,
-                KL.Number 3545.15,
+                KL.FloatingNumber 3545.15,
                 KL.LowerEqual,
                 KL.Dot,
                 KL.Lower,
                 KL.Number 1129,
                 KL.GreaterEqual,
                 KL.OpenParenthesis,
-                KL.Number 0.58,
+                KL.FloatingNumber 0.58,
                 KL.Assign,
                 KL.Number 8,
                 KL.LogicalNot
