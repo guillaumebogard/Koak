@@ -134,6 +134,7 @@ spec = do
             [
                 KL.Word "foo",
                 KL.OpenParenthesis,
+                KL.Word "my_var",
                 KL.ClosedParenthesis,
                 KL.SemiColon
             ] == [
@@ -174,6 +175,11 @@ spec = do
             [
                 KL.Word "foo",
                 KL.OpenParenthesis,
+                KL.Number 1,
+                KL.Comma,
+                KL.Word "my_var",
+                KL.Comma,
+                KL.Number 3,
                 KL.ClosedParenthesis,
                 KL.SemiColon
             ] == [
@@ -191,8 +197,8 @@ spec = do
                                                     (KP.UNARY_POSTFIX
                                                         (KP.POSTFIX
                                                             (KP.PRIMARY_LITERAL
-                                                                (KP.LITERAL_DECIMAL
-                                                                    (KP.DECIMAL_CONST 1)
+                                                                (KP.LITERAL_DOUBLE
+                                                                    (KP.DOUBLE_CONST 1)
                                                                 )
                                                             )
                                                             Nothing
@@ -216,8 +222,8 @@ spec = do
                                                         (KP.UNARY_POSTFIX
                                                             (KP.POSTFIX
                                                                 (KP.PRIMARY_LITERAL
-                                                                    (KP.LITERAL_DECIMAL
-                                                                        (KP.DECIMAL_CONST 3)
+                                                                    (KP.LITERAL_DOUBLE
+                                                                        (KP.DOUBLE_CONST 3)
                                                                     )
                                                                 )
                                                                 Nothing
@@ -239,30 +245,31 @@ spec = do
     it "Simple unary expression: -1;" $ do
         parseKoak
             [
-                KL.Word "foo",
-                KL.OpenParenthesis,
-                KL.ClosedParenthesis,
+                KL.Minus,
+                KL.Number 1,
                 KL.SemiColon
             ] == [
                     (KP.KDEFS_EXPR
                         (KP.EXPRESSIONS
                             (KP.EXPRESSION
-                                (KP.UNARY_POSTFIX
-                                    (KP.POSTFIX
-                                        (KP.PRIMARY_IDENTIFIER
-                                            (KP.IDENTIFIER "foo")
+                                (KP.UNARY_UN
+                                    (KP.UN_MINUS)
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_LITERAL
+                                                (KP.LITERAL_DOUBLE
+                                                    (KP.DOUBLE_CONST 1)
+                                                )
+                                            )
+                                            Nothing
                                         )
-                                        (Just (KP.CALL_EXPR
-                                            (Nothing)
-                                        ))
                                     )
                                 )
                                 []
                             )
                             []
                         )
-                    )
-                ]
+                    )                ]
     it "Deep unary expression: -++-1;" $ do
         parseKoak
             [
@@ -270,7 +277,8 @@ spec = do
                 KL.Plus,
                 KL.Plus,
                 KL.Minus,
-                KL.Number 1
+                KL.Number 1,
+                KL.SemiColon
             ] == [
                     (KP.KDEFS_EXPR
                         (KP.EXPRESSIONS
@@ -286,8 +294,8 @@ spec = do
                                                 (KP.UNARY_POSTFIX
                                                     (KP.POSTFIX
                                                         (KP.PRIMARY_LITERAL
-                                                            (KP.LITERAL_DECIMAL
-                                                                (KP.DECIMAL_CONST 1)
+                                                            (KP.LITERAL_DOUBLE
+                                                                (KP.DOUBLE_CONST 1)
                                                             )
                                                         )
                                                         Nothing

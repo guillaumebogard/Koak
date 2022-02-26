@@ -315,7 +315,7 @@ parseCallExprArg tokens@(x:xs) = let (first, other , rest) = parseCallExprArg' t
 parseCallExprArg' :: [Token] -> (EXPRESSION, [EXPRESSION], [Token])
 parseCallExprArg' list = let (expr,     rest ) = parseExpression list    in
                          let (exprList, rest') = parseCallExprArg'' rest in
-                         (expr, reverse exprList, rest')
+                         (expr, exprList, rest')
 
 parseCallExprArg'' :: [Token] -> ([EXPRESSION], [Token])
 parseCallExprArg'' []                     = throw $ newParsingError "parseCallExprArg" [Comma, ClosedParenthesis] Nothing []
@@ -456,3 +456,45 @@ getDefaultBinaryPrecedence BIN_ASSIGN   = PRECEDENCE 0
 
 newParsingError :: String -> [Token] -> (Maybe Token) -> [Token] -> KoakException
 newParsingError at expected actual rest = KoakParserMissingToken at (show expected) (show actual) (show rest)
+
+-- [
+--     KDEFS_EXPR
+--         (EXPRESSIONS
+--             (EXPRESSION
+--                 (UNARY_POSTFIX
+--                     (POSTFIX
+--                         (PRIMARY_IDENTIFIER
+--                             (IDENTIFIER "foo"))
+--                             (Just (CALL_EXPR
+--                                 (Just (CALL_EXPR_ARGS
+--                                         (EXPRESSION
+--                                             (UNARY_POSTFIX
+--                                                 (POSTFIX
+--                                                     (PRIMARY_LITERAL
+--                                                         (LITERAL_DOUBLE (DOUBLE_CONST 1.0))
+--                                                     )
+--                                                     Nothing
+--                                                 )
+--                                             )
+--                                             []
+--                                         )
+--                                         [
+--                                             EXPRESSION
+--                                                 (UNARY_POSTFIX
+--                                                     (POSTFIX
+--                                                         (PRIMARY_LITERAL
+--                                                             (LITERAL_DOUBLE (DOUBLE_CONST 3.0))
+--                                                         )
+--                                                         Nothing
+--                                                     )
+--                                                 )
+--                                                 [],
+--                                             EXPRESSION
+--                                                 (UNARY_POSTFIX
+--                                                     (POSTFIX
+--                                                         (PRIMARY_IDENTIFIER (IDENTIFIER "my_var"))
+--                                                         Nothing
+--                                                     )
+--                                                 )
+--                                                 []
+--                                             ])))))) []) [])]
