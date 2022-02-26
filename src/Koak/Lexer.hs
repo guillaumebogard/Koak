@@ -20,7 +20,8 @@ import Control.Exception    ( throw )
 import Exception            ( KoakException(KoakUnknownTokenException, KoakInvalidNumberException) )
 
 data Token  = Word String               -- 'if', 'def', 'foobar', 'i'
-            | Number Double             -- '0', '0123456789', '3.14159265', '.01'
+            | FloatingNumber Double     -- '3.14159265', '.01'
+            | Number Int                -- '0', '0123456789'
             | OpenParenthesis           -- '('
             | ClosedParenthesis         -- ')'
             | Plus                      -- '+'
@@ -68,7 +69,7 @@ tokenizeKoak line@('.':_)  = let (token, leftover) = parseDot    line in token :
 tokenizeKoak line@(x:xs)
     | isSpace x            = tokenizeKoak xs
     | isAlpha x            = let (token, leftover) = parseWord   line in token : tokenizeKoak leftover
-    | isDigit x            = let (token, leftover) = parseNumber line in token : tokenizeKoak leftover
+    | isDigit x            = let (token, leftover) = parseNumber line False in token : tokenizeKoak leftover
     | otherwise            = throw $ KoakUnknownTokenException x
 
 parseWord :: String -> (Token, String)
@@ -82,25 +83,33 @@ parseWord' parsed rest@(r:rs)
 
 parseDot :: String -> (Token, String)
 parseDot line@(_:x2:xs)
-    | isDigit x2 = parseNumber line
+    | isDigit x2 = parseNumber line True
     | otherwise  = (Dot, x2:xs)
 parseDot (_:xs)  = (Dot, xs)
 parseDot _       = (Dot, [])
 
-parseNumber :: String -> (Token, String)
-parseNumber unparsed = let (parsed, rest) = parseNumber' "" unparsed in (Koak.Lexer.Number $ refineNumber parsed, rest)
+parseNumber :: String -> Bool -> (Token, String)
+parseNumber unparsed floating = parseNumber' $ parseNumber'' "" unparsed floating
 
-parseNumber' :: String -> String -> (String, String)
-parseNumber' parsed []          = (reverse parsed, [])
-parseNumber' parsed ('.':rs)    = parseNumber' ('.':parsed) rs
-parseNumber' parsed rest@(r:rs)
-    | isDigit r                 = parseNumber' (r:parsed) rs
-    | otherwise                 = (reverse parsed, rest)
+parseNumber' :: (String, String, Bool) -> (Token, String)
+parseNumber' (parsed, rest, floating) = (refineNumber parsed floating, rest)
 
-refineNumber :: String -> Double
-refineNumber rawNumber@('.':_) = refineNumber' ('0':rawNumber) $ readMaybe $ '0':rawNumber
-refineNumber rawNumber         = refineNumber' rawNumber       $ readMaybe rawNumber
+parseNumber'' :: String -> String -> Bool -> (String, String, Bool)
+parseNumber'' parsed []          floating = (reverse parsed, [], floating)
+parseNumber'' parsed ('.':rs)    floating = parseNumber'' ('.':parsed) rs True
+parseNumber'' parsed rest@(r:rs) floating
+    | isDigit r                          = parseNumber'' (r:parsed) rs floating
+    | otherwise                          = (reverse parsed, rest, floating)
 
-refineNumber' :: String -> Maybe Double -> Double
-refineNumber' _               (Just x) = x
-refineNumber' impureRawNumber Nothing  = throw $ KoakInvalidNumberException impureRawNumber
+refineNumber :: String -> Bool -> Token
+refineNumber rawNumber@('.':_) _ = FloatingNumber $ refineFloatingNumber ('0':rawNumber) $ readMaybe $ '0':rawNumber
+refineNumber rawNumber False     = Number         $ refineIntegerNumber  rawNumber       $ readMaybe       rawNumber
+refineNumber rawNumber True      = FloatingNumber $ refineFloatingNumber rawNumber       $ readMaybe       rawNumber
+
+refineIntegerNumber :: String -> Maybe Int -> Int
+refineIntegerNumber _               (Just x) = x
+refineIntegerNumber impureRawNumber Nothing  = throw $ KoakInvalidNumberException impureRawNumber
+
+refineFloatingNumber :: String -> Maybe Double -> Double
+refineFloatingNumber _               (Just x) = x
+refineFloatingNumber impureRawNumber Nothing  = throw $ KoakInvalidNumberException impureRawNumber
