@@ -251,45 +251,13 @@ parseWhile [] = error "parseWhile: empty list"
 parseWhile _  = error "Not Implemented"
 
 
--- parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
--- parseExpressions []   = throw $ newParsingError "parseExpressions" [Word "for", Word "if", Word "while", Word "{expression}"] Nothing []
--- parseExpressions list@(x : xs)
---   | x == Word "for"   = let (for, rest)      = parseFor xs             in (FOR_EXPR for, rest)
---   | x == Word "if"    = let (if_, rest)      = parseIf xs              in (IF_EXPR if_, rest)
---   | x == Word "while" = let (while, rest)    = parseWhile xs           in (WHILE_EXPR while, rest)
---   | otherwise         = let (expr, rest)     = parseExpression list    in (EXPRESSIONS expr [], rest)
-                        -- let (arrExpr, rest') = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest')
-
--- [KDEFS_DEFS
---     (DEFS
---         (PROTOTYPE
---             (IDENTIFIER "foo")
---             (PROTOTYPE_ARGS [] INT)
---         )
---         (EXPRESSIONS
---             (EXPRESSION
---                 (UNARY_POSTFIX
---                     (POSTFIX
---                         (PRIMARY_LITERAL
---                             (LITERAL_DOUBLE (DOUBLE_CONST 42.0))
---                         )
---                         Nothing
---                     )
---                 )
---                 []
---             )
---             [EXPRESSION
---                 (UNARY_POSTFIX
---                 (POSTFIX *** Exception: At parsePrimary, expected: [Word "{variable}",Number 0.0,OpenParenthesis]. Got: Just SemiColon.[]
-
 parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
-parseExpressions []   = throw $ newParsingError "parseExpressions" [Word "for", Word "if", Word "while", Word "{expression}"] Nothing []
-parseExpressions list@(x : xs)
-  | x == Word "for"   = let (for,     rest)  = parseFor xs             in (FOR_EXPR for,     rest)
-  | x == Word "if"    = let (if_,     rest)  = parseIf xs              in (IF_EXPR if_,      rest)
-  | x == Word "while" = let (while,   rest)  = parseWhile xs           in (WHILE_EXPR while, rest)
-  | otherwise         = let (expr,    rest)  = parseExpression list    in
-                        let (arrExpr, rest') = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest')
+parseExpressions []                = throw $ newParsingError "parseExpressions" [Word "for", Word "if", Word "while", Word "{expression}"] Nothing []
+parseExpressions (Word "for":  xs) = let (for,     rest)  = parseFor xs             in (FOR_EXPR for,     rest)
+parseExpressions (Word "if":   xs) = let (if_,     rest)  = parseIf xs              in (IF_EXPR if_,      rest)
+parseExpressions (Word "while":xs) = let (while,   rest)  = parseWhile xs           in (WHILE_EXPR while, rest)
+parseExpressions list              = let (expr,    rest)  = parseExpression list    in
+                                     let (arrExpr, rest') = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest')
 
 parseExpression :: [Token] -> (EXPRESSION, [Token])
 parseExpression []     = throw $ newParsingError "parseExpression" [] Nothing []
