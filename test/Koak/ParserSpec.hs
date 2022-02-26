@@ -8,7 +8,10 @@
 module Koak.ParserSpec  ( spec ) where
 
 import Test.Hspec       ( Spec
-                        , it, shouldBe, shouldThrow, anyException
+                        , it
+                        , shouldBe
+                        , shouldThrow
+                        , anyException
                         )
 
 import Koak.Lexer as KL ( Token(..) )
@@ -42,8 +45,8 @@ spec = do
                                     (KP.UNARY_POSTFIX
                                         (KP.POSTFIX
                                             (KP.PRIMARY_LITERAL
-                                                (KP.LITERAL_DECIMAL 
-                                                    (KP.DECIMAL_CONST 42)
+                                                (KP.LITERAL_DOUBLE 
+                                                    (KP.DOUBLE_CONST 42.0)
                                                 )
                                             )
                                             (Nothing)

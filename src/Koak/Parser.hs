@@ -147,13 +147,18 @@ parseDefs :: [Token] -> (DEFS, [Token])
 parseDefs []     = throw $ newParsingError "parseDefs" [] Nothing []
 parseDefs tokens = let (prototype  , rest1) = parsePrototype   tokens in
                    let (expressions, rest2) = parseExpressions rest1  in
-                   (DEFS prototype expressions, rest2)
+                   (DEFS prototype expressions, parseDefsSemiColon rest2)
+
+parseDefsSemiColon :: [Token] -> [Token]
+parseDefsSemiColon []             = throw $ newParsingError "parseDefs" [SemiColon] Nothing []
+parseDefsSemiColon (SemiColon:xs) = xs
+parseDefsSemiColon (x:xs)         = throw $ newParsingError "parseDefs" [SemiColon] (Just x) xs
 
 parsePrototype :: [Token] -> (PROTOTYPE, [Token])
 parsePrototype []                   = throw $ newParsingError "parsePrototype" [Word "unary", Word "binary", Word "{function name}"] Nothing []
 parsePrototype ((Word "unary"):xs)  = parsePrototypeUnary  xs
 parsePrototype ((Word "binary"):xs) = parsePrototypeBinary xs
-parsePrototype ((Word w):xs)        = parsePrototype'      xs
+parsePrototype list@((Word w):xs)   = parsePrototype'      list
 
 parsePrototypeUnary :: [Token] -> (PROTOTYPE, [Token])
 parsePrototypeUnary []     = throw $ newParsingError "parsePrototypeUnary" [] Nothing []
@@ -187,15 +192,15 @@ parsePrototype' list    = let (id,    rest1) = parseIdentifier    list  in
 
 parsePrototypeArgs :: [Token] -> (PROTOTYPE_ARGS, [Token])
 parsePrototypeArgs []     = throw $ newParsingError "parsePrototypeArgs" [] Nothing []
-parsePrototypeArgs (x:xs) = let (p_list,      rest1) = parsePrototypeArgsList xs    in
-                            let (return_type, rest2) = parsePrototypeArgsType rest1 in
-                            parsePrototypeArgs' p_list return_type rest2
+parsePrototypeArgs (x:xs) = let (p_list,      rest1) = parsePrototypeArgsList xs in
+                            let (return_type, rest2) = parsePrototypeArgsType $ parsePrototypeArgsParenthesis $ x:rest1 in
+                            (PROTOTYPE_ARGS p_list return_type, rest2)
 
-parsePrototypeArgs' :: [PROTOTYPE_ID] -> TYPE -> [Token] -> (PROTOTYPE_ARGS, [Token])
-parsePrototypeArgs' p_list return_type (OpenParenthesis:ClosedParenthesis:xs) = (PROTOTYPE_ARGS p_list return_type, xs)
-parsePrototypeArgs' _      _    (x:ClosedParenthesis:xs)                      = throw $ newParsingError "parsePrototypeArgs" [OpenParenthesis] (Just x) xs
-parsePrototypeArgs' _      _    (OpenParenthesis:x:xs)                        = throw $ newParsingError "parsePrototypeArgs" [ClosedParenthesis] (Just x) xs
-parsePrototypeArgs' _      _    l                                             = throw $ newParsingError "parsePrototypeArgs" [OpenParenthesis, ClosedParenthesis] Nothing l
+parsePrototypeArgsParenthesis :: [Token] -> [Token]
+parsePrototypeArgsParenthesis (OpenParenthesis:ClosedParenthesis:xs) = xs
+parsePrototypeArgsParenthesis (x:ClosedParenthesis:xs)               = throw $ newParsingError "parsePrototypeArgsParenthesis" [OpenParenthesis] (Just x) xs
+parsePrototypeArgsParenthesis (OpenParenthesis:x:xs)                 = throw $ newParsingError "parsePrototypeArgsParenthesis" [ClosedParenthesis] (Just x) xs
+parsePrototypeArgsParenthesis list                                   = throw $ newParsingError "parsePrototypeArgsParenthesis" [OpenParenthesis, ClosedParenthesis] Nothing list
 
 parsePrototypeArgsList :: [Token] -> ([PROTOTYPE_ID], [Token])
 parsePrototypeArgsList list = let (p_list, tokens) = parsePrototypeArgsList' list [] in (reverse p_list, tokens)
@@ -223,7 +228,7 @@ parseMaybePrecedence (_:list)        = (Nothing,                     list)
 parsePrototypeId :: [Token] -> (PROTOTYPE_ID, [Token])
 parsePrototypeId []   = throw $ newParsingError "parsePrototypeId" [] Nothing []
 parsePrototypeId list = let (id,     rest1) = parseIdentifier list in
-                        let (p_type, rest2) = parseType rest1 in
+                        let (p_type, rest2) = parseType rest1      in
                         (PROTOTYPE_ID id p_type, rest2)
 
 parseType :: [Token] -> (TYPE, [Token])
@@ -235,24 +240,34 @@ parseType (x:xs)             = throw $ newParsingError "parseType" [Word "int", 
 
 parseFor :: [Token] -> (FOR, [Token])
 parseFor [] = error "parseFor: empty list"
-parseFor _ = error "Not Implemented"
+parseFor _  = error "Not Implemented"
 
 parseIf :: [Token] -> (IF, [Token])
 parseIf [] = error "parseIf: empty list"
-parseIf _ = error "Not Implemented"
+parseIf _  = error "Not Implemented"
 
 parseWhile :: [Token] -> (WHILE, [Token])
 parseWhile [] = error "parseWhile: empty list"
-parseWhile _ = error "Not Implemented"
+parseWhile _  = error "Not Implemented"
+
+
+-- parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
+-- parseExpressions []   = throw $ newParsingError "parseExpressions" [Word "for", Word "if", Word "while", Word "{expression}"] Nothing []
+-- parseExpressions list@(x : xs)
+--   | x == Word "for"   = let (for, rest)      = parseFor xs             in (FOR_EXPR for, rest)
+--   | x == Word "if"    = let (if_, rest)      = parseIf xs              in (IF_EXPR if_, rest)
+--   | x == Word "while" = let (while, rest)    = parseWhile xs           in (WHILE_EXPR while, rest)
+--   | otherwise         = let (expr, rest)     = parseExpression list    in (EXPRESSIONS expr [], rest)
+                        -- let (arrExpr, rest2) = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest2)
 
 parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
 parseExpressions []   = throw $ newParsingError "parseExpressions" [Word "for", Word "if", Word "while", Word "{expression}"] Nothing []
 parseExpressions list@(x : xs)
-  | x == Word "for"   = let (for, rest)      = parseFor xs             in (FOR_EXPR for, rest)
-  | x == Word "if"    = let (if_, rest)      = parseIf xs              in (IF_EXPR if_, rest)
-  | x == Word "while" = let (while, rest)    = parseWhile xs           in (WHILE_EXPR while, rest)
-  | otherwise         = let (expr, rest)     = parseExpression list    in
-                        let (arrExpr, rest2) = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest2)
+  | x == Word "for"   = let (for,     rest)  = parseFor xs             in (FOR_EXPR for,     rest)
+  | x == Word "if"    = let (if_,     rest)  = parseIf xs              in (IF_EXPR if_,      rest)
+  | x == Word "while" = let (while,   rest)  = parseWhile xs           in (WHILE_EXPR while, rest)
+  | otherwise         = let (expr,    rest)  = parseExpression list    in
+                        let (arrExpr, rest') = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest')
 
 
 parseExpression :: [Token] -> (EXPRESSION, [Token])
@@ -268,29 +283,6 @@ parseExpression' tokens@(x:xs)
                                  let (binops, rest2) = parseExpression' rest1 in
                                  ((getBinaryOp x, unary) : binops, rest2)
     | otherwise                = ([], tokens)
-
-parseBinOp :: [Token] -> (BIN_OP, [Token])
-parseBinOp []                = throw $ newParsingError "parseBinOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] Nothing []
-parseBinOp (Plus:xs)         = (BIN_PLUS,   xs)
-parseBinOp (Minus:xs)        = (BIN_MINUS,  xs)
-parseBinOp (Multiply:xs)     = (BIN_MULT,   xs)
-parseBinOp (Divide:xs)       = (BIN_DIV,    xs)
-parseBinOp (Modulo:xs)       = (BIN_MOD,    xs)
-parseBinOp (Lower:xs)        = (BIN_LT,     xs)
-parseBinOp (LowerEqual:xs)   = (BIN_LTE,    xs)
-parseBinOp (Greater:xs)      = (BIN_GT,     xs)
-parseBinOp (GreaterEqual:xs) = (BIN_GTE,    xs)
-parseBinOp (Equal:xs)        = (BIN_EQ,     xs)
-parseBinOp (NotEqual:xs)     = (BIN_NEQ,    xs)
-parseBinOp (Assign:xs)       = (BIN_ASSIGN, xs)
-parseBinOp (x:xs)            = throw $ newParsingError "parseBinOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] (Just x) xs
-
-parseUnOp :: [Token] -> (UN_OP, [Token])
-parseUnOp []              = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] Nothing []
-parseUnOp (Plus:xs)       = (UN_PLUS,  xs)
-parseUnOp (Minus:xs)      = (UN_MINUS, xs)
-parseUnOp (LogicalNot:xs) = (UN_NOT,   xs)
-parseUnOp (x:xs)          = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] (Just x) xs
 
 parseArrExpression :: [Token] -> ([EXPRESSION], [Token])
 parseArrExpression []     = throw $ newParsingError "parseArrExpression" [] Nothing []
@@ -334,7 +326,6 @@ parseCallExpr (x:xs) = throw $ newParsingError "parseCallExpr" [OpenParenthesis,
 parseCallExprArg :: [Token] -> (CALL_EXPR_ARGS, [Token])
 parseCallExprArg []              = throw $ newParsingError "parseCallExprArg" [] Nothing []
 parseCallExprArg tokens@(x : xs) = let (x : xs, rest) = parseArrExpression tokens in (CALL_EXPR_ARGS x xs, rest)
-
 
 parsePrimary :: [Token] -> (PRIMARY, [Token])
 parsePrimary []                     = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] Nothing []
@@ -380,6 +371,29 @@ parseLitteral (x:xs)            = throw $ newParsingError "parseLitteral" [Numbe
 --     | x == Word "if"    = let (if_, rest)   = parseIf xs in (IF_EXPR if_, rest)
 --     | x == Word "while" = let (while, rest) = parseWhile xs in (WHILE_EXPR while, rest)
 --     | otherwise = let (expr, rest) = parseExpression list in (EXPRESSIONS expr [], rest)
+
+parseBinOp :: [Token] -> (BIN_OP, [Token])
+parseBinOp []                = throw $ newParsingError "parseBinOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] Nothing []
+parseBinOp (Plus:xs)         = (BIN_PLUS,   xs)
+parseBinOp (Minus:xs)        = (BIN_MINUS,  xs)
+parseBinOp (Multiply:xs)     = (BIN_MULT,   xs)
+parseBinOp (Divide:xs)       = (BIN_DIV,    xs)
+parseBinOp (Modulo:xs)       = (BIN_MOD,    xs)
+parseBinOp (Lower:xs)        = (BIN_LT,     xs)
+parseBinOp (LowerEqual:xs)   = (BIN_LTE,    xs)
+parseBinOp (Greater:xs)      = (BIN_GT,     xs)
+parseBinOp (GreaterEqual:xs) = (BIN_GTE,    xs)
+parseBinOp (Equal:xs)        = (BIN_EQ,     xs)
+parseBinOp (NotEqual:xs)     = (BIN_NEQ,    xs)
+parseBinOp (Assign:xs)       = (BIN_ASSIGN, xs)
+parseBinOp (x:xs)            = throw $ newParsingError "parseBinOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] (Just x) xs
+
+parseUnOp :: [Token] -> (UN_OP, [Token])
+parseUnOp []              = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] Nothing []
+parseUnOp (Plus:xs)       = (UN_PLUS,  xs)
+parseUnOp (Minus:xs)      = (UN_MINUS, xs)
+parseUnOp (LogicalNot:xs) = (UN_NOT,   xs)
+parseUnOp (x:xs)          = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] (Just x) xs
 
 isBinaryOp :: Token -> Bool
 isBinaryOp KL.Plus          = True
