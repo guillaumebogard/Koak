@@ -158,37 +158,38 @@ parsePrototype :: [Token] -> (PROTOTYPE, [Token])
 parsePrototype []                   = throw $ newParsingError "parsePrototype" [Word "unary", Word "binary", Word "{function name}"] Nothing []
 parsePrototype ((Word "unary"):xs)  = parsePrototypeUnary  xs
 parsePrototype ((Word "binary"):xs) = parsePrototypeBinary xs
-parsePrototype list@((Word w):xs)   = parsePrototype'      list
+parsePrototype list@((Word _):_)    = parsePrototype'      list
+parsePrototype (x:xs)               = throw $ newParsingError "parsePrototype" [Word "unary", Word "binary", Word "{function name}"] (Just x) xs
 
 parsePrototypeUnary :: [Token] -> (PROTOTYPE, [Token])
 parsePrototypeUnary []     = throw $ newParsingError "parsePrototypeUnary" [] Nothing []
 parsePrototypeUnary tokens = let (unop,       rest   ) = parseUnOp            tokens in
-                             let (prec,       rest'  ) = parseMaybePrecedence rest   in
-                             let (id,         rest'' ) = parseIdentifier      rest'  in
+                             let (precedence,       rest'  ) = parseMaybePrecedence rest   in
+                             let (identifier, rest'' ) = parseIdentifier      rest'  in
                              let (proto_args, rest''') = parsePrototypeArgs   rest'' in
-                             parsePrototypeUnary' unop prec id proto_args rest'''
+                             parsePrototypeUnary' unop precedence identifier proto_args rest'''
 
 parsePrototypeUnary' :: UN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
-parsePrototypeUnary' unop (Nothing)   id proto_args list = (PROTOTYPE_UNARY unop (getDefaultUnaryPrecedence unop) id proto_args, list)
-parsePrototypeUnary' unop (Just prec) id proto_args list = (PROTOTYPE_UNARY unop prec id proto_args, list)
+parsePrototypeUnary' unop (Nothing)         identifier proto_args list = (PROTOTYPE_UNARY unop (getDefaultUnaryPrecedence unop) identifier proto_args, list)
+parsePrototypeUnary' unop (Just precedence) identifier proto_args list = (PROTOTYPE_UNARY unop precedence                       identifier proto_args, list)
 
 parsePrototypeBinary :: [Token] -> (PROTOTYPE, [Token])
 parsePrototypeBinary []     = throw $ newParsingError "parsePrototypeBinary" [] Nothing []
 parsePrototypeBinary list = let (binop,      rest   ) = parseBinOp            list   in
-                            let (prec,       rest'  ) = parseMaybePrecedence  rest   in
-                            let (id,         rest'' ) = parseIdentifier       rest'  in
+                            let (precedence, rest'  ) = parseMaybePrecedence  rest   in
+                            let (identifier, rest'' ) = parseIdentifier       rest'  in
                             let (proto_args, rest''') = parsePrototypeArgs    rest'' in
-                            parsePrototypeBinary' binop prec id proto_args rest'''
+                            parsePrototypeBinary' binop precedence identifier proto_args rest'''
 
 parsePrototypeBinary' :: BIN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
-parsePrototypeBinary' binop (Nothing)   id proto_args list = (PROTOTYPE_BINARY binop (getDefaultBinaryPrecedence binop) id proto_args, list)
-parsePrototypeBinary' binop (Just prec) id proto_args list = (PROTOTYPE_BINARY binop prec id proto_args, list)
+parsePrototypeBinary' binop (Nothing)         identifier proto_args list = (PROTOTYPE_BINARY binop (getDefaultBinaryPrecedence binop) identifier proto_args, list)
+parsePrototypeBinary' binop (Just precedence) identifier proto_args list = (PROTOTYPE_BINARY binop precedence                         identifier proto_args, list)
 
 parsePrototype' :: [Token] -> (PROTOTYPE, [Token])
 parsePrototype' []      = throw $ newParsingError "parsePrototype'" [] Nothing []
-parsePrototype' list    = let (id,    rest ) = parseIdentifier    list  in
-                          let (args,  rest') = parsePrototypeArgs rest  in
-                          (PROTOTYPE id args, rest')
+parsePrototype' list    = let (identifier, rest ) = parseIdentifier    list  in
+                          let (arguments,  rest') = parsePrototypeArgs rest  in
+                          (PROTOTYPE identifier arguments, rest')
 
 parsePrototypeArgs :: [Token] -> (PROTOTYPE_ARGS, [Token])
 parsePrototypeArgs []     = throw $ newParsingError "parsePrototypeArgs" [] Nothing []
@@ -222,14 +223,14 @@ parsePrecedence' (Nothing,   list) = throw $ newParsingError "parsePrecedence" [
 parsePrecedence' (Just p,    list) = (p, list)
 
 parseMaybePrecedence :: [Token] -> (Maybe PRECEDENCE, [Token])
-parseMaybePrecedence (Number n:xs)   = (Just $ PRECEDENCE $ round n, xs)
-parseMaybePrecedence (_:list)        = (Nothing,                     list)
+parseMaybePrecedence (Number n:xs) = (Just $ PRECEDENCE $ round n, xs)
+parseMaybePrecedence list          = (Nothing, list)
 
 parsePrototypeId :: [Token] -> (PROTOTYPE_ID, [Token])
 parsePrototypeId []   = throw $ newParsingError "parsePrototypeId" [] Nothing []
-parsePrototypeId list = let (id,     rest ) = parseIdentifier list in
-                        let (p_type, rest') = parseType rest       in
-                        (PROTOTYPE_ID id p_type, rest')
+parsePrototypeId list = let (identifier,     rest ) = parseIdentifier list in
+                        let (prototype_type, rest') = parseType rest       in
+                        (PROTOTYPE_ID identifier prototype_type, rest')
 
 parseType :: [Token] -> (TYPE, [Token])
 parseType []                 = throw $ newParsingError "parseType" [Word "int", Word "double", Word "void"] Nothing []
@@ -293,13 +294,12 @@ parsePostfix :: [Token] -> (POSTFIX, [Token])
 parsePostfix []     = throw $ newParsingError "parsePostfix" [] Nothing []
 parsePostfix tokens = let (prim, rest)      = parsePrimary tokens     in
                       let (callExpr, rest') = parseMaybeCallExpr rest in
-                      (POSTFIX prim callExpr, rest)
+                      (POSTFIX prim callExpr, rest')
 
 parseMaybeCallExpr :: [Token] -> (Maybe CALL_EXPR, [Token])
-parseMaybeCallExpr []            = (Nothing, [])
-parseMaybeCallExpr list@(x : xs)
-  | x == OpenParenthesis         = let (callExpr, rest) = parseCallExpr list in (Just callExpr, rest)
-  | otherwise                    = (Nothing, list)
+parseMaybeCallExpr []                       = (Nothing, [])
+parseMaybeCallExpr list@(OpenParenthesis:_) = let (callExpr, rest) = parseCallExpr list in (Just callExpr, rest)
+parseMaybeCallExpr list                     = (Nothing, list)
 
 parseCallExpr :: [Token] -> (CALL_EXPR, [Token])
 parseCallExpr []                                         = throw $ newParsingError "parseCallExpr" [OpenParenthesis, ClosedParenthesis] Nothing []
@@ -309,8 +309,8 @@ parseCallExpr (OpenParenthesis : xs)                     = let (callExpr, rest) 
 parseCallExpr (x:xs) = throw $ newParsingError "parseCallExpr" [OpenParenthesis, ClosedParenthesis] (Just x) xs
 
 parseCallExprArg :: [Token] -> (CALL_EXPR_ARGS, [Token])
-parseCallExprArg []              = throw $ newParsingError "parseCallExprArg" [] Nothing []
-parseCallExprArg tokens@(x : xs) = let (x : xs, rest) = parseArrExpression tokens in (CALL_EXPR_ARGS x xs, rest)
+parseCallExprArg []            = throw $ newParsingError "parseCallExprArg" [] Nothing []
+parseCallExprArg tokens@(x:xs) = let (x':xs', rest) = parseArrExpression tokens in (CALL_EXPR_ARGS x' xs', rest)
 
 parsePrimary :: [Token] -> (PRIMARY, [Token])
 parsePrimary []                     = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] Nothing []
@@ -327,7 +327,7 @@ parseIdentifier ((Word w):xs) = (IDENTIFIER w, xs)
 parseIdentifier (x:xs)        = throw $ newParsingError "parseIdentifier" [Word "{any}"] (Just x) xs
 
 isValidIdentifier :: [Token] -> Bool
-isValidIdentifier ((Word w):xs) = True
+isValidIdentifier ((Word _):_) = True
 isValidIdentifier _             = False
 
 {--
