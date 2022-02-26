@@ -223,7 +223,7 @@ parsePrecedence' (Nothing,   list) = throw $ newParsingError "parsePrecedence" [
 parsePrecedence' (Just p,    list) = (p, list)
 
 parseMaybePrecedence :: [Token] -> (Maybe PRECEDENCE, [Token])
-parseMaybePrecedence (Number n:xs) = (Just $ PRECEDENCE $ round n, xs)
+parseMaybePrecedence (Number n:xs) = (Just $ PRECEDENCE n, xs)
 parseMaybePrecedence list          = (Nothing, list)
 
 parsePrototypeId :: [Token] -> (PROTOTYPE_ID, [Token])
@@ -326,13 +326,14 @@ parseCallExprArg'' (Comma:xs)             = let (expr, rest ) = parseExpression 
 parseCallExprArg'' (x:xs)                 = throw $ newParsingError "parseCallExprArg" [Comma, ClosedParenthesis] (Just x) xs
 
 parsePrimary :: [Token] -> (PRIMARY, [Token])
-parsePrimary []                     = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] Nothing []
-parsePrimary (Word x : xs)          = (PRIMARY_IDENTIFIER (IDENTIFIER x), xs)
-parsePrimary (Number x : xs)        = (PRIMARY_LITERAL $ LITERAL_DOUBLE $ DOUBLE_CONST  x, xs)
-parsePrimary (OpenParenthesis : xs) =
-                let (expr, rest)    = parseExpressions xs
+parsePrimary []                      = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] Nothing []
+parsePrimary (Word x : xs)           = (PRIMARY_IDENTIFIER (IDENTIFIER x), xs)
+parsePrimary (Number x : xs)         = (PRIMARY_LITERAL $ LITERAL_DECIMAL $ DECIMAL_CONST  x, xs)
+parsePrimary (FloatingNumber x : xs) = (PRIMARY_LITERAL $ LITERAL_DOUBLE  $ DOUBLE_CONST   x, xs)
+parsePrimary (OpenParenthesis : xs)  =
+                let (expr, rest)     = parseExpressions xs
                 in (PRIMARY_EXPRS expr, rest)
-parsePrimary (x:xs)                 = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] (Just x) xs
+parsePrimary (x:xs)                  = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] (Just x) xs
 
 parseIdentifier :: [Token] -> (IDENTIFIER, [Token])
 parseIdentifier []            = throw $ newParsingError "parseIdentifier" [Word "{any}"] Nothing []
@@ -342,33 +343,6 @@ parseIdentifier (x:xs)        = throw $ newParsingError "parseIdentifier" [Word 
 isValidIdentifier :: [Token] -> Bool
 isValidIdentifier ((Word _):_) = True
 isValidIdentifier _             = False
-
-{--
-parseDot :: [Token] -> (DOT, [Token])
-parseDot [] = error "parseDot: empty list"
-parseDot _ = error "Not Implemented"
-
-parseDecimalConst :: [Token] -> (DECIMAL_CONST, [Token])
-parseDecimalConst [] = error "parseDecimalConst: empty list"
-parseDecimalConst _ = error "Not Implemented"
-
-parseDoubleConst :: [Token] -> (DOUBLE_CONST, [Token])
-parseDoubleConst [] = error "parseDoubleConst: empty list"
-parseDoubleConst _ = error "Not Implemented"
---}
-
-parseLitteral :: [Token] -> (LITERAL, [Token])
-parseLitteral []                = throw $ newParsingError "parseLitteral" [Number 0] Nothing []
-parseLitteral ((Number x) : xs) = (LITERAL_DOUBLE $ DOUBLE_CONST x, xs)
-parseLitteral (x:xs)            = throw $ newParsingError "parseLitteral" [Number 0] (Just x) xs
-
--- parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
--- parseExpressions _ = error "parseExpressions: empty list"
--- parseExpressions list@(x:xs)
---     | x == Word "for"   = let (for, rest)   = parseFor xs in (FOR_EXPR for, rest)
---     | x == Word "if"    = let (if_, rest)   = parseIf xs in (IF_EXPR if_, rest)
---     | x == Word "while" = let (while, rest) = parseWhile xs in (WHILE_EXPR while, rest)
---     | otherwise = let (expr, rest) = parseExpression list in (EXPRESSIONS expr [], rest)
 
 parseBinOp :: [Token] -> (BIN_OP, [Token])
 parseBinOp []                = throw $ newParsingError "parseBinOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] Nothing []
@@ -456,45 +430,3 @@ getDefaultBinaryPrecedence BIN_ASSIGN   = PRECEDENCE 0
 
 newParsingError :: String -> [Token] -> (Maybe Token) -> [Token] -> KoakException
 newParsingError at expected actual rest = KoakParserMissingToken at (show expected) (show actual) (show rest)
-
--- [
---     KDEFS_EXPR
---         (EXPRESSIONS
---             (EXPRESSION
---                 (UNARY_POSTFIX
---                     (POSTFIX
---                         (PRIMARY_IDENTIFIER
---                             (IDENTIFIER "foo"))
---                             (Just (CALL_EXPR
---                                 (Just (CALL_EXPR_ARGS
---                                         (EXPRESSION
---                                             (UNARY_POSTFIX
---                                                 (POSTFIX
---                                                     (PRIMARY_LITERAL
---                                                         (LITERAL_DOUBLE (DOUBLE_CONST 1.0))
---                                                     )
---                                                     Nothing
---                                                 )
---                                             )
---                                             []
---                                         )
---                                         [
---                                             EXPRESSION
---                                                 (UNARY_POSTFIX
---                                                     (POSTFIX
---                                                         (PRIMARY_LITERAL
---                                                             (LITERAL_DOUBLE (DOUBLE_CONST 3.0))
---                                                         )
---                                                         Nothing
---                                                     )
---                                                 )
---                                                 [],
---                                             EXPRESSION
---                                                 (UNARY_POSTFIX
---                                                     (POSTFIX
---                                                         (PRIMARY_IDENTIFIER (IDENTIFIER "my_var"))
---                                                         Nothing
---                                                     )
---                                                 )
---                                                 []
---                                             ])))))) []) [])]

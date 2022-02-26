@@ -31,7 +31,7 @@ spec = do
                 KL.ClosedParenthesis,
                 KL.Colon,
                 KL.Word "int",
-                KL.Number 42.0,
+                KL.Number 42,
                 KL.SemiColon
             ] == [
                     (KP.KDEFS_DEFS
@@ -45,8 +45,8 @@ spec = do
                                     (KP.UNARY_POSTFIX
                                         (KP.POSTFIX
                                             (KP.PRIMARY_LITERAL
-                                                (KP.LITERAL_DOUBLE 
-                                                    (KP.DOUBLE_CONST 42.0)
+                                                (KP.LITERAL_DECIMAL 
+                                                    (KP.DECIMAL_CONST 42)
                                                 )
                                             )
                                             (Nothing)
@@ -86,12 +86,12 @@ spec = do
                         )
                     )
                 ]
-    it "Simple function call with one number as argument: foo(1.0);" $ do
+    it "Simple function call with one number as argument: foo(1);" $ do
         parseKoak
             [
                 KL.Word "foo",
                 KL.OpenParenthesis,
-                KL.Number 1.0,
+                KL.Number 1,
                 KL.ClosedParenthesis,
                 KL.SemiColon
             ] == [
@@ -109,8 +109,8 @@ spec = do
                                                     (KP.UNARY_POSTFIX
                                                         (KP.POSTFIX
                                                             (KP.PRIMARY_LITERAL
-                                                                (KP.LITERAL_DOUBLE
-                                                                    (KP.DOUBLE_CONST 1.0)
+                                                                (KP.LITERAL_DECIMAL
+                                                                    (KP.DECIMAL_CONST 1)
                                                                 )
                                                             )
                                                             Nothing
@@ -170,7 +170,7 @@ spec = do
                         )
                     )
                 ]
-    it "Simple function call with multiple primary arguments: foo(1, my_var, 3);" $ do
+    it "Simple function call with multiple primary arguments: foo(1, my_var, 3.14);" $ do
         parseKoak
             [
                 KL.Word "foo",
@@ -179,7 +179,7 @@ spec = do
                 KL.Comma,
                 KL.Word "my_var",
                 KL.Comma,
-                KL.Number 3,
+                KL.FloatingNumber 3.14,
                 KL.ClosedParenthesis,
                 KL.SemiColon
             ] == [
@@ -197,8 +197,8 @@ spec = do
                                                     (KP.UNARY_POSTFIX
                                                         (KP.POSTFIX
                                                             (KP.PRIMARY_LITERAL
-                                                                (KP.LITERAL_DOUBLE
-                                                                    (KP.DOUBLE_CONST 1)
+                                                                (KP.LITERAL_DECIMAL
+                                                                    (KP.DECIMAL_CONST 1)
                                                                 )
                                                             )
                                                             Nothing
@@ -223,7 +223,7 @@ spec = do
                                                             (KP.POSTFIX
                                                                 (KP.PRIMARY_LITERAL
                                                                     (KP.LITERAL_DOUBLE
-                                                                        (KP.DOUBLE_CONST 3)
+                                                                        (KP.DOUBLE_CONST 3.14)
                                                                     )
                                                                 )
                                                                 Nothing
@@ -257,8 +257,8 @@ spec = do
                                     (KP.UNARY_POSTFIX
                                         (KP.POSTFIX
                                             (KP.PRIMARY_LITERAL
-                                                (KP.LITERAL_DOUBLE
-                                                    (KP.DOUBLE_CONST 1)
+                                                (KP.LITERAL_DECIMAL
+                                                    (KP.DECIMAL_CONST 1)
                                                 )
                                             )
                                             Nothing
@@ -294,8 +294,8 @@ spec = do
                                                 (KP.UNARY_POSTFIX
                                                     (KP.POSTFIX
                                                         (KP.PRIMARY_LITERAL
-                                                            (KP.LITERAL_DOUBLE
-                                                                (KP.DOUBLE_CONST 1)
+                                                            (KP.LITERAL_DECIMAL
+                                                                (KP.DECIMAL_CONST 1)
                                                             )
                                                         )
                                                         Nothing
