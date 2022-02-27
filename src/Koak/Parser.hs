@@ -32,7 +32,7 @@ module Koak.Parser          ( parseKoak
                             , LITERAL(..)
                             ) where
 
-import Koak.Lexer as KL
+import Koak.Lexer as KL     (Token(..))
 
 import Exception            ( KoakException(KoakParserMissingToken))
 
@@ -170,7 +170,7 @@ parsePrototypeUnary tokens = let (unop,       rest   ) = parseUnOp            to
                              parsePrototypeUnary' unop precedence identifier proto_args rest'''
 
 parsePrototypeUnary' :: UN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
-parsePrototypeUnary' unop (Nothing)         identifier proto_args list = (PROTOTYPE_UNARY unop (getDefaultUnaryPrecedence unop) identifier proto_args, list)
+parsePrototypeUnary' unop Nothing           identifier proto_args list = (PROTOTYPE_UNARY unop (getDefaultUnaryPrecedence unop) identifier proto_args, list)
 parsePrototypeUnary' unop (Just precedence) identifier proto_args list = (PROTOTYPE_UNARY unop precedence                       identifier proto_args, list)
 
 parsePrototypeBinary :: [Token] -> (PROTOTYPE, [Token])
@@ -182,7 +182,7 @@ parsePrototypeBinary list = let (binop,      rest   ) = parseBinOp            li
                             parsePrototypeBinary' binop precedence identifier proto_args rest'''
 
 parsePrototypeBinary' :: BIN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
-parsePrototypeBinary' binop (Nothing)         identifier proto_args list = (PROTOTYPE_BINARY binop (getDefaultBinaryPrecedence binop) identifier proto_args, list)
+parsePrototypeBinary' binop Nothing         identifier proto_args list = (PROTOTYPE_BINARY binop (getDefaultBinaryPrecedence binop) identifier proto_args, list)
 parsePrototypeBinary' binop (Just precedence) identifier proto_args list = (PROTOTYPE_BINARY binop precedence                         identifier proto_args, list)
 
 parsePrototype' :: [Token] -> (PROTOTYPE, [Token])
@@ -265,17 +265,8 @@ parseWhile (x:xs)            = throw $ newParsingError "parseWhile" [Word "while
 
 parseWhileDo :: [Token] -> EXPRESSION -> (WHILE, [Token])
 parseWhileDo []             _    = throw $ newParsingError "parseWhile" [Word "do"] Nothing []
-parseWhileDo (Word "do":xs) expr = let (exprs, rest) = parseExpressions xs in (WHILE expr exprs, rest) 
+parseWhileDo (Word "do":xs) expr = let (exprs, rest) = parseExpressions xs in (WHILE expr exprs, rest)
 parseWhileDo (x:xs)         _    = throw $ newParsingError "parseWhile" [Word "do"] (Just x) xs
-
--- data FOR            = FOR IDENTIFIER EXPRESSION IDENTIFIER EXPRESSION EXPRESSION EXPRESSIONS
---     deriving (Eq, Show)
-
--- data IF             = IF EXPRESSION EXPRESSIONS (Maybe EXPRESSIONS)
---     deriving (Eq, Show)
-
--- data WHILE          = WHILE EXPRESSION EXPRESSIONS
---     deriving (Eq, Show)
 
 parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
 parseExpressions []                     = throw $ newParsingError "parseExpressions" [Word "for", Word "if", Word "while", Word "{expression}"] Nothing []
@@ -465,5 +456,5 @@ getDefaultBinaryPrecedence BIN_EQ       = PRECEDENCE 0
 getDefaultBinaryPrecedence BIN_NEQ      = PRECEDENCE 0
 getDefaultBinaryPrecedence BIN_ASSIGN   = PRECEDENCE 0
 
-newParsingError :: String -> [Token] -> (Maybe Token) -> [Token] -> KoakException
+newParsingError :: String -> [Token] -> Maybe Token -> [Token] -> KoakException
 newParsingError at expected actual rest = KoakParserMissingToken at (show expected) (show actual) (show rest)
