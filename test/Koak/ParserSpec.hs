@@ -75,9 +75,9 @@ spec = do
                                         (KP.PRIMARY_IDENTIFIER
                                             (KP.IDENTIFIER "foo")
                                         )
-                                        (Just (KP.CALL_EXPR
+                                        (Just $ KP.CALL_EXPR
                                             (Nothing)
-                                        ))
+                                        )
                                     )
                                 )
                                 []
@@ -103,8 +103,8 @@ spec = do
                                         (KP.PRIMARY_IDENTIFIER
                                             (KP.IDENTIFIER "foo")
                                         )
-                                        (Just (KP.CALL_EXPR
-                                            (Just (KP.CALL_EXPR_ARGS
+                                        (Just $ KP.CALL_EXPR
+                                            (Just $ KP.CALL_EXPR_ARGS
                                                 (KP.EXPRESSION
                                                     (KP.UNARY_POSTFIX
                                                         (KP.POSTFIX
@@ -119,8 +119,8 @@ spec = do
                                                     []
                                                 )
                                                 []
-                                            ))
-                                        ))
+                                            )
+                                        )
                                     )
                                 )
                                 []
@@ -146,8 +146,8 @@ spec = do
                                         (KP.PRIMARY_IDENTIFIER
                                             (KP.IDENTIFIER "foo")
                                         )
-                                        (Just (KP.CALL_EXPR
-                                            (Just (KP.CALL_EXPR_ARGS
+                                        (Just $ KP.CALL_EXPR
+                                            (Just $ KP.CALL_EXPR_ARGS
                                                 (KP.EXPRESSION
                                                     (KP.UNARY_POSTFIX
                                                         (KP.POSTFIX
@@ -160,8 +160,8 @@ spec = do
                                                     []
                                                 )
                                                 []
-                                            ))
-                                        ))
+                                            )
+                                        )
                                     )
                                 )
                                 []
@@ -191,8 +191,8 @@ spec = do
                                         (KP.PRIMARY_IDENTIFIER
                                             (KP.IDENTIFIER "foo")
                                         )
-                                        (Just (KP.CALL_EXPR
-                                            (Just (KP.CALL_EXPR_ARGS
+                                        (Just $ KP.CALL_EXPR
+                                            (Just $ KP.CALL_EXPR_ARGS
                                                 (KP.EXPRESSION
                                                     (KP.UNARY_POSTFIX
                                                         (KP.POSTFIX
@@ -232,8 +232,167 @@ spec = do
                                                         []
                                                     )    
                                                 ]
-                                            ))
-                                        ))
+                                            )
+                                        )
+                                    )
+                                )
+                                []
+                            )
+                            []
+                        )
+                    )
+                ]
+    it "function call with multiple arguments and expressions: foo(-1 * 3, my_var, bar(1, -2.12), my_var_2 / 2);" $ do
+        parseKoak
+            [
+                KL.Word "foo",
+                KL.OpenParenthesis,
+                KL.Minus,
+                KL.Number 1,
+                KL.Multiply,
+                KL.Number 3,
+                KL.Comma,
+                KL.Word "my_var",
+                KL.Comma,
+                KL.Word "bar",
+                KL.OpenParenthesis,
+                KL.Number 1,
+                KL.Comma,
+                KL.Minus,
+                KL.FloatingNumber 2.12,
+                KL.ClosedParenthesis,
+                KL.Comma,
+                KL.Word "my_var_2",
+                KL.Divide,
+                KL.Number 2,
+                KL.ClosedParenthesis,
+                KL.SemiColon
+            ] == [
+                    (KP.KDEFS_EXPR
+                        (KP.EXPRESSIONS
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_IDENTIFIER
+                                            (KP.IDENTIFIER "foo")
+                                        )
+                                        (Just $ KP.CALL_EXPR
+                                            (Just $ KP.CALL_EXPR_ARGS
+                                                (KP.EXPRESSION
+                                                    (KP.UNARY_UN
+                                                        (KP.UN_MINUS)
+                                                            (KP.UNARY_POSTFIX
+                                                                (KP.POSTFIX
+                                                                    (KP.PRIMARY_LITERAL
+                                                                        (KP.LITERAL_DECIMAL
+                                                                            (KP.DECIMAL_CONST 1)
+                                                                        )
+                                                                    )
+                                                                    Nothing
+                                                                )
+                                                            )
+                                                    )
+                                                    [
+                                                        (
+                                                            (KP.BIN_MULT),
+                                                            (KP.UNARY_POSTFIX
+                                                                (KP.POSTFIX
+                                                                    (KP.PRIMARY_LITERAL
+                                                                        (KP.LITERAL_DECIMAL
+                                                                            (KP.DECIMAL_CONST 3)   
+                                                                        )
+                                                                    )
+                                                                   Nothing
+                                                                )
+                                                            )
+                                                        )
+                                                    ]
+                                                )
+                                                [
+                                                    (KP.EXPRESSION
+                                                        (KP.UNARY_POSTFIX
+                                                            (KP.POSTFIX
+                                                                (KP.PRIMARY_IDENTIFIER
+                                                                    (KP.IDENTIFIER "my_var")
+                                                                )
+                                                                Nothing
+                                                            )
+                                                        )
+                                                        []
+                                                    ),
+                                                    (KP.EXPRESSION
+                                                        (KP.UNARY_POSTFIX
+                                                            (KP.POSTFIX
+                                                                (KP.PRIMARY_IDENTIFIER
+                                                                    (KP.IDENTIFIER "bar")
+                                                                )
+                                                                (Just $ KP.CALL_EXPR
+                                                                    (Just $ CALL_EXPR_ARGS
+                                                                        (KP.EXPRESSION
+                                                                            (KP.UNARY_POSTFIX
+                                                                                (KP.POSTFIX
+                                                                                    (KP.PRIMARY_LITERAL
+                                                                                        (KP.LITERAL_DECIMAL
+                                                                                            (KP.DECIMAL_CONST 1)
+                                                                                        )
+                                                                                    )
+                                                                                    Nothing
+                                                                                )
+                                                                            )
+                                                                            []
+                                                                        )
+                                                                        [
+                                                                            (KP.EXPRESSION
+                                                                                (KP.UNARY_UN
+                                                                                    (KP.UN_MINUS)
+                                                                                    (KP.UNARY_POSTFIX
+                                                                                        (KP.POSTFIX
+                                                                                            (KP.PRIMARY_LITERAL
+                                                                                                (KP.LITERAL_DOUBLE
+                                                                                                    (KP.DOUBLE_CONST 2.12)
+                                                                                                )
+                                                                                            )
+                                                                                            Nothing
+                                                                                        )
+                                                                                    )
+                                                                                )
+                                                                                []
+                                                                            )   
+                                                                        ]
+                                                                    )
+                                                                )
+                                                            )
+                                                        )
+                                                        []
+                                                    ),
+                                                    (KP.EXPRESSION
+                                                        (KP.UNARY_POSTFIX
+                                                            (KP.POSTFIX
+                                                                (KP.PRIMARY_IDENTIFIER
+                                                                    (KP.IDENTIFIER "my_var_2")
+                                                                )
+                                                                Nothing
+                                                            )
+                                                        )
+                                                        [
+                                                            (
+                                                                (KP.BIN_DIV),
+                                                                (KP.UNARY_POSTFIX
+                                                                    (KP.POSTFIX
+                                                                        (KP.PRIMARY_LITERAL
+                                                                            (KP.LITERAL_DECIMAL
+                                                                                (KP.DECIMAL_CONST 2)
+                                                                            )
+                                                                        )
+                                                                        Nothing
+                                                                    )
+                                                                )
+                                                            )
+                                                        ]
+                                                    )    
+                                                ]
+                                            )
+                                        )
                                     )
                                 )
                                 []
