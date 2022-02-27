@@ -233,8 +233,36 @@ parseType (Word "void":xs)   = (VOID, xs)
 parseType (x:xs)             = throw $ newParsingError "parseType" [Word "int", Word "double", Word "void"] (Just x) xs
 
 parseFor :: [Token] -> (FOR, [Token])
-parseFor [] = error "parseFor: empty list"
-parseFor _  = error "Not Implemented"
+parseFor []              = throw $ newParsingError "parseIf" [Word "for"] Nothing []
+parseFor (Word "for":xs) = let (assign_id, rest) = parseIdentifier xs in parseFor' rest assign_id
+parseFor (x:xs)          = throw $ newParsingError "parseIf" [Word "for"] (Just x) xs
+
+parseFor' :: [Token] -> IDENTIFIER -> (FOR, [Token])
+parseFor' []         _          = throw $ newParsingError "parseIf" [Assign] Nothing []
+parseFor' (Assign:xs) assign_id = let (assign_expr, rest) = parseExpression xs in parseFor'' rest assign_id assign_expr
+parseFor' (x:xs)     _          = throw $ newParsingError "parseIf" [Assign] (Just x) xs
+
+parseFor'' :: [Token] -> IDENTIFIER -> EXPRESSION -> (FOR, [Token])
+parseFor'' []         _          _          = throw $ newParsingError "parseIf" [Comma] Nothing []
+parseFor'' (Comma:xs) assign_id assign_expr = let (cmp_id, rest) = parseIdentifier xs in parseFor''' rest assign_id assign_expr cmp_id
+parseFor'' (x:xs)     _          _          = throw $ newParsingError "parseIf" [Comma] (Just x) xs
+
+parseFor''' :: [Token] -> IDENTIFIER -> EXPRESSION -> IDENTIFIER -> (FOR, [Token])
+parseFor''' []         _          _          _      = throw $ newParsingError "parseIf" [Lower] Nothing []
+parseFor''' (Lower:xs) assign_id assign_expr cmp_id = let (cmp_expr, rest) = parseExpression xs in parseFor'''' rest assign_id assign_expr cmp_id cmp_expr
+parseFor''' (x:xs)     _          _          _      = throw $ newParsingError "parseIf" [Lower] (Just x) xs
+
+parseFor'''' :: [Token] -> IDENTIFIER -> EXPRESSION -> IDENTIFIER -> EXPRESSION -> (FOR, [Token])
+parseFor'''' []             _          _          _      _    = throw $ newParsingError "parseIf" [Comma] Nothing []
+parseFor'''' (Comma:xs) assign_id assign_expr cmp_id cmp_expr = let (inc_expr, rest) = parseExpression xs in parseFor''''' rest assign_id assign_expr cmp_id cmp_expr inc_expr
+parseFor'''' (x:xs)         _          _          _      _    = throw $ newParsingError "parseIf" [Comma] (Just x) xs
+
+parseFor''''' :: [Token] -> IDENTIFIER -> EXPRESSION -> IDENTIFIER -> EXPRESSION -> EXPRESSION -> (FOR, [Token])
+parseFor''''' []             _          _           _     _        _        = throw $ newParsingError "parseIf" [Word "in"] Nothing []
+parseFor''''' (Word "in":xs) assign_id assign_expr cmp_id cmp_expr inc_expr =
+    let (core_expr, rest) = parseExpressions xs in
+    (FOR assign_id assign_expr cmp_id cmp_expr inc_expr core_expr, rest)
+parseFor''''' (x:xs)         _          _           _     _        _        = throw $ newParsingError "parseIf" [Word "in"] (Just x) xs
 
 parseIf :: [Token] -> (IF, [Token])
 parseIf []             = throw $ newParsingError "parseIf" [Word "if"] Nothing []
@@ -348,13 +376,6 @@ parsePrimaryExpression (OpenParenthesis:ClosedParenthesis:xs) exprs = (PRIMARY_E
 parsePrimaryExpression (x:              ClosedParenthesis:xs) _     = throw $ newParsingError "parsePrimaryExpression" [OpenParenthesis]   (Just x) xs
 parsePrimaryExpression (OpenParenthesis:x                :xs) _     = throw $ newParsingError "parsePrimaryExpression" [ClosedParenthesis] (Just x) xs
 parsePrimaryExpression list                                   _     = throw $ newParsingError "parsePrimaryExpression" [OpenParenthesis, ClosedParenthesis] Nothing list
-
--- parseCallExpr :: [Token] -> (CALL_EXPR, [Token])
--- parseCallExpr []                                         = throw $ newParsingError "parseCallExpr" [OpenParenthesis, ClosedParenthesis] Nothing []
--- parseCallExpr (OpenParenthesis : ClosedParenthesis : xs) = (CALL_EXPR Nothing, xs)
--- parseCallExpr (OpenParenthesis : xs)                     = let (callExpr, rest) = parseCallExprArg xs in
---                                                            (CALL_EXPR (Just callExpr), rest)
--- parseCallExpr (x:xs) = throw $ newParsingError "parseCallExpr" [OpenParenthesis, ClosedParenthesis] (Just x) xs
 
 parseIdentifier :: [Token] -> (IDENTIFIER, [Token])
 parseIdentifier []            = throw $ newParsingError "parseIdentifier" [Word "{any}"] Nothing []

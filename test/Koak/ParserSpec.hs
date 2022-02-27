@@ -804,6 +804,103 @@ spec = do
                         ]
                     )
             ]
+    it "Simple for: for i = 1, i < n, 1 in print(42);" $
+        parseKoak
+        [
+            KL.Word "for",
+            KL.Word "i",
+            KL.Assign,
+            KL.Number 1,
+            KL.Comma ,
+            KL.Word "i",
+            KL.Lower,
+            KL.Word "n",
+            KL.Comma,
+            KL.Number 1,
+            KL.Word "in",
+            KL.Word "print",
+            KL.OpenParenthesis, 
+            KL.Number 42,
+            KL.ClosedParenthesis, 
+            KL.SemiColon
+        ] == [
+                KP.KDEFS_EXPR
+                    (KP.FOR_EXPR
+                        (KP.FOR
+                            (KP.IDENTIFIER "i")
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_LITERAL
+                                            (KP.LITERAL_DECIMAL
+                                                (KP.DECIMAL_CONST 1)
+                                            )
+                                        )
+                                        Nothing
+                                    )
+                                )
+                                []
+                            )
+                            (KP.IDENTIFIER "i")
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_IDENTIFIER
+                                            (KP.IDENTIFIER "n")
+                                        )
+                                        Nothing
+                                    )
+                                )
+                                []
+                            )
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_LITERAL
+                                            (KP.LITERAL_DECIMAL
+                                                (KP.DECIMAL_CONST 1)
+                                            )
+                                        )
+                                        Nothing
+                                    )
+                                )
+                                []
+                            )
+                            (KP.EXPRESSIONS
+                                (KP.EXPRESSION
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_IDENTIFIER
+                                                (KP.IDENTIFIER "print")
+                                            )
+                                            (Just $ KP.CALL_EXPR
+                                                (Just $ KP.CALL_EXPR_ARGS
+                                                    (KP.EXPRESSION
+                                                        (KP.UNARY_POSTFIX
+                                                            (KP.POSTFIX
+                                                                (KP.PRIMARY_LITERAL
+                                                                    (KP.LITERAL_DECIMAL
+                                                                        (KP.DECIMAL_CONST 42)
+                                                                    )
+                                                                )
+                                                                Nothing
+                                                            )
+                                                        )
+                                                        []
+                                                    )
+                                                    []
+                                                )
+                                            )
+                                        )
+                                    )
+                                    []
+                                )
+                                []
+                            )
+                        )
+                    )
+            ]
+
 
 
 -- foo(): bar(2): foobar(1, 2, 3)
