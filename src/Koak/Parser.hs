@@ -136,12 +136,12 @@ data LITERAL          = LITERAL_DECIMAL DECIMAL_CONST
 
 parseKoak :: [Token] -> [KDEFS]
 parseKoak [] = []
-parseKoak tokens = let (kdefs, rest) = parseKdefs tokens in kdefs : parseKoak rest
+parseKoak tokens = let (kdefs, rest) = parseKDefs tokens in kdefs : parseKoak rest
 
-parseKdefs :: [Token] -> (KDEFS, [Token])
-parseKdefs []                = throw $ newParsingError "parseKdefs" [Word "def"] Nothing []
-parseKdefs ((Word "def"):xs) = let (def, rest)  = parseDefs xs          in (KDEFS_DEFS def, rest)
-parseKdefs list              = let (expr, rest) = parseExpressions list in (KDEFS_EXPR expr, parseKDefsSemiColon rest)
+parseKDefs :: [Token] -> (KDEFS, [Token])
+parseKDefs []                = throw $ newParsingError "parseKdefs" [Word "def"] Nothing []
+parseKDefs ((Word "def"):xs) = let (def, rest)  = parseDefs xs          in (KDEFS_DEFS def, rest)
+parseKDefs list              = let (expr, rest) = parseExpressions list in (KDEFS_EXPR expr, parseKDefsSemiColon rest)
 
 parseDefs :: [Token] -> (DEFS, [Token])
 parseDefs []     = throw $ newParsingError "parseDefs" [] Nothing []
@@ -194,14 +194,14 @@ parsePrototype' list    = let (identifier, rest ) = parseIdentifier    list  in
 parsePrototypeArgs :: [Token] -> (PROTOTYPE_ARGS, [Token])
 parsePrototypeArgs []     = throw $ newParsingError "parsePrototypeArgs" [] Nothing []
 parsePrototypeArgs (x:xs) = let (p_list,      rest ) = parsePrototypeArgsList xs in
-                            let (return_type, rest') = parsePrototypeArgsType $ parsePrototypeArgsParenthesis $ x:rest  in
+                            let (return_type, rest') = parsePrototypeArgsType $ parsePrototypeArgsParenthesis (x:rest)  in
                             (PROTOTYPE_ARGS p_list return_type, rest')
 
 parsePrototypeArgsParenthesis :: [Token] -> [Token]
 parsePrototypeArgsParenthesis (OpenParenthesis:ClosedParenthesis:xs) = xs
-parsePrototypeArgsParenthesis (x:ClosedParenthesis:xs)               = throw $ newParsingError "parsePrototypeArgsParenthesis" [OpenParenthesis] (Just x) xs
-parsePrototypeArgsParenthesis (OpenParenthesis:x:xs)                 = throw $ newParsingError "parsePrototypeArgsParenthesis" [ClosedParenthesis] (Just x) xs
-parsePrototypeArgsParenthesis list                                   = throw $ newParsingError "parsePrototypeArgsParenthesis" [OpenParenthesis, ClosedParenthesis] Nothing list
+parsePrototypeArgsParenthesis (x:ClosedParenthesis:xs)               = throw $ newParsingError "parsePrototypeArgsParenthesis" [OpenParenthesis]                    (Just x) xs
+parsePrototypeArgsParenthesis (OpenParenthesis:x:xs)                 = throw $ newParsingError "parsePrototypeArgsParenthesis" [ClosedParenthesis]                  (Just x) xs
+parsePrototypeArgsParenthesis list                                   = throw $ newParsingError "parsePrototypeArgsParenthesis" [OpenParenthesis, ClosedParenthesis] Nothing  list
 
 parsePrototypeArgsList :: [Token] -> ([PROTOTYPE_ID], [Token])
 parsePrototypeArgsList list = let (p_list, tokens) = parsePrototypeArgsList' list [] in (reverse p_list, tokens)
@@ -221,9 +221,12 @@ parseMaybePrecedence list          = (Nothing, list)
 
 parsePrototypeId :: [Token] -> (PROTOTYPE_ID, [Token])
 parsePrototypeId []   = throw $ newParsingError "parsePrototypeId" [] Nothing []
-parsePrototypeId list = let (identifier,     rest ) = parseIdentifier list in
-                        let (prototype_type, rest') = parseType rest       in
-                        (PROTOTYPE_ID identifier prototype_type, rest')
+parsePrototypeId list = let (identifier, rest) = parseIdentifier list in parsePrototypeId' rest identifier
+
+parsePrototypeId' :: [Token] -> IDENTIFIER -> (PROTOTYPE_ID, [Token])
+parsePrototypeId' []         _          = throw $ newParsingError "parsePrototypeId" [Colon] Nothing []
+parsePrototypeId' (Colon:xs) identifier = let (prototype_type, rest) = parseType xs in (PROTOTYPE_ID identifier prototype_type, rest)
+parsePrototypeId' (x:xs)     _          = throw $ newParsingError "parsePrototypeId" [Colon] (Just x) xs
 
 parseType :: [Token] -> (TYPE, [Token])
 parseType []                 = throw $ newParsingError "parseType" [Word "int", Word "double", Word "void"] Nothing []
