@@ -244,21 +244,46 @@ parseFor [] = error "parseFor: empty list"
 parseFor _  = error "Not Implemented"
 
 parseIf :: [Token] -> (IF, [Token])
-parseIf [] = error "parseIf: empty list"
-parseIf _  = error "Not Implemented"
+parseIf []             = throw $ newParsingError "parseIf" [Word "if"] Nothing []
+parseIf (Word "if":xs) = let (expr, rest) = parseExpression xs in parseIfThen rest expr
+parseIf (x:xs)         = throw $ newParsingError "parseIf" [Word "if"] (Just x) xs
+
+parseIfThen :: [Token] -> EXPRESSION -> (IF, [Token])
+parseIfThen []               _    = throw $ newParsingError "parseIf" [Word "then"] Nothing []
+parseIfThen (Word "then":xs) expr = let (exprs, rest) = parseExpressions xs in parseIf' rest expr exprs
+parseIfThen (x:xs)           _    = throw $ newParsingError "parseIf" [Word "then"] (Just x) xs
+
+parseIf' :: [Token] -> EXPRESSION -> EXPRESSIONS -> (IF, [Token])
+parseIf' (Word "else":xs) expr exprs = let (exprs', rest) = parseExpressions xs in
+                                       (IF expr exprs (Just exprs'), rest)
+parseIf' rest             expr exprs = (IF expr exprs Nothing,       rest)
 
 parseWhile :: [Token] -> (WHILE, [Token])
-parseWhile [] = error "parseWhile: empty list"
-parseWhile _  = error "Not Implemented"
+parseWhile []                = throw $ newParsingError "parseWhile" [Word "while"] Nothing []
+parseWhile (Word "while":xs) = let (expr, rest) = parseExpression xs in parseWhileDo rest expr
+parseWhile (x:xs)            = throw $ newParsingError "parseWhile" [Word "while"] (Just x) xs
 
+parseWhileDo :: [Token] -> EXPRESSION -> (WHILE, [Token])
+parseWhileDo []             _    = throw $ newParsingError "parseWhile" [Word "do"] Nothing []
+parseWhileDo (Word "do":xs) expr = let (exprs, rest) = parseExpressions xs in (WHILE expr exprs, rest) 
+parseWhileDo (x:xs)         _    = throw $ newParsingError "parseWhile" [Word "do"] (Just x) xs
+
+-- data FOR            = FOR IDENTIFIER EXPRESSION IDENTIFIER EXPRESSION EXPRESSION EXPRESSIONS
+--     deriving (Eq, Show)
+
+-- data IF             = IF EXPRESSION EXPRESSIONS (Maybe EXPRESSIONS)
+--     deriving (Eq, Show)
+
+-- data WHILE          = WHILE EXPRESSION EXPRESSIONS
+--     deriving (Eq, Show)
 
 parseExpressions :: [Token] -> (EXPRESSIONS, [Token])
-parseExpressions []                = throw $ newParsingError "parseExpressions" [Word "for", Word "if", Word "while", Word "{expression}"] Nothing []
-parseExpressions (Word "for":  xs) = let (for,     rest)  = parseFor xs             in (FOR_EXPR for,     rest)
-parseExpressions (Word "if":   xs) = let (if_,     rest)  = parseIf xs              in (IF_EXPR if_,      rest)
-parseExpressions (Word "while":xs) = let (while,   rest)  = parseWhile xs           in (WHILE_EXPR while, rest)
-parseExpressions list              = let (expr,    rest)  = parseExpression list    in
-                                     let (arrExpr, rest') = parseArrExpression rest in (EXPRESSIONS expr arrExpr, rest')
+parseExpressions []                     = throw $ newParsingError "parseExpressions" [Word "for", Word "if", Word "while", Word "{expression}"] Nothing []
+parseExpressions list@(Word "for":  xs) = let (for_expr,   rest)  = parseFor list           in (FOR_EXPR for_expr,         rest )
+parseExpressions list@(Word "if":   xs) = let (if_expr,    rest)  = parseIf list            in (IF_EXPR if_expr,           rest )
+parseExpressions list@(Word "while":xs) = let (while_expr, rest)  = parseWhile list         in (WHILE_EXPR while_expr,     rest )
+parseExpressions list                   = let (expr,       rest)  = parseExpression list    in
+                                          let (arr_expr,   rest') = parseArrExpression rest in (EXPRESSIONS expr arr_expr, rest')
 
 parseExpression :: [Token] -> (EXPRESSION, [Token])
 parseExpression []     = throw $ newParsingError "parseExpression" [] Nothing []
@@ -275,7 +300,7 @@ parseExpression' tokens@(x:xs)
     | otherwise                = ([], tokens)
 
 parseArrExpression :: [Token] -> ([EXPRESSION], [Token])
-parseArrExpression list = let (arrExpr, rest) = parseArrExpression' list in (reverse arrExpr, rest)
+parseArrExpression list = let (arrExpr, rest) = parseArrExpression' list in (arrExpr, rest)
 
 parseArrExpression' :: [Token] -> ([EXPRESSION], [Token])
 parseArrExpression' (Colon:xs) = let (first, rest ) = parseExpression xs       in
@@ -330,10 +355,22 @@ parsePrimary []                      = throw $ newParsingError "parsePrimary" [W
 parsePrimary (Word x : xs)           = (PRIMARY_IDENTIFIER (IDENTIFIER x), xs)
 parsePrimary (Number x : xs)         = (PRIMARY_LITERAL $ LITERAL_DECIMAL $ DECIMAL_CONST  x, xs)
 parsePrimary (FloatingNumber x : xs) = (PRIMARY_LITERAL $ LITERAL_DOUBLE  $ DOUBLE_CONST   x, xs)
-parsePrimary (OpenParenthesis : xs)  =
-                let (expr, rest)     = parseExpressions xs
-                in (PRIMARY_EXPRS expr, rest)
+parsePrimary (OpenParenthesis : xs)  = let (exprs, rest) = parseExpressions xs in parsePrimaryExpression (OpenParenthesis : rest) exprs
 parsePrimary (x:xs)                  = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] (Just x) xs
+
+parsePrimaryExpression :: [Token] -> EXPRESSIONS -> (PRIMARY, [Token])
+parsePrimaryExpression []                                     _     = throw $ newParsingError "parsePrimaryExpression" [OpenParenthesis, ClosedParenthesis] Nothing []
+parsePrimaryExpression (OpenParenthesis:ClosedParenthesis:xs) exprs = (PRIMARY_EXPRS exprs, xs)
+parsePrimaryExpression (x:              ClosedParenthesis:xs) _     = throw $ newParsingError "parsePrimaryExpression" [OpenParenthesis]   (Just x) xs
+parsePrimaryExpression (OpenParenthesis:x                :xs) _     = throw $ newParsingError "parsePrimaryExpression" [ClosedParenthesis] (Just x) xs
+parsePrimaryExpression list                                   _     = throw $ newParsingError "parsePrimaryExpression" [OpenParenthesis, ClosedParenthesis] Nothing list
+
+-- parseCallExpr :: [Token] -> (CALL_EXPR, [Token])
+-- parseCallExpr []                                         = throw $ newParsingError "parseCallExpr" [OpenParenthesis, ClosedParenthesis] Nothing []
+-- parseCallExpr (OpenParenthesis : ClosedParenthesis : xs) = (CALL_EXPR Nothing, xs)
+-- parseCallExpr (OpenParenthesis : xs)                     = let (callExpr, rest) = parseCallExprArg xs in
+--                                                            (CALL_EXPR (Just callExpr), rest)
+-- parseCallExpr (x:xs) = throw $ newParsingError "parseCallExpr" [OpenParenthesis, ClosedParenthesis] (Just x) xs
 
 parseIdentifier :: [Token] -> (IDENTIFIER, [Token])
 parseIdentifier []            = throw $ newParsingError "parseIdentifier" [Word "{any}"] Nothing []

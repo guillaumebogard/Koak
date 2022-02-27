@@ -428,7 +428,8 @@ spec = do
                             )
                             []
                         )
-                    )                ]
+                    )
+            ]
     it "Deep unary expression: -++-1;" $ do
         parseKoak
             [
@@ -470,6 +471,369 @@ spec = do
                         )
                     )
                 ]
+    it "Simple if: if a then b;" $ do
+        parseKoak
+            [
+                KL.Word "if",
+                KL.Word "a",
+                KL.Word "then",
+                KL.Word "b",
+                KL.SemiColon
+            ] == [
+                    (KP.KDEFS_EXPR
+                        (KP.IF_EXPR
+                            (KP.IF
+                                (KP.EXPRESSION
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_IDENTIFIER
+                                                (KP.IDENTIFIER "a")
+                                            )
+                                            Nothing
+                                        )
+                                    )
+                                    []
+                                )
+                                (KP.EXPRESSIONS
+                                    (KP.EXPRESSION
+                                        (KP.UNARY_POSTFIX
+                                            (KP.POSTFIX
+                                                (KP.PRIMARY_IDENTIFIER
+                                                    (KP.IDENTIFIER "b")
+                                                )
+                                                Nothing
+                                            )
+                                        )
+                                        []
+                                    )
+                                    []
+                                )
+                                (Nothing)
+                            )
+                        )
+                    )
+                ]
+    it "Simple if else: if a then b else c;" $ do
+        parseKoak
+            [
+                KL.Word "if",
+                KL.Word "a",
+                KL.Word "then",
+                KL.Word "b",
+                KL.Word "else",
+                KL.Word "c",
+                KL.SemiColon
+            ] == [
+                    (KP.KDEFS_EXPR
+                        (KP.IF_EXPR
+                            (KP.IF
+                                (KP.EXPRESSION
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_IDENTIFIER
+                                                (KP.IDENTIFIER "a")
+                                            )
+                                            Nothing
+                                        )
+                                    )
+                                    []
+                                )
+                                (KP.EXPRESSIONS
+                                    (KP.EXPRESSION
+                                        (KP.UNARY_POSTFIX
+                                            (KP.POSTFIX
+                                                (KP.PRIMARY_IDENTIFIER
+                                                    (KP.IDENTIFIER "b")
+                                                )
+                                                Nothing
+                                            )
+                                        )
+                                        []
+                                    )
+                                    []
+                                )
+                                (Just $ KP.EXPRESSIONS
+                                    (KP.EXPRESSION
+                                        (KP.UNARY_POSTFIX
+                                            (KP.POSTFIX
+                                                (KP.PRIMARY_IDENTIFIER
+                                                    (KP.IDENTIFIER "c")
+                                                )
+                                                Nothing
+                                            )
+                                        )
+                                        []
+                                    )
+                                    []
+                                )
+                            )
+                        )
+                    )
+                ]
+    it "Simple while: while a do b;" $ do
+        parseKoak
+            [
+                KL.Word "while",
+                KL.Word "a",
+                KL.Word "do",
+                KL.Word "b",
+                KL.SemiColon
+            ] == [
+                    (KP.KDEFS_EXPR
+                        (KP.WHILE_EXPR
+                            (KP.WHILE
+                                (KP.EXPRESSION
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_IDENTIFIER
+                                                (KP.IDENTIFIER "a")
+                                            )
+                                            Nothing
+                                        )
+                                    )
+                                    []
+                                )
+                                (KP.EXPRESSIONS
+                                    (KP.EXPRESSION
+                                        (KP.UNARY_POSTFIX
+                                            (KP.POSTFIX
+                                                (KP.PRIMARY_IDENTIFIER
+                                                    (KP.IDENTIFIER "b")
+                                                )
+                                                Nothing
+                                            )
+                                        )
+                                        []
+                                    )
+                                    []
+                                )
+                            )
+                        )
+                    )
+                ]
+    it "real world while: len = 99 : i = 0 : (while i < len do print(i) : i = i + 1) : print(i);" $ do
+        parseKoak
+            [
+                KL.Word "len",
+                KL.Assign,
+                KL.Number 99,
+                KL.Colon,
+                KL.Word "i",
+                KL.Assign,
+                KL.Number 0,
+                KL.Colon,
+                KL.OpenParenthesis,
+                KL.Word "while",
+                KL.Word "i",
+                KL.Lower,
+                KL.Word "len",
+                KL.Word "do",
+                KL.Word "print",
+                KL.OpenParenthesis,
+                KL.Word "i",
+                KL.ClosedParenthesis,
+                KL.Colon,
+                KL.Word "i",
+                KL.Assign,
+                KL.Word "i",
+                KL.Plus,
+                KL.Number 1,
+                KL.ClosedParenthesis,
+                KL.Colon,
+                KL.Word "print",
+                KL.OpenParenthesis,
+                KL.Word "i",
+                KL.ClosedParenthesis,
+                KL.SemiColon
+            ] == [
+                    (KP.KDEFS_EXPR
+                        (KP.EXPRESSIONS
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_IDENTIFIER
+                                            (KP.IDENTIFIER "len")
+                                        )
+                                        Nothing
+                                    )
+                                )
+                                [
+                                    (
+                                        (KP.BIN_ASSIGN),
+                                        (KP.UNARY_POSTFIX
+                                            (KP.POSTFIX
+                                                (KP.PRIMARY_LITERAL
+                                                    (KP.LITERAL_DECIMAL
+                                                        (KP.DECIMAL_CONST 99)
+                                                    )
+                                                )
+                                                Nothing
+                                            )
+                                        )
+                                    )
+                                ]
+                            )
+                            [
+                                (KP.EXPRESSION
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_IDENTIFIER
+                                                (KP.IDENTIFIER "i")
+                                            )
+                                            Nothing
+                                        )
+                                    )
+                                    [
+                                        (
+                                            (KP.BIN_ASSIGN),
+                                            (KP.UNARY_POSTFIX
+                                                (KP.POSTFIX
+                                                    (KP.PRIMARY_LITERAL
+                                                        (KP.LITERAL_DECIMAL
+                                                            (KP.DECIMAL_CONST 0)
+                                                        )
+                                                    )
+                                                    Nothing
+                                                )
+                                            )
+                                        )
+                                    ]
+                                ),
+                                (KP.EXPRESSION
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_EXPRS
+                                                (KP.WHILE_EXPR
+                                                    (KP.WHILE
+                                                        (KP.EXPRESSION
+                                                            (KP.UNARY_POSTFIX
+                                                                (KP.POSTFIX
+                                                                    (KP.PRIMARY_IDENTIFIER
+                                                                        (KP.IDENTIFIER "i")
+                                                                    )
+                                                                    Nothing
+                                                                )
+                                                            )
+                                                            [
+                                                                (
+                                                                    (KP.BIN_LT),
+                                                                    (KP.UNARY_POSTFIX
+                                                                        (KP.POSTFIX
+                                                                            (KP.PRIMARY_IDENTIFIER
+                                                                                (KP.IDENTIFIER "len")
+                                                                            )
+                                                                            Nothing
+                                                                        )
+                                                                    )
+                                                                )
+                                                            ]
+                                                        )
+                                                        (KP.EXPRESSIONS
+                                                            (KP.EXPRESSION
+                                                                (KP.UNARY_POSTFIX
+                                                                    (KP.POSTFIX
+                                                                        (KP.PRIMARY_IDENTIFIER
+                                                                            (KP.IDENTIFIER "print")
+                                                                        )
+                                                                        (Just $ KP.CALL_EXPR
+                                                                            (Just $ KP.CALL_EXPR_ARGS
+                                                                                (KP.EXPRESSION
+                                                                                    (KP.UNARY_POSTFIX
+                                                                                        (KP.POSTFIX
+                                                                                            (KP.PRIMARY_IDENTIFIER
+                                                                                                (KP.IDENTIFIER "i")
+                                                                                            )
+                                                                                            Nothing
+                                                                                        )
+                                                                                    )
+                                                                                    []
+                                                                                )
+                                                                                []
+                                                                            )
+                                                                        )
+                                                                    )
+                                                                )
+                                                                []
+                                                            )
+                                                            [
+                                                                (KP.EXPRESSION
+                                                                    (KP.UNARY_POSTFIX
+                                                                        (KP.POSTFIX
+                                                                            (KP.PRIMARY_IDENTIFIER
+                                                                                (KP.IDENTIFIER "i")
+                                                                            )
+                                                                            Nothing
+                                                                        )
+                                                                    )
+                                                                    [
+                                                                        (
+                                                                            (KP.BIN_ASSIGN),
+                                                                            (KP.UNARY_POSTFIX
+                                                                                (KP.POSTFIX
+                                                                                    (KP.PRIMARY_IDENTIFIER
+                                                                                        (KP.IDENTIFIER "i")
+                                                                                    )
+                                                                                    Nothing
+                                                                                )
+                                                                            )
+                                                                        ),
+                                                                        (
+                                                                            (KP.BIN_PLUS),
+                                                                            (KP.UNARY_POSTFIX
+                                                                                (KP.POSTFIX
+                                                                                    (KP.PRIMARY_LITERAL
+                                                                                        (KP.LITERAL_DECIMAL
+                                                                                            (KP.DECIMAL_CONST 1)
+                                                                                        )
+                                                                                    )
+                                                                                    Nothing
+                                                                                )
+                                                                            )
+                                                                        )
+                                                                    ]
+                                                                )
+                                                            ]
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                            Nothing
+                                        )
+                                    )
+                                    []
+                                ),
+
+                                (KP.EXPRESSION
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_IDENTIFIER
+                                                (KP.IDENTIFIER "print")
+                                            )
+                                            (Just $ KP.CALL_EXPR
+                                                (Just $ KP.CALL_EXPR_ARGS
+                                                    (KP.EXPRESSION
+                                                        (KP.UNARY_POSTFIX
+                                                            (KP.POSTFIX
+                                                                (KP.PRIMARY_IDENTIFIER
+                                                                    (KP.IDENTIFIER "i")
+                                                                )
+                                                                Nothing
+                                                            )
+                                                        )
+                                                        []
+                                                    )
+                                                    []
+                                                )
+                                            )
+                                        )
+                                    )
+                                    []
+                                )
+                            ]
+                        )
+                    )
+                ]
+
 
 -- foo(): bar(2): foobar(1, 2, 3)
 
