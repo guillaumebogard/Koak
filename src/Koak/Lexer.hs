@@ -96,10 +96,10 @@ parseNumber' (parsed, rest, floating) = (refineNumber parsed floating, rest)
 
 parseNumber'' :: String -> String -> Bool -> (String, String, Bool)
 parseNumber'' parsed []          floating = (reverse parsed, [], floating)
-parseNumber'' parsed ('.':rs)    floating = parseNumber'' ('.':parsed) rs True
+parseNumber'' parsed ('.':rs)    _        = parseNumber'' ('.':parsed) rs True
 parseNumber'' parsed rest@(r:rs) floating
-    | isDigit r                          = parseNumber'' (r:parsed) rs floating
-    | otherwise                          = (reverse parsed, rest, floating)
+    | isDigit r                           = parseNumber'' (r:parsed) rs floating
+    | otherwise                           = (reverse parsed, rest, floating)
 
 refineNumber :: String -> Bool -> Token
 refineNumber rawNumber@('.':_) _ = FloatingNumber $ refineFloatingNumber ('0':rawNumber) $ readMaybe $ '0':rawNumber
