@@ -164,7 +164,7 @@ parsePrototype (x:xs)               = throw $ newParsingError "parsePrototype" [
 parsePrototypeUnary :: [Token] -> (PROTOTYPE, [Token])
 parsePrototypeUnary []     = throw $ newParsingError "parsePrototypeUnary" [] Nothing []
 parsePrototypeUnary tokens = let (unop,       rest   ) = parseUnOp            tokens in
-                             let (precedence,       rest'  ) = parseMaybePrecedence rest   in
+                             let (precedence, rest'  ) = parseMaybePrecedence rest   in
                              let (identifier, rest'' ) = parseIdentifier      rest'  in
                              let (proto_args, rest''') = parsePrototypeArgs   rest'' in
                              parsePrototypeUnary' unop precedence identifier proto_args rest'''
@@ -174,12 +174,11 @@ parsePrototypeUnary' unop Nothing           identifier proto_args list = (PROTOT
 parsePrototypeUnary' unop (Just precedence) identifier proto_args list = (PROTOTYPE_UNARY unop precedence                       identifier proto_args, list)
 
 parsePrototypeBinary :: [Token] -> (PROTOTYPE, [Token])
-parsePrototypeBinary []     = throw $ newParsingError "parsePrototypeBinary" [] Nothing []
-parsePrototypeBinary list = let (binop,      rest   ) = parseBinOp            list   in
-                            let (precedence, rest'  ) = parseMaybePrecedence  rest   in
-                            let (identifier, rest'' ) = parseIdentifier       rest'  in
-                            let (proto_args, rest''') = parsePrototypeArgs    rest'' in
-                            parsePrototypeBinary' binop precedence identifier proto_args rest'''
+parsePrototypeBinary []          = throw $ newParsingError "parsePrototypeBinary" [] Nothing []
+parsePrototypeBinary list@(x:xs) = let (precedence, rest  ) = parseMaybePrecedence  xs    in
+                                   let (identifier, rest' ) = parseIdentifier       rest  in
+                                   let (proto_args, rest'') = parsePrototypeArgs    rest' in
+                                   parsePrototypeBinary' (getBinaryOp x) precedence identifier proto_args rest''
 
 parsePrototypeBinary' :: BIN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
 parsePrototypeBinary' binop Nothing         identifier proto_args list = (PROTOTYPE_BINARY binop (getDefaultBinaryPrecedence binop) identifier proto_args, list)
@@ -471,3 +470,39 @@ getDefaultBinaryPrecedence BIN_ASSIGN   = PRECEDENCE 0
 
 newParsingError :: String -> [Token] -> Maybe Token -> [Token] -> KoakException
 newParsingError at expected actual rest = KoakParserMissingToken at (show expected) (show actual) (show rest)
+
+-- parseA :: [Token] -> (IF, [Token])
+-- parseA list = parseB list >>>> parseB' >>>> parseB'' >>>> parseB'''
+
+-- parseB :: [Token] -> (IF, [Token])
+-- parseB []             = throw $ newParsingError "parseIf" [Word "if"] Nothing []
+-- parseB (Word "if":xs) = let (expr, rest) = parseExpression xs in parseIfThen rest expr
+-- parseB (x:xs)         = throw $ newParsingError "parseIf" [Word "if"] (Just x) xs
+
+-- parseB' :: [Token] -> EXPRESSION -> (IF, [Token])
+-- parseB' []               _    = throw $ newParsingError "parseIf" [Word "then"] Nothing []
+-- parseB' (Word "then":xs) expr = let (exprs, rest) = parseExpressions xs in parseIf' rest expr exprs
+-- parseB' (x:xs)           _    = throw $ newParsingError "parseIf" [Word "then"] (Just x) xs
+
+-- parseB'' :: [Token] -> EXPRESSION -> EXPRESSIONS -> (IF, [Token])
+-- parseB'' (Word "else":xs) expr exprs = let (exprs', rest) = parseExpressions xs in (IF expr exprs (Just exprs'), rest)
+-- parseB'' rest             expr exprs = (IF expr exprs Nothing,       rest)
+
+-- parseB''' :: [Token] -> EXPRESSION -> EXPRESSIONS -> Maybe EXPRESSIONS -> (IF, [Token])
+-- parseB''' list expr then_expr else_expr = (IF expr then_expr else_expr, list)
+
+
+-- (<<<<) ::   ([Token] -> (elementParsed, [Token])) ->
+--             ([Token] , (elementParsed -> partialParsed)) ->
+--             ([Token], (partialParsed))
+-- (<<<<) fparse (t, f1)  = let (result, rest) = fparse t in (rest, f1 result)
+
+
+-- (>>>>) ::   ([Token] , (elementParsed -> partialParsed)) ->
+--             ([Token] -> (elementParsed, [Token])) ->
+--             ((partialParsed), [Token])
+-- (>>>>) (t, f1) fparse = let (result, rest) = fparse t in (f1 result, rest)
+
+-- data BB = BB String
+
+-- a :: ([Token], String -> BB) -> ([Token] -> String, [Token]) -> (String -> [Token])

@@ -159,7 +159,101 @@ spec = do
                         )
                     )
             ]
-
+    it "Multiple simple def w args: def foo (x : int y : double z : void) : int 42; def bar(a : double) : double a;" $
+        parseKoak
+        [
+            KL.Word "def",
+            KL.Word "foo",
+            KL.OpenParenthesis,
+            KL.Word "x",
+            KL.Colon,
+            KL.Word "int",
+            KL.Word "y",
+            KL.Colon,
+            KL.Word "double",
+            KL.Word "z",
+            KL.Colon,
+            KL.Word "void",
+            KL.ClosedParenthesis,
+            KL.Colon,
+            KL.Word "int",
+            KL.Number 42,
+            KL.SemiColon,
+            KL.Word "def",            
+            KL.Word "bar",
+            KL.OpenParenthesis,
+            KL.Word "a",
+            KL.Colon,
+            KL.Word "double",
+            KL.ClosedParenthesis,
+            KL.Colon,
+            KL.Word "double",
+            KL.Word "a",
+            KL.SemiColon            
+        ] == [
+                KP.KDEFS_DEFS
+                    (KP.DEFS
+                        (KP.PROTOTYPE
+                            (KP.IDENTIFIER "foo")
+                            (KP.PROTOTYPE_ARGS
+                                [
+                                    KP.PROTOTYPE_ID
+                                        (KP.IDENTIFIER "x")
+                                        KP.INT,
+                                    KP.PROTOTYPE_ID
+                                        (KP.IDENTIFIER "y")
+                                        KP.DOUBLE,
+                                    KP.PROTOTYPE_ID
+                                        (KP.IDENTIFIER "z")
+                                        KP.VOID
+                                ]
+                                KP.INT)
+                        )
+                        (KP.EXPRESSIONS
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_LITERAL
+                                            (KP.LITERAL_DECIMAL
+                                                (KP.DECIMAL_CONST 42)
+                                            )
+                                        )
+                                        Nothing
+                                    )
+                                )
+                                []
+                            )
+                            []
+                        )
+                    ),
+                KP.KDEFS_DEFS
+                    (KP.DEFS
+                        (KP.PROTOTYPE
+                            (KP.IDENTIFIER "bar")
+                            (KP.PROTOTYPE_ARGS
+                                [
+                                    KP.PROTOTYPE_ID
+                                        (KP.IDENTIFIER "a")
+                                        KP.DOUBLE
+                                ]
+                                KP.DOUBLE)
+                        )
+                        (KP.EXPRESSIONS
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_IDENTIFIER
+                                            (KP.IDENTIFIER "a")
+                                        )
+                                        Nothing
+                                    )
+                                )
+                                []
+                            )
+                            []
+                        )
+                    )
+            ]
     it "Simple function call without args: foo();" $
         parseKoak
         [

@@ -18,12 +18,12 @@ data KoakException = KoakArgumentParserException String
 instance Exception KoakException
 
 instance Show KoakException where
-    show (KoakArgumentParserException err)             = "Argument Parser Exception: " ++ err
-    show (KoakUnknownTokenException token)             = "Unknown token: "             ++ [token]
-    show (KoakInvalidNumberException token)            = "Invalid number: "            ++ token
+    show (KoakArgumentParserException err)                = "Argument Parser Exception: " ++ err
+    show (KoakUnknownTokenException token)                = "Unknown token: "             ++ [token]
+    show (KoakInvalidNumberException token)               = "Invalid number: "            ++ token
     show (KoakParserMissingToken at expected actual [])   = "At " ++ at ++ ", expected: " ++ expected ++ ". Got: " ++ actual ++ "."
     show (KoakParserMissingToken at expected actual rest) = "At " ++ at ++ ", expected: " ++ expected ++ ". Got: " ++ actual ++ "." ++ rest
-    show  KoakHelpException                            = usage
+    show  KoakHelpException                               = usage
 
 instance Eq KoakException where
     (KoakArgumentParserException left) == (KoakArgumentParserException right) = left == right

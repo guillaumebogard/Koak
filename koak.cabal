@@ -22,7 +22,6 @@ library
       Exception
       Koak.Lexer
       Koak.Parser
-      Types
   other-modules:
       Paths_koak
   hs-source-dirs:
