@@ -35,63 +35,82 @@ import Koak.Parser          ( KDEFS(..)
                             , LITERAL(..)
                             )
 
-newtype VAR_FRAME  = VAR_FRAME [(IDENTIFIER, TYPE)]
+
+data VAR_SIGNATURE  = VAR_SIGNATURE IDENTIFIER TYPE
+
+newtype VAR_FRAME  = VAR_FRAME [VAR_SIGNATURE]
 
 type VAR_FRAME_STACK = [VAR_FRAME]
 
-data VAR_CONTEXT = VAR_CONTEXT [KDEFS] VAR_FRAME_STACK
+data SYMBOL_CONTEXT = SYMBOL_CONTEXT [KDEFS] VAR_FRAME_STACK
 
 -- Au lieU de se balader avec plein de KDEF, on va se balader avec la structure suivante
 -- La structure est pas fini, mais elle contient toute les [KDEFS], et la liste de variables locales déclarés, comme une stack
 -- Et il faudra faire une fonction pour push et pop des variables et des stack frame
 
 -- J'utilise l'op <-> pour chainer mes appelle de check___Typing
-    
+
 checkKoakTyping :: [KDEFS] -> ()
-checkKoakTyping _ = ()
--- checkKoakTyping kdefs = map checkKdefTyping kdefs
+checkKoakTyping kdefs = checkKoakTyping' (SYMBOL_CONTEXT kdefs []) kdefs
 
-checkKdefTyping :: [KDEFS] -> KDEFS -> ()
-checkKdefTyping kdefs (KDEFS_DEFS defs)  = checkDefsTyping kdefs defs
-checkKdefTyping kdefs (KDEFS_EXPR exprs) = checkExpressionsTyping kdefs exprs
+checkKoakTyping' :: SYMBOL_CONTEXT -> [KDEFS] -> ()
+checkKoakTyping' _       []     = ()
+checkKoakTyping' context (x:xs) = checkKdefTyping context x <->
+                                  checkKoakTyping' context xs
 
-checkDefsTyping :: [KDEFS] -> DEFS -> ()
-checkDefsTyping _ _ = ()
+checkKdefTyping :: SYMBOL_CONTEXT -> KDEFS -> ()
+checkKdefTyping context (KDEFS_DEFS defs)  = checkDefsTyping        context defs
+checkKdefTyping context (KDEFS_EXPR exprs) = checkExpressionsTyping context exprs
 
-checkExpressionsTyping :: [KDEFS] -> EXPRESSIONS -> ()
-checkExpressionsTyping kdefs (FOR_EXPR    for_expr  ) = checkForTyping   kdefs for_expr
-checkExpressionsTyping kdefs (IF_EXPR     if_expr   ) = checkIfTyping    kdefs if_expr
-checkExpressionsTyping kdefs (WHILE_EXPR  while_expr) = checkWhileTyping kdefs while_expr
-checkExpressionsTyping kdefs (EXPRESSIONS expr exprs) = checkExpressionTyping kdefs expr <->
-                                                        checkExpressionListTyping kdefs exprs
+checkDefsTyping :: SYMBOL_CONTEXT -> DEFS -> ()
+checkDefsTyping context (DEFS prototype exprs) = checkExpressionsTyping (symbolContextPushPrototype context prototype) exprs
 
-checkExpressionListTyping :: [KDEFS] -> [EXPRESSION] -> ()
-checkExpressionListTyping _ []         = ()
-checkExpressionListTyping kdefs (x:xs) = checkExpressionTyping kdefs x <-> checkExpressionListTyping kdefs xs
+symbolContextPushPrototype :: SYMBOL_CONTEXT -> PROTOTYPE -> SYMBOL_CONTEXT
+symbolContextPushPrototype context (PROTOTYPE_UNARY  _ _ _ prototype_args) = symbolContextPushPrototypeArgs context prototype_args
+symbolContextPushPrototype context (PROTOTYPE_BINARY _ _ _ prototype_args) = symbolContextPushPrototypeArgs context prototype_args
+symbolContextPushPrototype context (PROTOTYPE        _     prototype_args) = symbolContextPushPrototypeArgs context prototype_args
 
-checkExpressionTyping :: [KDEFS] -> EXPRESSION -> ()
-checkExpressionTyping kdefs _= ()
+symbolContextPushPrototypeArgs :: SYMBOL_CONTEXT -> PROTOTYPE_ARGS -> SYMBOL_CONTEXT
+symbolContextPushPrototypeArgs context (PROTOTYPE_ARGS prototype_ids _) = symbolContextPushVars context (map prototypeIdToVarSignature prototype_ids)
 
-checkForTyping :: [KDEFS] -> FOR -> ()
-checkForTyping kdefs (FOR assign_id assign_expr cmp_id cmp_expr inc_expr exprs) = checkExpressionsTyping kdefs exprs
+prototypeIdToVarSignature :: PROTOTYPE_ID -> VAR_SIGNATURE
+prototypeIdToVarSignature (PROTOTYPE_ID var_name var_type) = VAR_SIGNATURE var_name var_type
 
-checkIfTyping :: [KDEFS] -> IF -> ()
-checkIfTyping kdefs (IF cmp_expr then_exprs (Just else_exprs)) = checkExpressionTyping  kdefs cmp_expr   <->
-                                                                 checkExpressionsTyping kdefs then_exprs <->
-                                                                 checkExpressionsTyping kdefs else_exprs
-checkIfTyping kdefs (IF cmp_expr then_exprs Nothing         )  = checkExpressionTyping  kdefs cmp_expr   <->
-                                                                 checkExpressionsTyping kdefs then_exprs
+checkExpressionsTyping :: SYMBOL_CONTEXT -> EXPRESSIONS -> ()
+checkExpressionsTyping context (FOR_EXPR    for_expr  ) = checkForTyping            context for_expr
+checkExpressionsTyping context (IF_EXPR     if_expr   ) = checkIfTyping             context if_expr
+checkExpressionsTyping context (WHILE_EXPR  while_expr) = checkWhileTyping          context while_expr
+checkExpressionsTyping context (EXPRESSIONS expr exprs) = checkExpressionTyping     context expr <->
+                                                          checkExpressionListTyping context exprs
 
-checkWhileTyping :: [KDEFS] -> WHILE -> ()
-checkWhileTyping kdefs (WHILE expr exprs) = checkExpressionTyping  kdefs expr <->
-                                            checkExpressionsTyping kdefs exprs
+checkExpressionListTyping :: SYMBOL_CONTEXT -> [EXPRESSION] -> ()
+checkExpressionListTyping _ []           = ()
+checkExpressionListTyping context (x:xs) = checkExpressionTyping     context x <->
+                                           checkExpressionListTyping context xs
+
+checkExpressionTyping :: SYMBOL_CONTEXT -> EXPRESSION -> ()
+checkExpressionTyping context _ = ()
+
+checkForTyping :: SYMBOL_CONTEXT -> FOR -> ()
+checkForTyping context (FOR assign_id assign_expr cmp_id cmp_expr inc_expr exprs) = checkExpressionsTyping context exprs
+
+checkIfTyping :: SYMBOL_CONTEXT -> IF -> ()
+checkIfTyping context (IF cmp_expr then_exprs (Just else_exprs)) = checkExpressionTyping  context cmp_expr   <->
+                                                                   checkExpressionsTyping context then_exprs <->
+                                                                   checkExpressionsTyping context else_exprs
+checkIfTyping context (IF cmp_expr then_exprs Nothing         )  = checkExpressionTyping  context cmp_expr   <->
+                                                                   checkExpressionsTyping context then_exprs
+
+checkWhileTyping :: SYMBOL_CONTEXT -> WHILE -> ()
+checkWhileTyping context (WHILE expr exprs) = checkExpressionTyping  context expr <->
+                                              checkExpressionsTyping context exprs
 
 
 
 evaluateExpressionsType :: EXPRESSIONS -> TYPE
-evaluateExpressionsType (FOR_EXPR    expr)       = evaluateForType   expr
-evaluateExpressionsType (IF_EXPR     expr)       = evaluateIfType    expr
-evaluateExpressionsType (WHILE_EXPR  expr)       = evaluateWhileType expr
+evaluateExpressionsType (FOR_EXPR    expr)       = evaluateForType        expr
+evaluateExpressionsType (IF_EXPR     expr)       = evaluateIfType         expr
+evaluateExpressionsType (WHILE_EXPR  expr)       = evaluateWhileType      expr
 evaluateExpressionsType (EXPRESSIONS expr []   ) = evaluateExpressionType expr
 evaluateExpressionsType (EXPRESSIONS _    exprs) = evaluateExpressionType $ last exprs
 
@@ -125,6 +144,17 @@ getUnaryType = error "pute"
 
 
 -- find :: Foldable t => (a -> Bool) -> t a -> Maybe a
+
+symbolContextPushNewFrame :: SYMBOL_CONTEXT -> SYMBOL_CONTEXT
+symbolContextPushNewFrame (SYMBOL_CONTEXT kdefs stack) = SYMBOL_CONTEXT kdefs (VAR_FRAME [] :stack)
+
+symbolContextPushVar :: SYMBOL_CONTEXT -> VAR_SIGNATURE -> SYMBOL_CONTEXT
+symbolContextPushVar context@(SYMBOL_CONTEXT _     []                    ) _        = context
+symbolContextPushVar (SYMBOL_CONTEXT         kdefs ((VAR_FRAME signs):xs)) new_sign = SYMBOL_CONTEXT kdefs (VAR_FRAME ( new_sign : signs) : xs)
+
+symbolContextPushVars :: SYMBOL_CONTEXT -> [VAR_SIGNATURE] -> SYMBOL_CONTEXT
+symbolContextPushVars context@(SYMBOL_CONTEXT _     []                    ) _        = context
+symbolContextPushVars (SYMBOL_CONTEXT         kdefs ((VAR_FRAME signs):xs)) new_signs = SYMBOL_CONTEXT kdefs (VAR_FRAME ( new_sign ++ signs) : xs)
 
 (<->) :: () -> () -> ()
 (<->) _ _ = ()
