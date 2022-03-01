@@ -62,7 +62,12 @@ checkExpressionsTyping :: [KDEFS] -> EXPRESSIONS -> ()
 checkExpressionsTyping kdefs (FOR_EXPR    for_expr  ) = checkForTyping   kdefs for_expr
 checkExpressionsTyping kdefs (IF_EXPR     if_expr   ) = checkIfTyping    kdefs if_expr
 checkExpressionsTyping kdefs (WHILE_EXPR  while_expr) = checkWhileTyping kdefs while_expr
-checkExpressionsTyping kdefs (EXPRESSIONS expr exprs) = -- checkExpressionTyping kdefs expr <-> -- pas fini
+checkExpressionsTyping kdefs (EXPRESSIONS expr exprs) = checkExpressionTyping kdefs expr <->
+                                                        checkExpressionListTyping kdefs exprs
+
+checkExpressionListTyping :: [KDEFS] -> [EXPRESSION] -> ()
+checkExpressionListTyping _ []         = ()
+checkExpressionListTyping kdefs (x:xs) = checkExpressionTyping kdefs x <-> checkExpressionListTyping kdefs xs
 
 checkExpressionTyping :: [KDEFS] -> EXPRESSION -> ()
 checkExpressionTyping kdefs _= ()
