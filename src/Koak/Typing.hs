@@ -154,7 +154,7 @@ symbolContextPushVar (SYMBOL_CONTEXT         kdefs ((VAR_FRAME signs):xs)) new_s
 
 symbolContextPushVars :: SYMBOL_CONTEXT -> [VAR_SIGNATURE] -> SYMBOL_CONTEXT
 symbolContextPushVars context@(SYMBOL_CONTEXT _     []                    ) _        = context
-symbolContextPushVars (SYMBOL_CONTEXT         kdefs ((VAR_FRAME signs):xs)) new_signs = SYMBOL_CONTEXT kdefs (VAR_FRAME ( new_sign ++ signs) : xs)
+symbolContextPushVars (SYMBOL_CONTEXT         kdefs ((VAR_FRAME signs):xs)) new_signs = SYMBOL_CONTEXT kdefs (VAR_FRAME ( new_signs ++ signs) : xs)
 
 (<->) :: () -> () -> ()
 (<->) _ _ = ()
