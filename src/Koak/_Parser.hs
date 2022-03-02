@@ -11,7 +11,7 @@ module Koak.Parser  ( parseKoak
                     , PRECEDENCE(..)
                     , PROTOTYPE(..)
                     , PROTOTYPE_ARGS(..)
-                    , PROTOTYPE_ID(..)
+                    , VAR_SIGNATURE(..)
                     , TYPE(..)
                     , FOR(..)
                     , IF(..)
@@ -50,10 +50,10 @@ data PROTOTYPE      = PROTOTYPE_UNARY  UN_OP  PRECEDENCE IDENTIFIER PROTOTYPE_AR
                     | PROTOTYPE IDENTIFIER PROTOTYPE_ARGS
     deriving (Eq, Show)
 
-data PROTOTYPE_ARGS = PROTOTYPE_ARGS [PROTOTYPE_ID] TYPE
+data PROTOTYPE_ARGS = PROTOTYPE_ARGS [VAR_SIGNATURE] TYPE
     deriving (Eq, Show)
 
-data PROTOTYPE_ID   = PROTOTYPE_ID IDENTIFIER TYPE
+data VAR_SIGNATURE   = VAR_SIGNATURE IDENTIFIER TYPE
     deriving (Eq, Show)
 
 data TYPE           = INT
@@ -301,7 +301,7 @@ parsePrototypeArgs :: [Token] -> (PROTOTYPE_ARGS, [Token])
 parsePrototypeArgs [] = error "parsePrototypeArgs: empty list"
 parsePrototypeArgs _ = error "Not Implemented"
 
-parsePrototypeId :: [Token] -> (PROTOTYPE_ID, [Token])
+parsePrototypeId :: [Token] -> (VAR_SIGNATURE, [Token])
 parsePrototypeId [] = error "parsePrototypeId: empty list"
 parsePrototypeId _ = error "Not Implemented"
 

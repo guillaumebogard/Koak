@@ -21,11 +21,11 @@ import Koak.SymbolContext   ( sContextPushNewFrame
                             , SYMBOL_CONTEXT(..)
                             , VAR_FRAME_STACK(..)
                             , VAR_FRAME(..)
-                            , VAR_SIGNATURE(..)
                             )
 
 import Koak.Parser as KP    ( IDENTIFIER(..)
                             , TYPE(..)
+                            , VAR_SIGNATURE(..)
                             )
 
 

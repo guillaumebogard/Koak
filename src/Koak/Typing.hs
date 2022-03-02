@@ -15,7 +15,7 @@ import Koak.Parser          ( KDEFS(..)
                             , PRECEDENCE(..)
                             , PROTOTYPE(..)
                             , PROTOTYPE_ARGS(..)
-                            , PROTOTYPE_ID(..)
+                            , VAR_SIGNATURE(..)
                             , TYPE(..)
                             , FOR(..)
                             , IF(..)
@@ -35,14 +35,13 @@ import Koak.Parser          ( KDEFS(..)
                             , LITERAL(..)
                             )
 
-import Koak.SymbolContext  ( sContextPushNewFrame
+import Koak.SymbolContext   ( sContextPushNewFrame
                             , sContextPushVar
                             , sContextPushVars
                             , sContextPushPrototype
                             , SYMBOL_CONTEXT(..)
                             , VAR_FRAME_STACK(..)
                             , VAR_FRAME(..)
-                            , VAR_SIGNATURE(..)
                             )
 
 checkKoakTyping :: [KDEFS] -> ()

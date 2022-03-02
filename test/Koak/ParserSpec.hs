@@ -78,7 +78,7 @@ spec = do
                             (KP.IDENTIFIER "foo")
                             (KP.PROTOTYPE_ARGS
                                 [
-                                    KP.PROTOTYPE_ID
+                                    KP.VAR_SIGNATURE
                                         (KP.IDENTIFIER "x")
                                         (KP.INT)
                                 ]
@@ -129,13 +129,13 @@ spec = do
                             (KP.IDENTIFIER "foo")
                             (KP.PROTOTYPE_ARGS
                                 [
-                                    KP.PROTOTYPE_ID
+                                    KP.VAR_SIGNATURE
                                         (KP.IDENTIFIER "x")
                                         KP.INT,
-                                    KP.PROTOTYPE_ID
+                                    KP.VAR_SIGNATURE
                                         (KP.IDENTIFIER "y")
                                         KP.DOUBLE,
-                                    KP.PROTOTYPE_ID
+                                    KP.VAR_SIGNATURE
                                         (KP.IDENTIFIER "z")
                                         KP.VOID
                                 ]
@@ -197,13 +197,13 @@ spec = do
                             (KP.IDENTIFIER "foo")
                             (KP.PROTOTYPE_ARGS
                                 [
-                                    KP.PROTOTYPE_ID
+                                    KP.VAR_SIGNATURE
                                         (KP.IDENTIFIER "x")
                                         KP.INT,
-                                    KP.PROTOTYPE_ID
+                                    KP.VAR_SIGNATURE
                                         (KP.IDENTIFIER "y")
                                         KP.DOUBLE,
-                                    KP.PROTOTYPE_ID
+                                    KP.VAR_SIGNATURE
                                         (KP.IDENTIFIER "z")
                                         KP.VOID
                                 ]
@@ -232,7 +232,7 @@ spec = do
                             (KP.IDENTIFIER "bar")
                             (KP.PROTOTYPE_ARGS
                                 [
-                                    KP.PROTOTYPE_ID
+                                    KP.VAR_SIGNATURE
                                         (KP.IDENTIFIER "a")
                                         KP.DOUBLE
                                 ]
@@ -735,7 +735,7 @@ spec = do
                             (KP.IDENTIFIER "test")
                             (KP.PROTOTYPE_ARGS
                                 [
-                                    KP.PROTOTYPE_ID
+                                    KP.VAR_SIGNATURE
                                         (KP.IDENTIFIER "x")
                                         KP.DOUBLE
                                 ]
