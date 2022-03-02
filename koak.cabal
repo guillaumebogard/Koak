@@ -22,6 +22,7 @@ library
       Exception
       Koak.Lexer
       Koak.Parser
+      Koak.SymbolContext
       Koak.Typing
       Koak.Typing.Exception
   other-modules:
@@ -52,6 +53,7 @@ test-suite koak-test
       Argument.ParserSpec
       Koak.LexerSpec
       Koak.ParserSpec
+      Koak.SymbolContextSpec
       Paths_koak
   hs-source-dirs:
       test

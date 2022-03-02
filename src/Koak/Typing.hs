@@ -8,7 +8,7 @@
 module Koak.Typing          ( checkKoakTyping
                             ) where
 
-import Control.Exception    ( throw, evaluate )
+import Control.Exception    ( throw )
 
 import Koak.Parser          ( KDEFS(..)
                             , DEFS(..)
@@ -35,20 +35,15 @@ import Koak.Parser          ( KDEFS(..)
                             , LITERAL(..)
                             )
 
-
-data VAR_SIGNATURE  = VAR_SIGNATURE IDENTIFIER TYPE
-
-newtype VAR_FRAME  = VAR_FRAME [VAR_SIGNATURE]
-
-type VAR_FRAME_STACK = [VAR_FRAME]
-
-data SYMBOL_CONTEXT = SYMBOL_CONTEXT [KDEFS] VAR_FRAME_STACK
-
--- Au lieU de se balader avec plein de KDEF, on va se balader avec la structure suivante
--- La structure est pas fini, mais elle contient toute les [KDEFS], et la liste de variables locales déclarés, comme une stack
--- Et il faudra faire une fonction pour push et pop des variables et des stack frame
-
--- J'utilise l'op <-> pour chainer mes appelle de check___Typing
+import Koak.SymbolContext  ( sContextPushNewFrame
+                            , sContextPushVar
+                            , sContextPushVars
+                            , sContextPushPrototype
+                            , SYMBOL_CONTEXT(..)
+                            , VAR_FRAME_STACK(..)
+                            , VAR_FRAME(..)
+                            , VAR_SIGNATURE(..)
+                            )
 
 checkKoakTyping :: [KDEFS] -> ()
 checkKoakTyping kdefs = checkKoakTyping' (SYMBOL_CONTEXT kdefs []) kdefs
@@ -63,18 +58,7 @@ checkKdefTyping context (KDEFS_DEFS defs)  = checkDefsTyping        context defs
 checkKdefTyping context (KDEFS_EXPR exprs) = checkExpressionsTyping context exprs
 
 checkDefsTyping :: SYMBOL_CONTEXT -> DEFS -> ()
-checkDefsTyping context (DEFS prototype exprs) = checkExpressionsTyping (symbolContextPushPrototype context prototype) exprs
-
-symbolContextPushPrototype :: SYMBOL_CONTEXT -> PROTOTYPE -> SYMBOL_CONTEXT
-symbolContextPushPrototype context (PROTOTYPE_UNARY  _ _ _ prototype_args) = symbolContextPushPrototypeArgs context prototype_args
-symbolContextPushPrototype context (PROTOTYPE_BINARY _ _ _ prototype_args) = symbolContextPushPrototypeArgs context prototype_args
-symbolContextPushPrototype context (PROTOTYPE        _     prototype_args) = symbolContextPushPrototypeArgs context prototype_args
-
-symbolContextPushPrototypeArgs :: SYMBOL_CONTEXT -> PROTOTYPE_ARGS -> SYMBOL_CONTEXT
-symbolContextPushPrototypeArgs context (PROTOTYPE_ARGS prototype_ids _) = symbolContextPushVars context (map prototypeIdToVarSignature prototype_ids)
-
-prototypeIdToVarSignature :: PROTOTYPE_ID -> VAR_SIGNATURE
-prototypeIdToVarSignature (PROTOTYPE_ID var_name var_type) = VAR_SIGNATURE var_name var_type
+checkDefsTyping context (DEFS prototype exprs) = checkExpressionsTyping (sContextPushPrototype context prototype) exprs
 
 checkExpressionsTyping :: SYMBOL_CONTEXT -> EXPRESSIONS -> ()
 checkExpressionsTyping context (FOR_EXPR    for_expr  ) = checkForTyping            context for_expr
@@ -144,17 +128,6 @@ getUnaryType = error "pute"
 
 
 -- find :: Foldable t => (a -> Bool) -> t a -> Maybe a
-
-symbolContextPushNewFrame :: SYMBOL_CONTEXT -> SYMBOL_CONTEXT
-symbolContextPushNewFrame (SYMBOL_CONTEXT kdefs stack) = SYMBOL_CONTEXT kdefs (VAR_FRAME [] :stack)
-
-symbolContextPushVar :: SYMBOL_CONTEXT -> VAR_SIGNATURE -> SYMBOL_CONTEXT
-symbolContextPushVar context@(SYMBOL_CONTEXT _     []                    ) _        = context
-symbolContextPushVar (SYMBOL_CONTEXT         kdefs ((VAR_FRAME signs):xs)) new_sign = SYMBOL_CONTEXT kdefs (VAR_FRAME ( new_sign : signs) : xs)
-
-symbolContextPushVars :: SYMBOL_CONTEXT -> [VAR_SIGNATURE] -> SYMBOL_CONTEXT
-symbolContextPushVars context@(SYMBOL_CONTEXT _     []                    ) _        = context
-symbolContextPushVars (SYMBOL_CONTEXT         kdefs ((VAR_FRAME signs):xs)) new_signs = SYMBOL_CONTEXT kdefs (VAR_FRAME ( new_signs ++ signs) : xs)
 
 (<->) :: () -> () -> ()
 (<->) _ _ = ()

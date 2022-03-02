@@ -163,11 +163,10 @@ parsePrototype (x:xs)               = throw $ newParsingError "parsePrototype" [
 
 parsePrototypeUnary :: [Token] -> (PROTOTYPE, [Token])
 parsePrototypeUnary []     = throw $ newParsingError "parsePrototypeUnary" [] Nothing []
-parsePrototypeUnary tokens = let (unop,       rest   ) = parseUnOp            tokens in
-                             let (precedence, rest'  ) = parseMaybePrecedence rest   in
+parsePrototypeUnary (x:xs) = let (precedence, rest'  ) = parseMaybePrecedence xs     in
                              let (identifier, rest'' ) = parseIdentifier      rest'  in
                              let (proto_args, rest''') = parsePrototypeArgs   rest'' in
-                             parsePrototypeUnary' unop precedence identifier proto_args rest'''
+                             parsePrototypeUnary' (getUnaryOp x) precedence identifier proto_args rest'''
 
 parsePrototypeUnary' :: UN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
 parsePrototypeUnary' unop Nothing           identifier proto_args list = (PROTOTYPE_UNARY unop (getDefaultUnaryPrecedence unop) identifier proto_args, list)
@@ -175,10 +174,10 @@ parsePrototypeUnary' unop (Just precedence) identifier proto_args list = (PROTOT
 
 parsePrototypeBinary :: [Token] -> (PROTOTYPE, [Token])
 parsePrototypeBinary []          = throw $ newParsingError "parsePrototypeBinary" [] Nothing []
-parsePrototypeBinary list@(x:xs) = let (precedence, rest  ) = parseMaybePrecedence  xs    in
-                                   let (identifier, rest' ) = parseIdentifier       rest  in
-                                   let (proto_args, rest'') = parsePrototypeArgs    rest' in
-                                   parsePrototypeBinary' (getBinaryOp x) precedence identifier proto_args rest''
+parsePrototypeBinary (x:xs) = let (precedence, rest  ) = parseMaybePrecedence  xs    in
+                              let (identifier, rest' ) = parseIdentifier       rest  in
+                              let (proto_args, rest'') = parsePrototypeArgs    rest' in
+                              parsePrototypeBinary' (getBinaryOp x) precedence identifier proto_args rest''
 
 parsePrototypeBinary' :: BIN_OP -> Maybe PRECEDENCE -> IDENTIFIER -> PROTOTYPE_ARGS -> [Token] -> (PROTOTYPE, [Token])
 parsePrototypeBinary' binop Nothing         identifier proto_args list = (PROTOTYPE_BINARY binop (getDefaultBinaryPrecedence binop) identifier proto_args, list)
@@ -384,28 +383,28 @@ parseIdentifier []            = throw $ newParsingError "parseIdentifier" [Word 
 parseIdentifier ((Word w):xs) = (IDENTIFIER w, xs)
 parseIdentifier (x:xs)        = throw $ newParsingError "parseIdentifier" [Word "{any}"] (Just x) xs
 
-parseBinOp :: [Token] -> (BIN_OP, [Token])
-parseBinOp []                = throw $ newParsingError "parseBinOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] Nothing []
-parseBinOp (Plus:xs)         = (BIN_PLUS,   xs)
-parseBinOp (Minus:xs)        = (BIN_MINUS,  xs)
-parseBinOp (Multiply:xs)     = (BIN_MULT,   xs)
-parseBinOp (Divide:xs)       = (BIN_DIV,    xs)
-parseBinOp (Modulo:xs)       = (BIN_MOD,    xs)
-parseBinOp (Lower:xs)        = (BIN_LT,     xs)
-parseBinOp (LowerEqual:xs)   = (BIN_LTE,    xs)
-parseBinOp (Greater:xs)      = (BIN_GT,     xs)
-parseBinOp (GreaterEqual:xs) = (BIN_GTE,    xs)
-parseBinOp (Equal:xs)        = (BIN_EQ,     xs)
-parseBinOp (NotEqual:xs)     = (BIN_NEQ,    xs)
-parseBinOp (Assign:xs)       = (BIN_ASSIGN, xs)
-parseBinOp (x:xs)            = throw $ newParsingError "parseBinOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] (Just x) xs
+-- parseBinOp :: [Token] -> (BIN_OP, [Token])
+-- parseBinOp []                = throw $ newParsingError "parseBinOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] Nothing []
+-- parseBinOp (Plus:xs)         = (BIN_PLUS,   xs)
+-- parseBinOp (Minus:xs)        = (BIN_MINUS,  xs)
+-- parseBinOp (Multiply:xs)     = (BIN_MULT,   xs)
+-- parseBinOp (Divide:xs)       = (BIN_DIV,    xs)
+-- parseBinOp (Modulo:xs)       = (BIN_MOD,    xs)
+-- parseBinOp (Lower:xs)        = (BIN_LT,     xs)
+-- parseBinOp (LowerEqual:xs)   = (BIN_LTE,    xs)
+-- parseBinOp (Greater:xs)      = (BIN_GT,     xs)
+-- parseBinOp (GreaterEqual:xs) = (BIN_GTE,    xs)
+-- parseBinOp (Equal:xs)        = (BIN_EQ,     xs)
+-- parseBinOp (NotEqual:xs)     = (BIN_NEQ,    xs)
+-- parseBinOp (Assign:xs)       = (BIN_ASSIGN, xs)
+-- parseBinOp (x:xs)            = throw $ newParsingError "parseBinOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] (Just x) xs
 
-parseUnOp :: [Token] -> (UN_OP, [Token])
-parseUnOp []              = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] Nothing []
-parseUnOp (Plus:xs)       = (UN_PLUS,  xs)
-parseUnOp (Minus:xs)      = (UN_MINUS, xs)
-parseUnOp (LogicalNot:xs) = (UN_NOT,   xs)
-parseUnOp (x:xs)          = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] (Just x) xs
+-- parseUnOp :: [Token] -> (UN_OP, [Token])
+-- parseUnOp []              = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] Nothing []
+-- parseUnOp (Plus:xs)       = (UN_PLUS,  xs)
+-- parseUnOp (Minus:xs)      = (UN_MINUS, xs)
+-- parseUnOp (LogicalNot:xs) = (UN_NOT,   xs)
+-- parseUnOp (x:xs)          = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] (Just x) xs
 
 isBinaryOp :: Token -> Bool
 isBinaryOp KL.Plus          = True
