@@ -17,7 +17,9 @@ module Koak.SymbolContext   ( sContextPushNewFrame
 import Koak.Parser          ( KDEFS(..)
                             , PROTOTYPE(..)
                             , PROTOTYPE_ARGS(..)
-                            , VAR_SIGNATURE(..), DEFS
+                            , VAR_SIGNATURE(..)
+                            , DEFS (..)
+                            , IDENTIFIER(..), PRIMARY
                             )
 
 import Koak.Typing.Exception ( KoakTypingException(..) )
@@ -32,11 +34,52 @@ type VAR_FRAME_STACK = [VAR_FRAME]
 data SYMBOL_CONTEXT = SYMBOL_CONTEXT [KDEFS] VAR_FRAME_STACK
     deriving (Show, Eq)
 
+data BASE_TYPE  = INT
+                | FLOAT
+                | BOOL
+                | NIL
+
+data FUNCTION_TYPING    = FUNCTION_TYPING [BASE_TYPE] BASE_TYPE
+
+data TYPINGS    = PRIMITIVE_FUNCTION [FUNCTION_TYPING]
+                | FUNCTION           FUNCTION_TYPING
+                | VAR                BASE_TYPE
+
+type CONTEXT  = [(IDENTIFIER, TYPINGS)]
+
+-- evaluateFunctionCall :: CONTEXT -> (CONTEXT, RESULT)
+-- evaluateFunctionCall c = let (_, r) = evaluateOther c in (c, r)
+
+
+-- evaluateOther :: CONTEXT -> (CONTEXT, RESULT)
+-- evaluateOther c = evaluateOther c
+
+getDefaultContext :: CONTEXT
+getDefaultContext = [
+                        (IDENTIFIER "+", PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE])
+                        (IDENTIFIER "-", PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE])
+                        (IDENTIFIER "*", PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE])
+                        (IDENTIFIER "/", PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE])
+                        (IDENTIFIER "%", PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE])
+                        (IDENTIFIER "toto", FUNCTION FUNCTION_TYPING [INT, INT] INT)
+                    ]
+
+-- def unary --- 200 (int) : int
+-- def toto(double) : int
+
+-- foo()
+
+-- --- 3 * 1.0 // -> double
+-- toto(4.0) + 1 * 2
+-- 1 * toto(4.0) + 2
+
+-- loadKdefToContext :: CONTEXT -> KDEFS -> CONTEXT
+
 sContextPushNewFrame :: SYMBOL_CONTEXT -> SYMBOL_CONTEXT
 sContextPushNewFrame (SYMBOL_CONTEXT kdefs stack) = SYMBOL_CONTEXT kdefs (VAR_FRAME [] :stack)
 
 sContextPushVar :: SYMBOL_CONTEXT -> VAR_SIGNATURE -> SYMBOL_CONTEXT
-sContextPushVar context@(SYMBOL_CONTEXT _     []        ) _        = context
+sContextPushVar context@(SYMBOL_CONTEXT _     []        ) _       = context
 sContextPushVar (SYMBOL_CONTEXT         kdefs (frame:xs)) new_var = SYMBOL_CONTEXT kdefs (varFramePushVar frame new_var:xs)
 
 checkPushVarShadowsDefinition :: SYMBOL_CONTEXT -> VAR_SIGNATURE -> SYMBOL_CONTEXT
@@ -44,10 +87,18 @@ checkPushVarShadowsDefinition context@(SYMBOL_CONTEXT []     _        ) _ = cont
 checkPushVarShadowsDefinition context@(SYMBOL_CONTEXT (x:xs) _        ) _ = context
 
 checkPushVarShadowsDefinition' :: KDEFS -> VAR_SIGNATURE -> KDEFS
-checkPushVarShadowsDefinition'  kdef@(KDEFS_DEFS _) _ = kdef
-checkPushVarShadowsDefinition'  kdef@(KDEFS_EXPR _) _ = kdef
+checkPushVarShadowsDefinition'  (KDEFS_DEFS (DEFS prototype e)) _  var = KDEFS_DEFS (DEFS prototype (checkPushVarShadowsDefinition'' def var) e)
+checkPushVarShadowsDefinition'  kdef@(KDEFS_EXPR _)             _      = kdef
 
--- checkPushVarShadowsDefinition'' :: DEFS -> VAR_SIGNATURE -> DEFS
+checkPushVarShadowsDefinition'' :: PROTOTYPE -> VAR_SIGNATURE -> PROTOTYPE
+checkPushVarShadowsDefinition'' p@(PROTOTYPE_UNARY  _ _ identifier _) var = checkPushVarShadowsDefinition''' p identifier var
+checkPushVarShadowsDefinition'' p@(PROTOTYPE_BINARY _ _ identifier _) var = checkPushVarShadowsDefinition''' p identifier var
+checkPushVarShadowsDefinition'' p@(PROTOTYPE identifier _)            var = checkPushVarShadowsDefinition''' p identifier var 
+
+checkPushVarShadowsDefinition''' :: PROTOTYPE -> IDENTIFIER -> VAR_SIGNATURE -> PROTOTYPE
+checkPushVarShadowsDefinition''' p identifier v@(VAR_SIGNATURE vi _)
+    | identifier == vi = throw $ ShadowedDefinitionByVariable p v
+    | otherwise        = p
 
 varFramePushVar :: VAR_FRAME -> VAR_SIGNATURE -> VAR_FRAME
 varFramePushVar (VAR_FRAME vars) var = VAR_FRAME $ varFramePushVar' vars var
