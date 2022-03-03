@@ -21,6 +21,7 @@ library
       Argument.Parser
       Exception
       Koak.Lexer
+      Koak.Parser
   other-modules:
       Paths_koak
   hs-source-dirs:
@@ -48,6 +49,7 @@ test-suite koak-test
       Argument.LexerSpec
       Argument.ParserSpec
       Koak.LexerSpec
+      Koak.ParserSpec
       Paths_koak
   hs-source-dirs:
       test

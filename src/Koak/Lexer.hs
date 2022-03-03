@@ -40,9 +40,9 @@ data Token  = Word String               -- 'if', 'def', 'foobar', 'i'
             | Assign                    -- '='
             | Comma                     -- ','
             | Colon                     -- ':'
-            | Semicolon                 -- ';'
+            | SemiColon                 -- ';'
             | Dot                       -- '.'
-            deriving (Show, Eq)
+            deriving(Eq, Show)
 
 tokenizeKoak :: String -> [Token]
 tokenizeKoak []            = []
@@ -64,7 +64,7 @@ tokenizeKoak ('!':'=' :xs) = NotEqual          : tokenizeKoak xs
 tokenizeKoak ('!'     :xs) = LogicalNot        : tokenizeKoak xs
 tokenizeKoak (','     :xs) = Comma             : tokenizeKoak xs
 tokenizeKoak (':'     :xs) = Colon             : tokenizeKoak xs
-tokenizeKoak (';'     :xs) = Semicolon         : tokenizeKoak xs
+tokenizeKoak (';'     :xs) = SemiColon         : tokenizeKoak xs
 tokenizeKoak line@('.':_)  = let (token, leftover) = parseDot    line in token : tokenizeKoak leftover
 tokenizeKoak line@(x:xs)
     | isSpace x            = tokenizeKoak xs
@@ -96,10 +96,10 @@ parseNumber' (parsed, rest, floating) = (refineNumber parsed floating, rest)
 
 parseNumber'' :: String -> String -> Bool -> (String, String, Bool)
 parseNumber'' parsed []          floating = (reverse parsed, [], floating)
-parseNumber'' parsed ('.':rs)    floating = parseNumber'' ('.':parsed) rs True
+parseNumber'' parsed ('.':rs)    _        = parseNumber'' ('.':parsed) rs True
 parseNumber'' parsed rest@(r:rs) floating
-    | isDigit r                          = parseNumber'' (r:parsed) rs floating
-    | otherwise                          = (reverse parsed, rest, floating)
+    | isDigit r                           = parseNumber'' (r:parsed) rs floating
+    | otherwise                           = (reverse parsed, rest, floating)
 
 refineNumber :: String -> Bool -> Token
 refineNumber rawNumber@('.':_) _ = FloatingNumber $ refineFloatingNumber ('0':rawNumber) $ readMaybe $ '0':rawNumber
