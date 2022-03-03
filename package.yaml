@@ -20,6 +20,9 @@ dependencies:
 
 library:
   source-dirs: src
+  dependencies:
+    - hashable
+    - unordered-containers
 
 executables:
   koak-exe:

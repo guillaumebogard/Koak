@@ -11,15 +11,15 @@ import GHC.Exception            ( Exception )
 
 import Koak.Parser              ( TYPE(..)
                                 , PROTOTYPE(..)
-                                , VAR_SIGNATURE(..)
+                                , PROTOTYPE_ID
                                 )
 
 data KoakTypingException    = MismatchedArgumentType TYPE TYPE
                             | MismatchedReturnType   TYPE TYPE
                             | MismatchedThenElseType TYPE TYPE
-                            | ShadowedVariableByVariable     VAR_SIGNATURE VAR_SIGNATURE
-                            | ShadowedVariableByDefinition   VAR_SIGNATURE PROTOTYPE
-                            | ShadowedDefinitionByVariable   PROTOTYPE     VAR_SIGNATURE
+                            | ShadowedVariableByVariable     PROTOTYPE_ID PROTOTYPE_ID
+                            | ShadowedVariableByDefinition   PROTOTYPE_ID PROTOTYPE
+                            | ShadowedDefinitionByVariable   PROTOTYPE     PROTOTYPE_ID
                             | ShadowedDefinitionByDefinition PROTOTYPE     PROTOTYPE
     deriving (Eq)
 

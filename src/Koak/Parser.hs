@@ -11,7 +11,7 @@ module Koak.Parser          ( parseKoak
                             , PRECEDENCE(..)
                             , PROTOTYPE(..)
                             , PROTOTYPE_ARGS(..)
-                            , VAR_SIGNATURE(..)
+                            , PROTOTYPE_ID(..)
                             , TYPE(..)
                             , FOR(..)
                             , IF(..)
@@ -38,6 +38,10 @@ import Exception            ( KoakException(KoakParserMissingToken))
 
 import Control.Exception    ( throw )
 
+import Data.Hashable        (  Hashable
+                            , hashWithSalt
+                            )
+
 data KDEFS          = KDEFS_DEFS DEFS
                     | KDEFS_EXPR EXPRESSIONS
     deriving (Eq, Show)
@@ -53,10 +57,10 @@ data PROTOTYPE      = PROTOTYPE_UNARY  UN_OP  PRECEDENCE IDENTIFIER PROTOTYPE_AR
                     | PROTOTYPE IDENTIFIER PROTOTYPE_ARGS
     deriving (Eq, Show)
 
-data PROTOTYPE_ARGS = PROTOTYPE_ARGS [VAR_SIGNATURE] TYPE
+data PROTOTYPE_ARGS = PROTOTYPE_ARGS [PROTOTYPE_ID] TYPE
     deriving (Eq, Show)
 
-data VAR_SIGNATURE   = VAR_SIGNATURE IDENTIFIER TYPE
+data PROTOTYPE_ID   = PROTOTYPE_ID IDENTIFIER TYPE
     deriving (Eq, Show)
 
 data TYPE           = INT
@@ -121,6 +125,9 @@ data PRIMARY        = PRIMARY_IDENTIFIER IDENTIFIER
 
 newtype IDENTIFIER  = IDENTIFIER String
     deriving (Eq, Ord, Show)
+
+instance Hashable IDENTIFIER where
+    hashWithSalt salt (IDENTIFIER string)   = salt `hashWithSalt` string
 
 data DOT
 
@@ -201,10 +208,10 @@ parsePrototypeArgsParenthesis (x:ClosedParenthesis:xs)               = throw $ n
 parsePrototypeArgsParenthesis (OpenParenthesis:x:xs)                 = throw $ newParsingError "parsePrototypeArgsParenthesis" [ClosedParenthesis]                  (Just x) xs
 parsePrototypeArgsParenthesis list                                   = throw $ newParsingError "parsePrototypeArgsParenthesis" [OpenParenthesis, ClosedParenthesis] Nothing  list
 
-parsePrototypeArgsList :: [Token] -> ([VAR_SIGNATURE], [Token])
+parsePrototypeArgsList :: [Token] -> ([PROTOTYPE_ID], [Token])
 parsePrototypeArgsList list = let (p_list, tokens) = parsePrototypeArgsList' list [] in (reverse p_list, tokens)
 
-parsePrototypeArgsList' :: [Token] -> [VAR_SIGNATURE] -> ([VAR_SIGNATURE], [Token])
+parsePrototypeArgsList' :: [Token] -> [PROTOTYPE_ID] -> ([PROTOTYPE_ID], [Token])
 parsePrototypeArgsList' list@(Word _:_) p_list = let (proto_id, rest) = parsePrototypeId list in parsePrototypeArgsList' rest (proto_id:p_list)
 parsePrototypeArgsList' list            p_list = (p_list, list)
 
@@ -217,13 +224,13 @@ parseMaybePrecedence :: [Token] -> (Maybe PRECEDENCE, [Token])
 parseMaybePrecedence (Number n:xs) = (Just $ PRECEDENCE n, xs)
 parseMaybePrecedence list          = (Nothing, list)
 
-parsePrototypeId :: [Token] -> (VAR_SIGNATURE, [Token])
+parsePrototypeId :: [Token] -> (PROTOTYPE_ID, [Token])
 parsePrototypeId []   = throw $ newParsingError "parsePrototypeId" [] Nothing []
 parsePrototypeId list = let (identifier, rest) = parseIdentifier list in parsePrototypeId' rest identifier
 
-parsePrototypeId' :: [Token] -> IDENTIFIER -> (VAR_SIGNATURE, [Token])
+parsePrototypeId' :: [Token] -> IDENTIFIER -> (PROTOTYPE_ID, [Token])
 parsePrototypeId' []         _          = throw $ newParsingError "parsePrototypeId" [Colon] Nothing []
-parsePrototypeId' (Colon:xs) identifier = let (prototype_type, rest) = parseType xs in (VAR_SIGNATURE identifier prototype_type, rest)
+parsePrototypeId' (Colon:xs) identifier = let (prototype_type, rest) = parseType xs in (PROTOTYPE_ID identifier prototype_type, rest)
 parsePrototypeId' (x:xs)     _          = throw $ newParsingError "parsePrototypeId" [Colon] (Just x) xs
 
 parseType :: [Token] -> (TYPE, [Token])

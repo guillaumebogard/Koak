@@ -15,7 +15,7 @@ import Koak.Parser          ( KDEFS(..)
                             , PRECEDENCE(..)
                             , PROTOTYPE(..)
                             , PROTOTYPE_ARGS(..)
-                            , VAR_SIGNATURE(..)
+                            , PROTOTYPE_ID(..)
                             , TYPE(..)
                             , FOR(..)
                             , IF(..)
@@ -35,56 +35,51 @@ import Koak.Parser          ( KDEFS(..)
                             , LITERAL(..)
                             )
 
-import Koak.SymbolContext   ( sContextPushNewFrame
-                            , sContextPushVar
-                            , sContextPushVars
-                            , sContextPushPrototype
-                            , SYMBOL_CONTEXT(..)
-                            , VAR_FRAME_STACK(..)
-                            , VAR_FRAME(..)
+import Koak.TypingContext   ( CONTEXT
+                            , getDefaultContext
                             )
 
 checkKoakTyping :: [KDEFS] -> ()
-checkKoakTyping kdefs = checkKoakTyping' (SYMBOL_CONTEXT kdefs []) kdefs
+checkKoakTyping = checkKoakTyping' getDefaultContext
 
-checkKoakTyping' :: SYMBOL_CONTEXT -> [KDEFS] -> ()
+checkKoakTyping' :: CONTEXT -> [KDEFS] -> ()
 checkKoakTyping' _       []     = ()
 checkKoakTyping' context (x:xs) = checkKdefTyping context x <->
                                   checkKoakTyping' context xs
 
-checkKdefTyping :: SYMBOL_CONTEXT -> KDEFS -> ()
+checkKdefTyping :: CONTEXT -> KDEFS -> ()
 checkKdefTyping context (KDEFS_DEFS defs)  = checkDefsTyping        context defs
 checkKdefTyping context (KDEFS_EXPR exprs) = checkExpressionsTyping context exprs
 
-checkDefsTyping :: SYMBOL_CONTEXT -> DEFS -> ()
-checkDefsTyping context (DEFS prototype exprs) = checkExpressionsTyping (sContextPushPrototype context prototype) exprs
+checkDefsTyping :: CONTEXT -> DEFS -> ()
+checkDefsTyping context (DEFS prototype exprs) = checkExpressionsTyping context exprs
 
-checkExpressionsTyping :: SYMBOL_CONTEXT -> EXPRESSIONS -> ()
+checkExpressionsTyping :: CONTEXT -> EXPRESSIONS -> ()
 checkExpressionsTyping context (FOR_EXPR    for_expr  ) = checkForTyping            context for_expr
 checkExpressionsTyping context (IF_EXPR     if_expr   ) = checkIfTyping             context if_expr
 checkExpressionsTyping context (WHILE_EXPR  while_expr) = checkWhileTyping          context while_expr
 checkExpressionsTyping context (EXPRESSIONS expr exprs) = checkExpressionTyping     context expr <->
                                                           checkExpressionListTyping context exprs
 
-checkExpressionListTyping :: SYMBOL_CONTEXT -> [EXPRESSION] -> ()
+checkExpressionListTyping :: CONTEXT -> [EXPRESSION] -> ()
 checkExpressionListTyping _ []           = ()
 checkExpressionListTyping context (x:xs) = checkExpressionTyping     context x <->
                                            checkExpressionListTyping context xs
 
-checkExpressionTyping :: SYMBOL_CONTEXT -> EXPRESSION -> ()
+checkExpressionTyping :: CONTEXT -> EXPRESSION -> ()
 checkExpressionTyping context _ = ()
 
-checkForTyping :: SYMBOL_CONTEXT -> FOR -> ()
+checkForTyping :: CONTEXT -> FOR -> ()
 checkForTyping context (FOR assign_id assign_expr cmp_id cmp_expr inc_expr exprs) = checkExpressionsTyping context exprs
 
-checkIfTyping :: SYMBOL_CONTEXT -> IF -> ()
+checkIfTyping :: CONTEXT -> IF -> ()
 checkIfTyping context (IF cmp_expr then_exprs (Just else_exprs)) = checkExpressionTyping  context cmp_expr   <->
                                                                    checkExpressionsTyping context then_exprs <->
                                                                    checkExpressionsTyping context else_exprs
 checkIfTyping context (IF cmp_expr then_exprs Nothing         )  = checkExpressionTyping  context cmp_expr   <->
                                                                    checkExpressionsTyping context then_exprs
 
-checkWhileTyping :: SYMBOL_CONTEXT -> WHILE -> ()
+checkWhileTyping :: CONTEXT -> WHILE -> ()
 checkWhileTyping context (WHILE expr exprs) = checkExpressionTyping  context expr <->
                                               checkExpressionsTyping context exprs
 
