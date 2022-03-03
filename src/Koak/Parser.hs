@@ -62,7 +62,10 @@ data VAR_SIGNATURE   = VAR_SIGNATURE IDENTIFIER TYPE
 data TYPE           = INT
                     | DOUBLE
                     | VOID
+                    | BOOLEAN
     deriving (Eq, Show)
+
+data BOOL           = TRUE | FALSE
 
 data FOR            = FOR IDENTIFIER EXPRESSION IDENTIFIER EXPRESSION EXPRESSION EXPRESSIONS
     deriving (Eq, Show)
@@ -123,6 +126,7 @@ newtype IDENTIFIER  = IDENTIFIER String
     deriving (Eq, Ord, Show)
 
 data DOT
+
 
 newtype DECIMAL_CONST = DECIMAL_CONST Int
     deriving (Eq, Show)
@@ -227,11 +231,12 @@ parsePrototypeId' (Colon:xs) identifier = let (prototype_type, rest) = parseType
 parsePrototypeId' (x:xs)     _          = throw $ newParsingError "parsePrototypeId" [Colon] (Just x) xs
 
 parseType :: [Token] -> (TYPE, [Token])
-parseType []                 = throw $ newParsingError "parseType" [Word "int", Word "double", Word "void"] Nothing []
+parseType []                 = throw $ newParsingError "parseType" [Word "int", Word "double", Word "void", Word "bool"] Nothing []
 parseType (Word "int":xs)    = (INT, xs)
 parseType (Word "double":xs) = (DOUBLE, xs)
 parseType (Word "void":xs)   = (VOID, xs)
-parseType (x:xs)             = throw $ newParsingError "parseType" [Word "int", Word "double", Word "void"] (Just x) xs
+parseType (Word "bool":xs)   = (BOOLEAN, xs)
+parseType (x:xs)             = throw $ newParsingError "parseType" [Word "int", Word "double", Word "void", Word "bool"] (Just x) xs
 
 parseFor :: [Token] -> (FOR, [Token])
 parseFor []              = throw $ newParsingError "parseIf" [Word "for"] Nothing []

@@ -106,19 +106,30 @@ evaluateIfType (IF _ exprs _) = evaluateExpressionsType exprs
 evaluateWhileType :: WHILE -> TYPE
 evaluateWhileType  (WHILE _ exprs) = evaluateExpressionsType exprs
 
+checkPartialExpressionType :: UNARY -> BIN_OP -> UNARY -> ()
+checkPartialExpressionType first op second = ()
+{-| evaluateUnaryType first == evaluateUnaryType second == INT {-getBinOpType binop -} = ()
+    -- faudrait plutôt chopper le type des deux args du binop et les comparer aux unarys
+    | otherwise = error "Type error"-}
+
 evaluateExpressionType :: EXPRESSION -> TYPE
-evaluateExpressionType _ = INT --getLastOp . getFunctionType
+evaluateExpressionType (EXPRESSION unary []) = evaluateUnaryType unary
+evaluateExpressionType (EXPRESSION first ((binop, second) : xs)) = checkPartialExpressionType first binop second -->
+                                                     evaluateExpressionType' (EXPRESSION second xs) (getBinOpPrecedence binop, getBinOpType binop)
 
--- getLastOp :: EXPRESSION -> TYPE
--- getLastOp (EXPRESSION unary []) = getUnaryType unary
--- getLastOp expr = getLastOp' expr IDENTIFIER ""
+evaluateExpressionType' :: EXPRESSION -> (PRECEDENCE, TYPE) -> TYPE
+evaluateExpressionType' (EXPRESSION _ []) (_, t) = t
+evaluateExpressionType' (EXPRESSION first ((binop, second) : xs)) (prec, t)
+    | prec > getBinOpPrecedence binop = checkPartialExpressionType first binop second --> evaluateExpressionType' (EXPRESSION second xs) (prec, t)
+    | otherwise = checkPartialExpressionType first binop second -->
+                  evaluateExpressionType' (EXPRESSION second xs) (getBinOpPrecedence binop, getBinOpType binop)
 
-
---getLastOp' :: EXPRESSION -> IDENTIFIER -> IDENTIFIER 
---getLastOp' (EXPRESSION unary []) bestIdentifier -- c'est le type du dernier BINOP avec la plus haute précédence
-
-getUnaryType :: UNARY -> TYPE
-getUnaryType = error "pute"
+evaluateUnaryType :: UNARY -> TYPE
+evaluateUnaryType (UNARY_UN op unary)
+    | getUnopType op == evaluateUnaryType unary = evaluateUnaryType unary
+    | otherwise                            = throw $ MismatchedUnaryType (evaluateUnaryType unary) $ getUnopType op
+evaluateUnaryType (UNARY_POSTFIX (POSTFIX primary Nothing)) = INT -- get primary type as basic type
+evaluateUnaryType (UNARY_POSTFIX (POSTFIX primary _)) = INT -- get primary type as function type
 
 -- getFunctionType :: [KDEFS] -> IDENTIFIER -> TYPE
 -- getFunctionType (KDEFS_DEFS ((PROTOTYPE identifier (PROTOTYPE_ARGS _ fnType))) :xs) functionName
@@ -130,3 +141,6 @@ getUnaryType = error "pute"
 
 (<->) :: () -> () -> ()
 (<->) _ _ = ()
+
+(-->) :: () -> a -> a
+(-->) _ a = a
