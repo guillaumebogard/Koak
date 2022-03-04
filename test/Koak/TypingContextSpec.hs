@@ -7,6 +7,8 @@
 
 module Koak.TypingContextSpec       ( spec ) where
 
+import Control.Exception (evaluate)
+
 import Test.Hspec                   ( Spec
                                     , it
                                     , shouldBe
@@ -33,8 +35,7 @@ import Data.HashMap.Strict  as HM   ( HashMap
                                     , insert
                                     )
 
-import qualified Data.Ord
-import Koak.Parser (PROTOTYPE(PROTOTYPE))
+import Koak.Typing.Exception        ( KoakTypingException(..) )
 
 spec :: Spec
 spec = do
@@ -266,119 +267,125 @@ spec = do
                     (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [INT, INT, BOOLEAN, INT] BOOLEAN)
                 ])
                 (LOCAL_CONTEXT  $ HM.fromList [])
-    --     sContextPushNewFrame (
-    --         SYMBOL_CONTEXT
-    --             []
-    --             [
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var1") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var2") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var3") DOUBLE
-    --                     ],
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var4") DOUBLE
-    --                     ]
-    --             ]
-    --     )
-    --         ==
-    --         SYMBOL_CONTEXT
-    --             []
-    --             [
-    --                 VAR_FRAME
-    --                     [],
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var1") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var2") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var3") DOUBLE
-    --                     ],
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var4") DOUBLE
-    --                     ]
-    --             ]
-    -- it "sContextPushVar one frame with many vars" $
-    --     sContextPushVar (
-    --         SYMBOL_CONTEXT
-    --             []
-    --             [
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var1") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var2") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var3") INT
-
-    --                     ]
-    --             ]
-    --     ) (VAR_SIGNATURE (IDENTIFIER "var4") DOUBLE)
-    --         ==
-    --         SYMBOL_CONTEXT
-    --             []
-    --             [
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var4") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var1") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var2") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var3") INT
-    --                     ]
-    --             ]
-    -- it "sContextPushVar many frame with many vars" $
-    --     sContextPushVar (
-    --         SYMBOL_CONTEXT
-    --             []
-    --             [
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var1") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var2") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var3") INT
-
-    --                     ],
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var4") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var5") DOUBLE
-
-    --                     ],
-    --                 VAR_FRAME [],
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var6") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var7") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var8") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var9") INT
-
-    --                     ]
-    --             ]
-    --     ) (VAR_SIGNATURE (IDENTIFIER "var10") DOUBLE)
-    --         ==
-    --         SYMBOL_CONTEXT
-    --             []
-    --             [
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var10") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var1") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var2") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var3") INT
-
-    --                     ],
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var4") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var5") DOUBLE
-
-    --                     ],
-    --                 VAR_FRAME [],
-    --                 VAR_FRAME
-    --                     [
-    --                         VAR_SIGNATURE (IDENTIFIER "var6") DOUBLE,
-    --                         VAR_SIGNATURE (IDENTIFIER "var7") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var8") INT,
-    --                         VAR_SIGNATURE (IDENTIFIER "var9") INT
-
-    --                     ]
-    --             ]
+    it "kContextPushDef: Pushing twice same function" $ do
+        evaluate (
+                getEmptyKContext
+                `kContextPushDef`
+                KP.DEFS
+                    (KP.PROTOTYPE
+                        (KP.IDENTIFIER "foo")
+                        (KP.PROTOTYPE_ARGS [] KP.INT)
+                    )
+                    (KP.EXPRESSIONS
+                        (KP.EXPRESSION
+                            (KP.UNARY_POSTFIX
+                                (KP.POSTFIX
+                                    (KP.PRIMARY_LITERAL
+                                        (KP.LITERAL_DECIMAL
+                                            (KP.DECIMAL_CONST 42)
+                                        )
+                                    )
+                                    Nothing
+                                )
+                            )
+                            []
+                        )
+                        []
+                    )
+                `kContextPushDef`
+                KP.DEFS
+                    (KP.PROTOTYPE
+                        (KP.IDENTIFIER "foo")
+                        (KP.PROTOTYPE_ARGS [] KP.INT)
+                    )
+                    (KP.EXPRESSIONS
+                        (KP.EXPRESSION
+                            (KP.UNARY_POSTFIX
+                                (KP.POSTFIX
+                                    (KP.PRIMARY_LITERAL
+                                        (KP.LITERAL_DECIMAL
+                                            (KP.DECIMAL_CONST 42)
+                                        )
+                                    )
+                                    Nothing
+                                )
+                            )
+                            []
+                        )
+                        []
+                    )
+            )
+            `shouldThrow`
+            (== ShadowedDefinitionByDefinition 
+                (KP.PROTOTYPE 
+                    (KP.IDENTIFIER "foo")
+                    (KP.PROTOTYPE_ARGS [] KP.INT)
+                )
+            )
+    it "kContextPushDef: Pushing two functions with same name" $ do
+        evaluate (
+                getEmptyKContext
+                `kContextPushDef`
+                KP.DEFS
+                    (KP.PROTOTYPE
+                        (KP.IDENTIFIER "foo")
+                        (KP.PROTOTYPE_ARGS [
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.INT,
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.INT
+                            ] KP.VOID
+                        )
+                    )
+                    (KP.EXPRESSIONS
+                        (KP.EXPRESSION
+                            (KP.UNARY_POSTFIX
+                                (KP.POSTFIX
+                                    (KP.PRIMARY_LITERAL
+                                        (KP.LITERAL_DECIMAL
+                                            (KP.DECIMAL_CONST 42)
+                                        )
+                                    )
+                                    Nothing
+                                )
+                            )
+                            []
+                        )
+                        []
+                    )
+                `kContextPushDef`
+                KP.DEFS
+                    (KP.PROTOTYPE
+                        (KP.IDENTIFIER "foo")
+                        (KP.PROTOTYPE_ARGS [
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.BOOLEAN,
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.BOOLEAN
+                        ] KP.BOOLEAN)
+                    )
+                    (KP.EXPRESSIONS
+                        (KP.EXPRESSION
+                            (KP.UNARY_POSTFIX
+                                (KP.POSTFIX
+                                    (KP.PRIMARY_LITERAL
+                                        (KP.LITERAL_DECIMAL
+                                            (KP.DECIMAL_CONST 42)
+                                        )
+                                    )
+                                    Nothing
+                                )
+                            )
+                            []
+                        )
+                        []
+                    )
+            )
+            `shouldThrow`
+            (== ShadowedDefinitionByDefinition 
+                (KP.PROTOTYPE
+                    (KP.IDENTIFIER "foo")
+                    (KP.PROTOTYPE_ARGS [
+                            KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.BOOLEAN,
+                            KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.BOOLEAN
+                    ] KP.BOOLEAN)
+                )
+            )
