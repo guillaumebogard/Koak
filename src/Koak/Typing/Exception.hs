@@ -15,6 +15,8 @@ import Koak.Parser              ( TYPE(..)
                                 )
 
 data KoakTypingException    = MismatchedArgumentType TYPE TYPE
+                            | MismatchedUnaryType TYPE TYPE
+                            | MismatchedBinaryType TYPE TYPE TYPE TYPE
                             | MismatchedReturnType   TYPE TYPE
                             | MismatchedThenElseType TYPE TYPE
                             | ShadowedVariableByVariable     PROTOTYPE_ID PROTOTYPE_ID
@@ -29,6 +31,8 @@ instance Exception KoakTypingException
 
 instance Show KoakTypingException where
     show (MismatchedArgumentType got expected)   = "Mismatched argument type. Got type: '" ++ show got ++ "', but expected type '" ++ show expected ++ "'."
+    show (MismatchedUnaryType got expected)      = "Mismatched unary type. Got type: '" ++ show got ++ "', but unary operator expected type '" ++ show expected ++ "'."
+    show (MismatchedBinaryType got1 got2 expected1 expected2) = "Mismatched binary type. Got type: '" ++ show got1 ++ "' and '" ++ show got2 ++ "', but binary operator expected types '" ++ show expected1 ++ "' and '" ++ show expected2 ++ "'."
     show (MismatchedReturnType   got expected)   = "Mismatched return type. Got type: '"   ++ show got ++ "', but expected type '" ++ show expected ++ "'."
     show (MismatchedThenElseType got expected)   = "Mismatched type between then and else expression. In else, got type: '" ++ show got ++ "', but expected same type as then: '" ++ show expected ++ "'."
     show (ShadowedVariableByVariable     old_var new_var) = "Shadowed variable "   ++ show new_var ++ " by a variable "   ++ show old_var ++ "."
