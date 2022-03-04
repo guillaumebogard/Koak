@@ -21,6 +21,8 @@ data KoakTypingException    = MismatchedArgumentType TYPE TYPE
                             | ShadowedVariableByDefinition   PROTOTYPE_ID PROTOTYPE
                             | ShadowedDefinitionByVariable   PROTOTYPE     PROTOTYPE_ID
                             | ShadowedDefinitionByDefinition PROTOTYPE     PROTOTYPE
+                            | UnaryFunctionInvalidArgumentNumber    PROTOTYPE Int
+                            | BinaryFunctionInvalidArgumentNumber   PROTOTYPE Int
     deriving (Eq)
 
 instance Exception KoakTypingException
@@ -33,3 +35,5 @@ instance Show KoakTypingException where
     show (ShadowedVariableByDefinition   old_def new_var) = "Shadowed variable "   ++ show new_var ++ " by a definition " ++ show old_def ++ "."
     show (ShadowedDefinitionByVariable   old_var new_def) = "Shadowed definition " ++ show new_def ++ " by a variable "   ++ show old_var ++ "."
     show (ShadowedDefinitionByDefinition old_def new_def) = "Shadowed definition " ++ show new_def ++ " by a definition " ++ show old_def ++ "."
+    show (UnaryFunctionInvalidArgumentNumber  prototype arg_nb) = "Invalid argument number on unary function definition: "  ++ show prototype ++ ". Expected 1 argument. Got" ++ show arg_nb ++ " ."
+    show (BinaryFunctionInvalidArgumentNumber prototype arg_nb) = "Invalid argument number on binary function definition: " ++ show prototype ++ ". Expected 2 argument. Got" ++ show arg_nb ++ " ."

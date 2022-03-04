@@ -55,7 +55,7 @@ test-suite koak-test
       Argument.ParserSpec
       Koak.LexerSpec
       Koak.ParserSpec
-      Koak.SymbolContextSpec
+      Koak.TypingContextSpec
       Paths_koak
   hs-source-dirs:
       test
@@ -64,4 +64,5 @@ test-suite koak-test
       base >=4.7 && <5
     , hspec
     , koak
+    , unordered-containers
   default-language: Haskell2010

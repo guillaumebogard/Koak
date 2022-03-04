@@ -16,7 +16,7 @@ import Argument.LexerSpec       ( spec )
 import Argument.ParserSpec      ( spec )
 import Koak.LexerSpec           ( spec )
 import Koak.ParserSpec          ( spec )
-import Koak.SymbolContextSpec   ( spec )
+import Koak.TypingContextSpec   ( spec )
 
 main :: IO ()
 main = hspec Main.spec
@@ -27,4 +27,4 @@ spec = do
     describe "Argument.Parser"        Argument.ParserSpec.spec
     describe "Koak.Lexer"             Koak.LexerSpec.spec
     describe "Koak.Parser"            Koak.ParserSpec.spec
-    describe "Koak.SymbolContextSpec" Koak.SymbolContextSpec.spec
+    describe "Koak.TypingContextSpec" Koak.TypingContextSpec.spec

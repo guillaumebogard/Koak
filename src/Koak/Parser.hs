@@ -38,7 +38,7 @@ import Exception            ( KoakException(KoakParserMissingToken))
 
 import Control.Exception    ( throw )
 
-import Data.Hashable        (  Hashable
+import Data.Hashable        ( Hashable
                             , hashWithSalt
                             )
 
@@ -65,6 +65,7 @@ data PROTOTYPE_ID   = PROTOTYPE_ID IDENTIFIER TYPE
 
 data TYPE           = INT
                     | DOUBLE
+                    | BOOL
                     | VOID
     deriving (Eq, Show)
 
