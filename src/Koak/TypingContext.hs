@@ -9,6 +9,9 @@ module Koak.TypingContext           ( KCONTEXT(..)
                                     , GLOBAL_CONTEXT(..)
                                     , DEF_CONTEXT(..)
                                     , LOCAL_CONTEXT(..)
+                                    , BASE_TYPE(..)
+                                    , FUNCTION_TYPING(..)
+                                    , TYPE_SIGNATURE(..)
                                     , getDefaultKContext
                                     , getEmptyKContext
                                     , kContextPushDef
@@ -36,9 +39,12 @@ import Data.HashMap.Strict  as HM   ( HashMap
                                     , insert
                                     )
 
+class Identify a where
+    toIdentifier :: a -> KP.IDENTIFIER
+
 data BASE_TYPE  = INT
                 | DOUBLE
-                | BOOL
+                | BOOLEAN
                 | NIL
     deriving (Eq, Show)
 
@@ -47,16 +53,15 @@ data FUNCTION_TYPING    = UNARY_FUNCTION_TYPING  BASE_TYPE BASE_TYPE
                         | FUNCTION_TYPING [BASE_TYPE] BASE_TYPE
     deriving (Eq, Show)
 
-class Type a where
-    toTypeSignature :: a -> TYPE_SIGNATURE
 
-class Identify a where
-    toIdentifier :: a -> KP.IDENTIFIER
 
 data TYPE_SIGNATURE = PRIMITIVE_FUNCTION [FUNCTION_TYPING]
                     | FUNCTION           FUNCTION_TYPING
                     | VAR                BASE_TYPE
     deriving (Eq, Show)
+
+class Type a where
+    toTypeSignature :: a -> TYPE_SIGNATURE
 
 type CONTEXT    = HashMap KP.IDENTIFIER TYPE_SIGNATURE
 
@@ -123,8 +128,13 @@ getEmptyKContext :: KCONTEXT
 getEmptyKContext = KCONTEXT (GLOBAL_CONTEXT HM.empty) (DEF_CONTEXT HM.empty) (LOCAL_CONTEXT HM.empty)
 
 kContextPushDef :: KCONTEXT -> KP.DEFS -> KCONTEXT
-kContextPushDef (KCONTEXT gc (DEF_CONTEXT dc) lc) def =
-    KCONTEXT gc (DEF_CONTEXT $ contextPushItem dc (toIdentifier def) (toTypeSignature def)) lc
+kContextPushDef kcontext def@(KP.DEFS p _) = kContextPushDef' kcontext p (toIdentifier def) (toTypeSignature def)
+
+kContextPushDef' :: KCONTEXT -> KP.PROTOTYPE  -> KP.IDENTIFIER -> TYPE_SIGNATURE -> KCONTEXT
+kContextPushDef' (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) lc) p i ts
+    | HM.member i gc = throw $ ShadowedDefinitionByVariable   p
+    | HM.member i dc = throw $ ShadowedDefinitionByDefinition p
+    | otherwise      = KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT $ contextPushItem dc i ts) lc
 
 contextPushItem :: CONTEXT -> KP.IDENTIFIER -> TYPE_SIGNATURE -> CONTEXT
 contextPushItem c i ts = insert i ts c
@@ -147,8 +157,15 @@ prototypeIdToBaseType (KP.PROTOTYPE_ID _ t) = typeToBaseType t
 typeToBaseType :: KP.TYPE -> BASE_TYPE
 typeToBaseType KP.INT       = INT
 typeToBaseType KP.DOUBLE    = DOUBLE
-typeToBaseType KP.BOOL      = BOOL
+typeToBaseType KP.BOOLEAN   = BOOLEAN
 typeToBaseType KP.VOID      = NIL
+
+baseTypeToType :: BASE_TYPE -> KP.TYPE
+baseTypeToType INT      = KP.INT
+baseTypeToType DOUBLE   = KP.DOUBLE
+baseTypeToType BOOLEAN  = KP.BOOLEAN
+baseTypeToType NIL      = KP.VOID
+
 
     -- hashWithSalt salt (IDENTIFIER string)   = salt `hashWithSalt` string
 

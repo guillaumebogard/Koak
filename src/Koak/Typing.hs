@@ -44,7 +44,7 @@ checkKoakTyping = checkKoakTyping' getDefaultKContext
 
 checkKoakTyping' :: KCONTEXT -> [KDEFS] -> ()
 checkKoakTyping' _       []     = ()
-checkKoakTyping' context (x:xs) = checkKdefTyping context x <->
+checkKoakTyping' context (x:xs) = checkKdefTyping  context x <->
                                   checkKoakTyping' context xs
 
 checkKdefTyping :: KCONTEXT -> KDEFS -> ()
@@ -108,23 +108,24 @@ checkPartialExpressionType first op second = ()
     | otherwise = error "Type error"-}
 
 evaluateExpressionType :: EXPRESSION -> TYPE
-evaluateExpressionType (EXPRESSION unary []) = evaluateUnaryType unary
-evaluateExpressionType (EXPRESSION first ((binop, second) : xs)) = checkPartialExpressionType first binop second -->
-                                                     evaluateExpressionType' (EXPRESSION second xs) (getBinOpPrecedence binop, getBinOpType binop)
+evaluateExpressionType _ = INT
+-- evaluateExpressionType (EXPRESSION unary []) = evaluateUnaryType unary
+-- evaluateExpressionType (EXPRESSION first ((binop, second) : xs)) = checkPartialExpressionType first binop second -->
+                                                    --  evaluateExpressionType' (EXPRESSION second xs) (getBinOpPrecedence binop, getBinOpType binop)
 
-evaluateExpressionType' :: EXPRESSION -> (PRECEDENCE, TYPE) -> TYPE
-evaluateExpressionType' (EXPRESSION _ []) (_, t) = t
-evaluateExpressionType' (EXPRESSION first ((binop, second) : xs)) (prec, t)
-    | prec > getBinOpPrecedence binop = checkPartialExpressionType first binop second --> evaluateExpressionType' (EXPRESSION second xs) (prec, t)
-    | otherwise = checkPartialExpressionType first binop second -->
-                  evaluateExpressionType' (EXPRESSION second xs) (getBinOpPrecedence binop, getBinOpType binop)
+-- evaluateExpressionType' :: EXPRESSION -> (PRECEDENCE, TYPE) -> TYPE
+-- evaluateExpressionType' (EXPRESSION _ []) (_, t) = t
+-- evaluateExpressionType' (EXPRESSION first ((binop, second) : xs)) (prec, t)
+--     | prec > getBinOpPrecedence binop = checkPartialExpressionType first binop second --> evaluateExpressionType' (EXPRESSION second xs) (prec, t)
+--     | otherwise = checkPartialExpressionType first binop second -->
+--                   evaluateExpressionType' (EXPRESSION second xs) (getBinOpPrecedence binop, getBinOpType binop)
 
-evaluateUnaryType :: UNARY -> TYPE
-evaluateUnaryType (UNARY_UN op unary)
-    | getUnopType op == evaluateUnaryType unary = evaluateUnaryType unary
-    | otherwise                            = throw $ MismatchedUnaryType (evaluateUnaryType unary) $ getUnopType op
-evaluateUnaryType (UNARY_POSTFIX (POSTFIX primary Nothing)) = INT -- get primary type as basic type
-evaluateUnaryType (UNARY_POSTFIX (POSTFIX primary _)) = INT -- get primary type as function type
+-- evaluateUnaryType :: UNARY -> TYPE
+-- evaluateUnaryType (UNARY_UN op unary)
+--     | getUnopType op == evaluateUnaryType unary = evaluateUnaryType unary
+--     | otherwise                            = throw $ MismatchedUnaryType (evaluateUnaryType unary) $ getUnopType op
+-- evaluateUnaryType (UNARY_POSTFIX (POSTFIX primary Nothing)) = INT -- get primary type as basic type
+-- evaluateUnaryType (UNARY_POSTFIX (POSTFIX primary _)) = INT -- get primary type as function type
 
 -- getFunctionType :: [KDEFS] -> IDENTIFIER -> TYPE
 -- getFunctionType (KDEFS_DEFS ((PROTOTYPE identifier (PROTOTYPE_ARGS _ fnType))) :xs) functionName

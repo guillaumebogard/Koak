@@ -65,7 +65,6 @@ data PROTOTYPE_ID   = PROTOTYPE_ID IDENTIFIER TYPE
 
 data TYPE           = INT
                     | DOUBLE
-                    | BOOL
                     | VOID
                     | BOOLEAN
     deriving (Eq, Show)
