@@ -26,6 +26,7 @@ data Token  = Word String           -- 'if', 'def', 'foobar', 'i'
             | ClosedParenthesis     -- ')'
             | SemiColon             -- ';'
             | Colon                 -- ':'
+            | Comma                 -- ','
             deriving (Show, Eq)
 
 tokenizeKoak :: String -> [Token]
@@ -34,12 +35,16 @@ tokenizeKoak ('(':xs)     = OpenParenthesis   : tokenizeKoak xs
 tokenizeKoak (')':xs)     = ClosedParenthesis : tokenizeKoak xs
 tokenizeKoak (';':xs)     = SemiColon         : tokenizeKoak xs
 tokenizeKoak (':':xs)     = Colon             : tokenizeKoak xs
+tokenizeKoak (',':xs)     = Comma             : tokenizeKoak xs
 tokenizeKoak line@('.':_) = let (token, leftover) = parseDot line in token : tokenizeKoak leftover
 tokenizeKoak line@(x:xs)
     | isSpace x           = tokenizeKoak xs
     | isAlphaWord x       = let (token, leftover) = parseAlphaWord line     in token : tokenizeKoak leftover
     | isDigit x           = let (token, leftover) = parseNumber line False  in token : tokenizeKoak leftover
     | otherwise           = let (token, leftover) = parseSpecialWord line   in token : tokenizeKoak leftover
+
+isSyntaxToken :: Char -> Bool
+isSyntaxToken c = c `elem` "();:,"
 
 isAlphaWord :: Char -> Bool
 isAlphaWord c = isAlpha c || c == '\'' || c == '_'
@@ -48,7 +53,7 @@ isAlphaNumWord :: Char -> Bool
 isAlphaNumWord c = isAlphaNum c || c == '\'' || c == '_'
 
 isSpecialWord :: Char -> Bool
-isSpecialWord c = not (isAlphaNumWord c) && c /= '\'' && c /= '_' && not (isSpace c) && c /= '(' && c /= ')' && c /= ';' && c /= ':'
+isSpecialWord c = not (isAlphaNumWord c) && not (isSpace c) && not (isSyntaxToken c)
 
 parseAlphaWord :: String -> (Token, String)
 parseAlphaWord unparsed = let (parsed, rest) = span isAlphaNumWord unparsed in (Word parsed, rest)
