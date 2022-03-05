@@ -23,7 +23,6 @@ import qualified Koak.Parser as KP  ( KDEFS(..)
                                     , IDENTIFIER(..)
                                     , TYPE(..)
                                     )
-                    
 
 import Koak.Typing.Exception        ( KoakTypingException(..) )
 
