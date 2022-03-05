@@ -28,7 +28,8 @@ spec = do
             == [
                 KL.OpenParenthesis,
                 KL.ClosedParenthesis,
-                KL.Word ",!====%^/"
+                KL.Comma,
+                KL.Word "!====%^/"
             ]
     it "All simple tokens with spaces" $ do
         tokenizeKoak "( ) + - * / ^ >= > <= < == = != ! , : ; ."
@@ -48,7 +49,7 @@ spec = do
                 KL.Word "=",
                 KL.Word "!=",
                 KL.Word "!",
-                KL.Word ",",
+                KL.Comma,
                 KL.Colon,
                 KL.SemiColon ,
                 KL.Word "."
