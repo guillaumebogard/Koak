@@ -22,9 +22,9 @@ data Kdefs     = KdefDef        Defs
 
 data Defs      = Defs Prototype Expressions
 
-data Prototype = PrototypeUnary    UnaryOp             Identifier PrototypeArgs
-               | PrototypeBinary   BinaryOp Precedence Identifier PrototypeArgs
-               | PrototypeFunction                     Identifier PrototypeArgs
+data Prototype = PrototypeUnary               Identifier PrototypeArgs
+               | PrototypeBinary   Precedence Identifier PrototypeArgs
+               | PrototypeFunction            Identifier PrototypeArgs
 
 data PrototypeArgs       = PrototypeArgs [PrototypeIdentifier] Type
 
@@ -32,7 +32,11 @@ data PrototypeIdentifier = PrototypeIdentifier Identifier Type
 
 data Type = Int
           | Double
+          | Bool
           | Void
+
+data Bool = True
+          | False
 
 data Expressions = ExpressionFor   For
                  | ExpressionIf    If
@@ -62,9 +66,9 @@ data Primary = PrimaryIdentifier  Identifier
 
 newtype Identifier   = Identifier String
 
-newtype UnaryOp      = UnaryOp String
+newtype UnaryOp      = UnaryOp Identifier
 
-newtype BinaryOp     = BinaryOp String
+newtype BinaryOp     = BinaryOp Identifier
 
 newtype Precedence   = Precedence Int
 
@@ -78,18 +82,33 @@ data Literal = LiteralDecimal DecimalConst
 --parseKoak :: String -> Stmt
 --parseKoak = parseTokenizedKoak . tokenizeKoak
 --
---parseTokenizedKoak :: [Token] -> Stmt
+--parseTokenizedKoak :: [KL.Token] -> Stmt
 --parseTokenizedKoak = parseStmt
 --
---parsingError :: String -> [Token] -> Maybe Token -> [Token] -> KoakException
---parsingError at expected actual rest = KoakParserMissingToken at (show expected) (show actual) (show rest)
+--createParsingError :: String -> [KL.Token] -> Maybe KL.Token -> [KL.Token] -> KoakException
+--createParsingError at expected actual rest = KoakParserMissingToken at (show expected) (show actual) (show rest)
 --
---parseStmt :: [Token] -> Stmt
+--parseStmt :: [KL.Token] -> Stmt
 --parseStmt []     = Stmt []
 --parseStmt tokens = let (kdefs, rest) = parseKdefs tokens in Stmt $ kdefs : getKdefsFromStmt (parseStmt rest)
 --
 --getKdefsFromStmt :: Stmt -> [Kdefs]
 --getKdefsFromStmt (Stmt kdefs) = kdefs
 --
---parseKdefs :: [Token] -> (Kdefs, [Token])
---parseKdefs [] = throw "a"
+--parseKdefs :: [KL.Token] -> (Kdefs, [KL.Token])
+--parseKdefs []                 = throw $ createParsingError "parseKdefs" [Word "def"] Nothing []
+--parseKdefs (KL.Word "def":xs) = let (def, rest)  = parseDefs xs            in (KdefDef def, rest)
+--parseKdefs tokens             = let (expr, rest) = parseExpressions tokens in (KdefExpression expr, parseKdefCheckSemiColon rest)
+--
+--parseKdefCheckSemiColon :: [KL.Token] -> [KL.Token]
+--parseKdefCheckSemiColon []                = throw $ createParsingError "parseKdefs" [SemiColon] Nothing []
+--parseKdefCheckSemiColon (KL.SemiColon:xs) = xs
+--parseKdefCheckSemiColon (x:xs)            = throw $ createParsingError "parseKdefs" [SemiColon] (Just x) xs
+--
+--parseDefs :: [KL.Token] -> (Defs, [KL.Token])
+--parseDefs []     = throw $ createParsingError "parseDefs" [] Nothing []
+--parseDefs tokens = let (prototype  , rest ) = parsePrototype   tokens in
+--                   let (expressions, rest') = parseExpressions rest   in
+--                   (DEFS prototype expressions, parseKDefsSemiColon rest')
+--
+--(>=>=>)
