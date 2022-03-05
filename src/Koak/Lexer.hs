@@ -39,27 +39,27 @@ tokenizeKoak (',':xs)     = Comma             : tokenizeKoak xs
 tokenizeKoak line@('.':_) = let (token, leftover) = parseDot line in token : tokenizeKoak leftover
 tokenizeKoak line@(x:xs)
     | isSpace x           = tokenizeKoak xs
-    | isAlphaWord x       = let (token, leftover) = parseAlphaWord line     in token : tokenizeKoak leftover
+    | isAlphaWordChar x   = let (token, leftover) = parseAlphaWord line     in token : tokenizeKoak leftover
     | isDigit x           = let (token, leftover) = parseNumber line False  in token : tokenizeKoak leftover
     | otherwise           = let (token, leftover) = parseSpecialWord line   in token : tokenizeKoak leftover
 
 isSyntaxToken :: Char -> Bool
 isSyntaxToken c = c `elem` "();:,"
 
-isAlphaWord :: Char -> Bool
-isAlphaWord c = isAlpha c || c == '\'' || c == '_'
+isAlphaWordChar :: Char -> Bool
+isAlphaWordChar c = isAlpha c || c == '\'' || c == '_'
 
-isAlphaNumWord :: Char -> Bool
-isAlphaNumWord c = isAlphaNum c || c == '\'' || c == '_'
+isAlphaNumWordChar :: Char -> Bool
+isAlphaNumWordChar c = isAlphaNum c || c == '\'' || c == '_'
 
-isSpecialWord :: Char -> Bool
-isSpecialWord c = not (isAlphaNumWord c) && not (isSpace c) && not (isSyntaxToken c)
+isSpecialWordChar :: Char -> Bool
+isSpecialWordChar c = not (isAlphaNumWordChar c) && not (isSpace c) && not (isSyntaxToken c)
 
 parseAlphaWord :: String -> (Token, String)
-parseAlphaWord unparsed = let (parsed, rest) = span isAlphaNumWord unparsed in (Word parsed, rest)
+parseAlphaWord unparsed = let (parsed, rest) = span isAlphaNumWordChar unparsed in (Word parsed, rest)
 
 parseSpecialWord :: String -> (Token, String)
-parseSpecialWord unparsed = let (parsed, rest) = span isSpecialWord unparsed in (Word parsed, rest)
+parseSpecialWord unparsed = let (parsed, rest) = span isSpecialWordChar unparsed in (Word parsed, rest)
 
 parseDot :: String -> (Token, String)
 parseDot line@(_:x2:xs)
