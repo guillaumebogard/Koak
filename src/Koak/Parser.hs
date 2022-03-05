@@ -30,6 +30,7 @@ module Koak.Parser          ( parseKoak
                             , DECIMAL_CONST(..)
                             , DOUBLE_CONST(..)
                             , LITERAL(..)
+                            , VAR_ASSIGNMENT(..)
                             ) where
 
 import Koak.Lexer as KL     (Token(..))
@@ -144,6 +145,10 @@ newtype DOUBLE_CONST  = DOUBLE_CONST Double
 data LITERAL          = LITERAL_DECIMAL DECIMAL_CONST
                       | LITERAL_DOUBLE DOUBLE_CONST
     deriving (Eq, Show)
+
+data VAR_ASSIGNMENT = VAR_ASSIGNMENT IDENTIFIER TYPE
+    deriving (Eq, Show)
+
 
 parseKoak :: [Token] -> [KDEFS]
 parseKoak [] = []

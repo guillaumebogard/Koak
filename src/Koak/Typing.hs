@@ -83,8 +83,6 @@ checkWhileTyping :: KCONTEXT -> WHILE -> ()
 checkWhileTyping context (WHILE expr exprs) = checkExpressionTyping  context expr <->
                                               checkExpressionsTyping context exprs
 
-
-
 evaluateExpressionsType :: EXPRESSIONS -> TYPE
 evaluateExpressionsType (FOR_EXPR    expr)       = evaluateForType        expr
 evaluateExpressionsType (IF_EXPR     expr)       = evaluateIfType         expr
@@ -101,36 +99,35 @@ evaluateIfType (IF _ exprs _) = evaluateExpressionsType exprs
 evaluateWhileType :: WHILE -> TYPE
 evaluateWhileType  (WHILE _ exprs) = evaluateExpressionsType exprs
 
-checkPartialExpressionType :: UNARY -> BIN_OP -> UNARY -> ()
-checkPartialExpressionType first op second = ()
+checkPartialExpressionType :: KDEFS -> UNARY -> BIN_OP -> UNARY -> ()
+checkPartialExpressionType kdefs first op second = ()
 {-| evaluateUnaryType first == evaluateUnaryType second == INT {-getBinOpType binop -} = ()
     -- faudrait plutôt chopper le type des deux args du binop et les comparer aux unarys
     | otherwise = error "Type error"-}
 
-evaluateExpressionType :: EXPRESSION -> TYPE
-evaluateExpressionType _ = INT
--- evaluateExpressionType (EXPRESSION unary []) = evaluateUnaryType unary
--- evaluateExpressionType (EXPRESSION first ((binop, second) : xs)) = checkPartialExpressionType first binop second -->
-                                                    --  evaluateExpressionType' (EXPRESSION second xs) (getBinOpPrecedence binop, getBinOpType binop)
+evaluateExpressionType :: KDEFS -> EXPRESSION -> TYPE
+evaluateExpressionType kdefs (EXPRESSION unary []) = evaluateUnaryType kdefs unary
+evaluateExpressionType kdefs (EXPRESSION first ((binop, second) : xs)) = checkPartialExpressionType kdefs first binop second -->
+                                                     evaluateExpressionType' kdefs (EXPRESSION second xs) (getBinOpPrecedence kdefs binop, getBinOpType kdefs binop)
 
--- evaluateExpressionType' :: EXPRESSION -> (PRECEDENCE, TYPE) -> TYPE
--- evaluateExpressionType' (EXPRESSION _ []) (_, t) = t
--- evaluateExpressionType' (EXPRESSION first ((binop, second) : xs)) (prec, t)
---     | prec > getBinOpPrecedence binop = checkPartialExpressionType first binop second --> evaluateExpressionType' (EXPRESSION second xs) (prec, t)
---     | otherwise = checkPartialExpressionType first binop second -->
---                   evaluateExpressionType' (EXPRESSION second xs) (getBinOpPrecedence binop, getBinOpType binop)
+evaluateExpressionType' :: KDEFS -> EXPRESSION -> (PRECEDENCE, TYPE) -> TYPE
+evaluateExpressionType' kdefs (EXPRESSION _ []) (_, t) = t
+evaluateExpressionType' kdefs (EXPRESSION first ((binop, second) : xs)) (prec, t)
+    | prec > getBinOpPrecedence kdefs binop = checkPartialExpressionType kdefs first binop second --> evaluateExpressionType' kdefs (EXPRESSION second xs) (prec, t)
+    | otherwise = checkPartialExpressionType kdefs first binop second -->
+                  evaluateExpressionType' kdefs (EXPRESSION second xs) (getBinOpPrecedence kdefs binop, getBinOpType kdefs binop)
 
--- evaluateUnaryType :: UNARY -> TYPE
--- evaluateUnaryType (UNARY_UN op unary)
---     | getUnopType op == evaluateUnaryType unary = evaluateUnaryType unary
---     | otherwise                            = throw $ MismatchedUnaryType (evaluateUnaryType unary) $ getUnopType op
--- evaluateUnaryType (UNARY_POSTFIX (POSTFIX primary Nothing)) = INT -- get primary type as basic type
--- evaluateUnaryType (UNARY_POSTFIX (POSTFIX primary _)) = INT -- get primary type as function type
+evaluateUnaryType :: KDEFS -> UNARY -> TYPE
+evaluateUnaryType kdefs (UNARY_UN op unary)
+    | getUnopType kdefs op == evaluateUnaryType kdefs unary = evaluateUnaryType kdefs unary
+    | otherwise                            = throw $ MismatchedUnaryType (evaluateUnaryType kdefs unary) $ getUnopType defs op
+evaluateUnaryType kdefs (UNARY_POSTFIX (POSTFIX primary Nothing)) = INT -- get primary type as basic type
+evaluateUnaryType kdefs (UNARY_POSTFIX (POSTFIX primary _)) = INT -- get primary type as function type
 
--- getFunctionType :: [KDEFS] -> IDENTIFIER -> TYPE
--- getFunctionType (KDEFS_DEFS ((PROTOTYPE identifier (PROTOTYPE_ARGS _ fnType))) :xs) functionName
---   | identifier == functionName = fnType
---   | otherwise                  = getFunctionType xs functionName
+getFunctionType :: [KDEFS] -> IDENTIFIER -> TYPE
+getFunctionType (KDEFS_DEFS ((PROTOTYPE identifier (PROTOTYPE_ARGS _ fnType))) :xs) functionName
+  | identifier == functionName = fnType
+  | otherwise                  = getFunctionType xs functionName
 
 
 -- find :: Foldable t => (a -> Bool) -> t a -> Maybe a

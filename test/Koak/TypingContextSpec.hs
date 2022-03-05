@@ -42,10 +42,9 @@ spec = do
     it "getEmptyKContext basic" $
         getEmptyKContext
             ==
-            KCONTEXT (GLOBAL_CONTEXT HM.empty) (DEF_CONTEXT HM.empty) (LOCAL_CONTEXT HM.empty)
+            KCONTEXT (GLOBAL_CONTEXT HM.empty) (DEF_CONTEXT HM.empty) Nothing
     it "kContextPushDef: One push, empty context, simple signature 1" $
         kContextPushDef
-            getEmptyKContext
             (KP.DEFS
                 (KP.PROTOTYPE
                     (KP.IDENTIFIER "foo")
@@ -68,16 +67,16 @@ spec = do
                     []
                 )
             )
+            getEmptyKContext
             ==
             KCONTEXT
                 (GLOBAL_CONTEXT $ HM.fromList [])
                 (DEF_CONTEXT    $ HM.fromList [
                     (KP.IDENTIFIER "foo", FUNCTION $ FUNCTION_TYPING [] INT)
                 ])
-                (LOCAL_CONTEXT  $ HM.fromList [])
+                Nothing
     it "kContextPushDef: One push, empty context, simple signature 2" $
         kContextPushDef
-            getEmptyKContext
             (KP.DEFS
                 (KP.PROTOTYPE
                     (KP.IDENTIFIER "bar")
@@ -102,16 +101,16 @@ spec = do
                     []
                 )
             )
+            getEmptyKContext
             ==
             KCONTEXT
                 (GLOBAL_CONTEXT $ HM.fromList [])
                 (DEF_CONTEXT    $ HM.fromList [
                     (KP.IDENTIFIER "bar", FUNCTION $ FUNCTION_TYPING [INT] INT)
                 ])
-                (LOCAL_CONTEXT  $ HM.fromList [])
+                Nothing
     it "kContextPushDef: One push, empty context, simple signature 3" $
         kContextPushDef
-            getEmptyKContext
             (KP.DEFS
                 (KP.PROTOTYPE
                     (KP.IDENTIFIER "foobar")
@@ -136,16 +135,16 @@ spec = do
                     []
                 )
             )
+            getEmptyKContext
             ==
             KCONTEXT
                 (GLOBAL_CONTEXT $ HM.fromList [])
                 (DEF_CONTEXT    $ HM.fromList [
                     (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [DOUBLE] NIL)
                 ])
-                (LOCAL_CONTEXT  $ HM.fromList [])
+                Nothing
     it "kContextPushDef: One push, empty context, complex signature 1" $
         kContextPushDef
-            getEmptyKContext
             (KP.DEFS
                 (KP.PROTOTYPE
                     (KP.IDENTIFIER "foobar")
@@ -173,16 +172,15 @@ spec = do
                     []
                 )
             )
+            getEmptyKContext
             ==
             KCONTEXT
                 (GLOBAL_CONTEXT $ HM.fromList [])
                 (DEF_CONTEXT    $ HM.fromList [
                     (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [INT, DOUBLE, BOOLEAN, NIL] DOUBLE)
                 ])
-                (LOCAL_CONTEXT  $ HM.fromList [])
+                Nothing
     it "kContextPushDef: Multiple push, empty context, complex signature" $
-            getEmptyKContext
-            `kContextPushDef`
             KP.DEFS
                 (KP.PROTOTYPE
                     (KP.IDENTIFIER "foo")
@@ -205,59 +203,65 @@ spec = do
                     []
                 )
             `kContextPushDef`
-            KP.DEFS
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "bar")
-                    (KP.PROTOTYPE_ARGS [
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.DOUBLE,
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.VOID
-                    ] KP.DOUBLE)
-                )
-                (KP.EXPRESSIONS
-                    (KP.EXPRESSION
-                        (KP.UNARY_POSTFIX
-                            (KP.POSTFIX
-                                (KP.PRIMARY_LITERAL
-                                    (KP.LITERAL_DECIMAL
-                                        (KP.DECIMAL_CONST 42)
+            (
+                KP.DEFS
+                    (KP.PROTOTYPE
+                        (KP.IDENTIFIER "bar")
+                        (KP.PROTOTYPE_ARGS [
+                            KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
+                            KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.DOUBLE,
+                            KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
+                            KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.VOID
+                        ] KP.DOUBLE)
+                    )
+                    (KP.EXPRESSIONS
+                        (KP.EXPRESSION
+                            (KP.UNARY_POSTFIX
+                                (KP.POSTFIX
+                                    (KP.PRIMARY_LITERAL
+                                        (KP.LITERAL_DECIMAL
+                                            (KP.DECIMAL_CONST 42)
+                                        )
                                     )
+                                    Nothing
                                 )
-                                Nothing
                             )
+                            []
                         )
                         []
                     )
-                    []
-                )
-            `kContextPushDef`
-            KP.DEFS
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "foobar")
-                    (KP.PROTOTYPE_ARGS [
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.INT,
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.INT
-                    ] KP.BOOLEAN)
-                )
-                (KP.EXPRESSIONS
-                    (KP.EXPRESSION
-                        (KP.UNARY_POSTFIX
-                            (KP.POSTFIX
-                                (KP.PRIMARY_LITERAL
-                                    (KP.LITERAL_DECIMAL
-                                        (KP.DECIMAL_CONST 42)
+                `kContextPushDef`
+                (
+                    KP.DEFS
+                        (KP.PROTOTYPE
+                            (KP.IDENTIFIER "foobar")
+                            (KP.PROTOTYPE_ARGS [
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.INT,
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
+                                KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.INT
+                            ] KP.BOOLEAN)
+                        )
+                        (KP.EXPRESSIONS
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_LITERAL
+                                            (KP.LITERAL_DECIMAL
+                                                (KP.DECIMAL_CONST 42)
+                                            )
+                                        )
+                                        Nothing
                                     )
                                 )
-                                Nothing
+                                []
                             )
+                            []
                         )
-                        []
-                    )
-                    []
+                    `kContextPushDef`
+                    getEmptyKContext
                 )
+            )
             ==
             KCONTEXT
                 (GLOBAL_CONTEXT $ HM.fromList [])
@@ -266,11 +270,9 @@ spec = do
                     (KP.IDENTIFIER "bar",    FUNCTION $ FUNCTION_TYPING [INT, DOUBLE, BOOLEAN, NIL] DOUBLE),
                     (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [INT, INT, BOOLEAN, INT] BOOLEAN)
                 ])
-                (LOCAL_CONTEXT  $ HM.fromList [])
+                Nothing
     it "kContextPushDef: Pushing twice same function" $ do
         evaluate (
-                getEmptyKContext
-                `kContextPushDef`
                 KP.DEFS
                     (KP.PROTOTYPE
                         (KP.IDENTIFIER "foo")
@@ -293,27 +295,31 @@ spec = do
                         []
                     )
                 `kContextPushDef`
-                KP.DEFS
-                    (KP.PROTOTYPE
-                        (KP.IDENTIFIER "foo")
-                        (KP.PROTOTYPE_ARGS [] KP.INT)
-                    )
-                    (KP.EXPRESSIONS
-                        (KP.EXPRESSION
-                            (KP.UNARY_POSTFIX
-                                (KP.POSTFIX
-                                    (KP.PRIMARY_LITERAL
-                                        (KP.LITERAL_DECIMAL
-                                            (KP.DECIMAL_CONST 42)
+                (
+                    KP.DEFS
+                        (KP.PROTOTYPE
+                            (KP.IDENTIFIER "foo")
+                            (KP.PROTOTYPE_ARGS [] KP.INT)
+                        )
+                        (KP.EXPRESSIONS
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_LITERAL
+                                            (KP.LITERAL_DECIMAL
+                                                (KP.DECIMAL_CONST 42)
+                                            )
                                         )
+                                        Nothing
                                     )
-                                    Nothing
                                 )
+                                []
                             )
                             []
                         )
-                        []
-                    )
+                    `kContextPushDef`
+                    getEmptyKContext
+                )
             )
             `shouldThrow`
             (== ShadowedDefinitionByDefinition 
@@ -324,60 +330,63 @@ spec = do
             )
     it "kContextPushDef: Pushing two functions with same name" $ do
         evaluate (
-                getEmptyKContext
-                `kContextPushDef`
                 KP.DEFS
                     (KP.PROTOTYPE
                         (KP.IDENTIFIER "foo")
                         (KP.PROTOTYPE_ARGS [
+                                    KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.BOOLEAN,
+                                    KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.BOOLEAN
+                            ] KP.BOOLEAN
+                        )
+                    )
+                    (KP.EXPRESSIONS
+                        (KP.EXPRESSION
+                            (KP.UNARY_POSTFIX
+                                (KP.POSTFIX
+                                    (KP.PRIMARY_LITERAL
+                                        (KP.LITERAL_DECIMAL
+                                            (KP.DECIMAL_CONST 42)
+                                        )
+                                    )
+                                    Nothing
+                                )
+                            )
+                            []
+                        )
+                        []
+                    )
+                `kContextPushDef`
+                (
+                    KP.DEFS
+                        (KP.PROTOTYPE
+                            (KP.IDENTIFIER "foo")
+                            (KP.PROTOTYPE_ARGS [
                                 KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
                                 KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.INT,
                                 KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
                                 KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.INT
-                            ] KP.VOID
+
+                            ] KP.VOID)
                         )
-                    )
-                    (KP.EXPRESSIONS
-                        (KP.EXPRESSION
-                            (KP.UNARY_POSTFIX
-                                (KP.POSTFIX
-                                    (KP.PRIMARY_LITERAL
-                                        (KP.LITERAL_DECIMAL
-                                            (KP.DECIMAL_CONST 42)
+                        (KP.EXPRESSIONS
+                            (KP.EXPRESSION
+                                (KP.UNARY_POSTFIX
+                                    (KP.POSTFIX
+                                        (KP.PRIMARY_LITERAL
+                                            (KP.LITERAL_DECIMAL
+                                                (KP.DECIMAL_CONST 42)
+                                            )
                                         )
+                                        Nothing
                                     )
-                                    Nothing
                                 )
+                                []
                             )
                             []
                         )
-                        []
-                    )
-                `kContextPushDef`
-                KP.DEFS
-                    (KP.PROTOTYPE
-                        (KP.IDENTIFIER "foo")
-                        (KP.PROTOTYPE_ARGS [
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.BOOLEAN,
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.BOOLEAN
-                        ] KP.BOOLEAN)
-                    )
-                    (KP.EXPRESSIONS
-                        (KP.EXPRESSION
-                            (KP.UNARY_POSTFIX
-                                (KP.POSTFIX
-                                    (KP.PRIMARY_LITERAL
-                                        (KP.LITERAL_DECIMAL
-                                            (KP.DECIMAL_CONST 42)
-                                        )
-                                    )
-                                    Nothing
-                                )
-                            )
-                            []
-                        )
-                        []
-                    )
+                    `kContextPushDef`
+                    getEmptyKContext
+                )
             )
             `shouldThrow`
             (== ShadowedDefinitionByDefinition 

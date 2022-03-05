@@ -11,7 +11,7 @@ import GHC.Exception            ( Exception )
 
 import Koak.Parser              ( TYPE(..)
                                 , PROTOTYPE(..)
-                                , PROTOTYPE_ID
+                                , VAR_ASSIGNMENT
                                 )
 
 data KoakTypingException    = MismatchedArgumentType TYPE TYPE
@@ -19,8 +19,8 @@ data KoakTypingException    = MismatchedArgumentType TYPE TYPE
                             | MismatchedBinaryType   TYPE TYPE TYPE TYPE
                             | MismatchedReturnType   TYPE TYPE
                             | MismatchedThenElseType TYPE TYPE
-                            | ShadowedVariableByVariable     PROTOTYPE_ID
-                            | ShadowedVariableByDefinition   PROTOTYPE_ID
+                            | ShadowedVariableByVariable     VAR_ASSIGNMENT
+                            | ShadowedVariableByDefinition   VAR_ASSIGNMENT
                             | ShadowedDefinitionByVariable   PROTOTYPE
                             | ShadowedDefinitionByDefinition PROTOTYPE
                             | UnaryFunctionInvalidArgumentNumber    PROTOTYPE Int

@@ -12,6 +12,7 @@ module Koak.TypingContext           ( KCONTEXT(..)
                                     , BASE_TYPE(..)
                                     , FUNCTION_TYPING(..)
                                     , TYPE_SIGNATURE(..)
+                                    , CONTEXT_TYPE(..)
                                     , getDefaultKContext
                                     , getEmptyKContext
                                     , kContextPushDef
@@ -25,8 +26,9 @@ import qualified Koak.Parser as KP  ( KDEFS(..)
                                     , DEFS (..)
                                     , IDENTIFIER(..)
                                     , TYPE(..)
+                                    , PRECEDENCE(..)
+                                    , VAR_ASSIGNMENT(..)
                                     )
-                    
 
 import Koak.Typing.Exception        ( KoakTypingException(..) )
 
@@ -38,6 +40,7 @@ import Data.HashMap.Strict  as HM   ( HashMap
                                     , member
                                     , insert
                                     )
+import Koak.Parser (PROTOTYPE(PROTOTYPE_BINARY))
 
 class Identify a where
     toIdentifier :: a -> KP.IDENTIFIER
@@ -48,12 +51,10 @@ data BASE_TYPE  = INT
                 | NIL
     deriving (Eq, Show)
 
-data FUNCTION_TYPING    = UNARY_FUNCTION_TYPING  BASE_TYPE BASE_TYPE
-                        | BINARY_FUNCTION_TYPING BASE_TYPE BASE_TYPE BASE_TYPE
+data FUNCTION_TYPING    = UNARY_FUNCTION_TYPING  KP.PRECEDENCE BASE_TYPE BASE_TYPE
+                        | BINARY_FUNCTION_TYPING KP.PRECEDENCE BASE_TYPE BASE_TYPE BASE_TYPE
                         | FUNCTION_TYPING [BASE_TYPE] BASE_TYPE
     deriving (Eq, Show)
-
-
 
 data TYPE_SIGNATURE = PRIMITIVE_FUNCTION [FUNCTION_TYPING]
                     | FUNCTION           FUNCTION_TYPING
@@ -63,7 +64,7 @@ data TYPE_SIGNATURE = PRIMITIVE_FUNCTION [FUNCTION_TYPING]
 class Type a where
     toTypeSignature :: a -> TYPE_SIGNATURE
 
-type CONTEXT    = HashMap KP.IDENTIFIER TYPE_SIGNATURE
+type CONTEXT            = HashMap KP.IDENTIFIER TYPE_SIGNATURE
 
 newtype GLOBAL_CONTEXT  = GLOBAL_CONTEXT CONTEXT
     deriving (Eq, Show)
@@ -74,15 +75,10 @@ newtype DEF_CONTEXT     = DEF_CONTEXT    CONTEXT
 newtype LOCAL_CONTEXT   = LOCAL_CONTEXT  CONTEXT
     deriving (Eq, Show)
 
-data KCONTEXT   = KCONTEXT GLOBAL_CONTEXT DEF_CONTEXT LOCAL_CONTEXT
+data CONTEXT_TYPE       = CONTEXT_TYPE_GLOBAL | CONTEXT_TYPE_DEF | CONTEXT_TYPE_LOCAL
+
+data KCONTEXT           = KCONTEXT GLOBAL_CONTEXT DEF_CONTEXT (Maybe LOCAL_CONTEXT)
     deriving (Eq, Show)
-
--- evaluateFunctionCall :: CONTEXT -> (CONTEXT, RESULT)
--- evaluateFunctionCall c = let (_, r) = evaluateOther c in (c, r)
-
-
--- evaluateOther :: CONTEXT -> (CONTEXT, RESULT)
--- evaluateOther c = evaluateOther c
 
 getDefaultKContext :: KCONTEXT
 getDefaultKContext = KCONTEXT
@@ -93,10 +89,6 @@ getDefaultKContext = KCONTEXT
                         (
                             DEF_CONTEXT $
                                 HM.fromList [
-                                    (
-                                        KP.IDENTIFIER "Solène lefeu",
-                                        FUNCTION $ FUNCTION_TYPING [] NIL
-                                    ),
                                     (
                                         KP.IDENTIFIER "+",
                                         PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE]
@@ -119,25 +111,44 @@ getDefaultKContext = KCONTEXT
                                     )
                                 ]
                         )
-                        (
-                            LOCAL_CONTEXT
-                                HM.empty
-                        )
+                        Nothing
 
 getEmptyKContext :: KCONTEXT
-getEmptyKContext = KCONTEXT (GLOBAL_CONTEXT HM.empty) (DEF_CONTEXT HM.empty) (LOCAL_CONTEXT HM.empty)
+getEmptyKContext = KCONTEXT (GLOBAL_CONTEXT HM.empty) (DEF_CONTEXT HM.empty) Nothing
 
-kContextPushDef :: KCONTEXT -> KP.DEFS -> KCONTEXT
-kContextPushDef kcontext def@(KP.DEFS p _) = kContextPushDef' kcontext p (toIdentifier def) (toTypeSignature def)
+kContextPushDef :: KP.DEFS -> KCONTEXT -> KCONTEXT
+kContextPushDef def@(KP.DEFS p _) = kContextPushDef' p (toIdentifier def) (toTypeSignature def)
 
-kContextPushDef' :: KCONTEXT -> KP.PROTOTYPE  -> KP.IDENTIFIER -> TYPE_SIGNATURE -> KCONTEXT
-kContextPushDef' (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) lc) p i ts
+kContextPushDef' :: KP.PROTOTYPE  -> KP.IDENTIFIER -> TYPE_SIGNATURE -> KCONTEXT -> KCONTEXT
+kContextPushDef' p i ts (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) lc)
     | HM.member i gc = throw $ ShadowedDefinitionByVariable   p
     | HM.member i dc = throw $ ShadowedDefinitionByDefinition p
-    | otherwise      = KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT $ contextPushItem dc i ts) lc
+    | otherwise      = KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT $ contextPushItem i ts dc) lc
 
-contextPushItem :: CONTEXT -> KP.IDENTIFIER -> TYPE_SIGNATURE -> CONTEXT
-contextPushItem c i ts = insert i ts c
+kContextEnterFunctionCall :: KP.PROTOTYPE -> KCONTEXT -> KCONTEXT
+kContextEnterFunctionCall (KP.PROTOTYPE_UNARY  _ _ _ (KP.PROTOTYPE_ARGS args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
+kContextEnterFunctionCall (KP.PROTOTYPE_BINARY _ _ _ (KP.PROTOTYPE_ARGS args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
+kContextEnterFunctionCall (KP.PROTOTYPE _            (KP.PROTOTYPE_ARGS args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
+
+kContextEnterFunctionCall' :: [KP.PROTOTYPE_ID] -> KCONTEXT -> KCONTEXT
+kContextEnterFunctionCall' args k = foldr (kContextPushVar . prototypeIdToVarAssignment) k args
+
+kContextEnterLocalContext :: KCONTEXT -> KCONTEXT
+kContextEnterLocalContext (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) _) = KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) (Just $ LOCAL_CONTEXT HM.empty)
+
+kContextPushVar :: KP.VAR_ASSIGNMENT -> KCONTEXT -> KCONTEXT
+kContextPushVar v@(KP.VAR_ASSIGNMENT i t) (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) Nothing)
+    | HM.member i dc    = throw $ ShadowedVariableByDefinition v
+    | HM.member i gc    = throw $ ShadowedVariableByVariable   v
+    | otherwise         = KCONTEXT (GLOBAL_CONTEXT $ contextPushItem i (toTypeSignature v) gc) (DEF_CONTEXT dc) Nothing
+kContextPushVar v@(KP.VAR_ASSIGNMENT i t) (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) (Just (LOCAL_CONTEXT lc))) 
+    | HM.member i dc    = throw $ ShadowedVariableByDefinition v
+    | HM.member i gc    = throw $ ShadowedVariableByVariable   v
+    | HM.member i lc    = throw $ ShadowedVariableByVariable   v
+    | otherwise         = KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) (Just $ LOCAL_CONTEXT $ contextPushItem i (toTypeSignature v) gc)
+
+contextPushItem :: KP.IDENTIFIER -> TYPE_SIGNATURE -> CONTEXT -> CONTEXT
+contextPushItem = insert
 
 instance Identify KP.DEFS where
     toIdentifier (KP.DEFS (KP.PROTOTYPE_UNARY  _  _ i _) _) = i
@@ -145,14 +156,24 @@ instance Identify KP.DEFS where
     toIdentifier (KP.DEFS (KP.PROTOTYPE i      _)        _) = i
 
 instance Type KP.DEFS where
-    toTypeSignature (KP.DEFS   (KP.PROTOTYPE_UNARY  _  _ _ (KP.PROTOTYPE_ARGS [x]        return_type)) _) = FUNCTION $ UNARY_FUNCTION_TYPING (prototypeIdToBaseType x) (typeToBaseType return_type)
-    toTypeSignature (KP.DEFS p@(KP.PROTOTYPE_UNARY  _  _ _ (KP.PROTOTYPE_ARGS args       _          )) _) = throw $ UnaryFunctionInvalidArgumentNumber p (length args) 
-    toTypeSignature (KP.DEFS   (KP.PROTOTYPE_BINARY _  _ _ (KP.PROTOTYPE_ARGS [x,y]      return_type)) _) = FUNCTION $ BINARY_FUNCTION_TYPING (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
-    toTypeSignature (KP.DEFS p@(KP.PROTOTYPE_BINARY _  _ _ (KP.PROTOTYPE_ARGS args       _          )) _) = throw $ BinaryFunctionInvalidArgumentNumber p (length args)
-    toTypeSignature (KP.DEFS   (KP.PROTOTYPE _             (KP.PROTOTYPE_ARGS args       return_type)) _) = FUNCTION $ FUNCTION_TYPING (map prototypeIdToBaseType args) (typeToBaseType return_type)
+    toTypeSignature (KP.DEFS   (KP.PROTOTYPE_UNARY  _ pre _ (KP.PROTOTYPE_ARGS [x]        return_type)) _) = FUNCTION $ UNARY_FUNCTION_TYPING  pre (prototypeIdToBaseType x) (typeToBaseType return_type)
+    toTypeSignature (KP.DEFS p@(KP.PROTOTYPE_UNARY  _ _   _ (KP.PROTOTYPE_ARGS args       _          )) _) = throw    $ UnaryFunctionInvalidArgumentNumber p  (length args)
+    toTypeSignature (KP.DEFS   (KP.PROTOTYPE_BINARY _ pre _ (KP.PROTOTYPE_ARGS [x,y]      return_type)) _) = FUNCTION $ BINARY_FUNCTION_TYPING pre (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
+    toTypeSignature (KP.DEFS p@(KP.PROTOTYPE_BINARY _ _   _ (KP.PROTOTYPE_ARGS args       _          )) _) = throw    $ BinaryFunctionInvalidArgumentNumber p (length args)
+    toTypeSignature (KP.DEFS   (KP.PROTOTYPE _              (KP.PROTOTYPE_ARGS args       return_type)) _) = FUNCTION $ FUNCTION_TYPING (map prototypeIdToBaseType args) (typeToBaseType return_type)
+
+instance Identify KP.VAR_ASSIGNMENT where
+    toIdentifier (KP.VAR_ASSIGNMENT i _) = i
+
+instance Type KP.VAR_ASSIGNMENT where
+    toTypeSignature (KP.VAR_ASSIGNMENT _ var_type) = VAR $ typeToBaseType var_type
 
 prototypeIdToBaseType :: KP.PROTOTYPE_ID -> BASE_TYPE
 prototypeIdToBaseType (KP.PROTOTYPE_ID _ t) = typeToBaseType t
+
+prototypeIdToVarAssignment :: KP.PROTOTYPE_ID -> KP.VAR_ASSIGNMENT
+prototypeIdToVarAssignment (KP.PROTOTYPE_ID i t) = KP.VAR_ASSIGNMENT i t
+
 
 typeToBaseType :: KP.TYPE -> BASE_TYPE
 typeToBaseType KP.INT       = INT
@@ -168,24 +189,6 @@ baseTypeToType NIL      = KP.VOID
 
 
     -- hashWithSalt salt (IDENTIFIER string)   = salt `hashWithSalt` string
-
--- data DEFS           = DEFS PROTOTYPE EXPRESSIONS
---     deriving (Eq, Show)
-
--- newtype PRECEDENCE  = PRECEDENCE Int
---     deriving (Eq, Show)
-
--- data PROTOTYPE      = PROTOTYPE_UNARY  UN_OP  PRECEDENCE IDENTIFIER PROTOTYPE_ARGS
---                     | PROTOTYPE_BINARY BIN_OP PRECEDENCE IDENTIFIER PROTOTYPE_ARGS
---                     | PROTOTYPE IDENTIFIER PROTOTYPE_ARGS
---     deriving (Eq, Show)
-
--- data PROTOTYPE_ARGS = PROTOTYPE_ARGS [PROTOTYPE_ID] TYPE
---     deriving (Eq, Show)
-
--- data PROTOTYPE_ID   = PROTOTYPE_ID IDENTIFIER TYPE
---     deriving (Eq, Show)
-
 
 -- sContextPushNewFrame :: SYMBOL_CONTEXT -> SYMBOL_CONTEXT
 -- sContextPushNewFrame (SYMBOL_CONTEXT kdefs stack) = SYMBOL_CONTEXT kdefs (VAR_FRAME [] :stack)
