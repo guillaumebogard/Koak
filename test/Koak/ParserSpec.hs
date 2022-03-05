@@ -30,7 +30,7 @@ spec = do
             KL.ClosedParenthesis,
             KL.Colon,
             KL.Word "int",
-            KL.Number 42,
+            KL.IntegerNumber 42,
             KL.SemiColon
         ] == [
                 KP.KDEFS_DEFS
@@ -69,7 +69,7 @@ spec = do
             KL.ClosedParenthesis,
             KL.Colon,
             KL.Word "int",
-            KL.Number 42,
+            KL.IntegerNumber 42,
             KL.SemiColon
         ] == [
                 KP.KDEFS_DEFS
@@ -120,7 +120,7 @@ spec = do
             KL.ClosedParenthesis,
             KL.Colon,
             KL.Word "int",
-            KL.Number 42,
+            KL.IntegerNumber 42,
             KL.SemiColon
         ] == [
                 KP.KDEFS_DEFS
@@ -177,7 +177,7 @@ spec = do
             KL.ClosedParenthesis,
             KL.Colon,
             KL.Word "int",
-            KL.Number 42,
+            KL.IntegerNumber 42,
             KL.SemiColon,
             KL.Word "def",            
             KL.Word "bar",
@@ -285,7 +285,7 @@ spec = do
         [
             KL.Word "foo",
             KL.OpenParenthesis,
-            KL.Number 1,
+            KL.IntegerNumber 1,
             KL.ClosedParenthesis,
             KL.SemiColon
         ] == [
@@ -367,7 +367,7 @@ spec = do
         [
             KL.Word "foo",
             KL.OpenParenthesis,
-            KL.Number 1,
+            KL.IntegerNumber 1,
             KL.Comma,
             KL.Word "my_var",
             KL.Comma,
@@ -436,24 +436,24 @@ spec = do
         [
             KL.Word "foo",
             KL.OpenParenthesis,
-            KL.Minus,
-            KL.Number 1,
-            KL.Multiply,
-            KL.Number 3,
+            KL.Word "-",
+            KL.IntegerNumber 1,
+            KL.Word "*",
+            KL.IntegerNumber 3,
             KL.Comma,
             KL.Word "my_var",
             KL.Comma,
             KL.Word "bar",
             KL.OpenParenthesis,
-            KL.Number 1,
+            KL.IntegerNumber 1,
             KL.Comma,
-            KL.Minus,
+            KL.Word "-",
             KL.FloatingNumber 2.12,
             KL.ClosedParenthesis,
             KL.Comma,
             KL.Word "my_var_2",
-            KL.Divide,
-            KL.Number 2,
+            KL.Word "/",
+            KL.IntegerNumber 2,
             KL.ClosedParenthesis,
             KL.SemiColon
         ] == [
@@ -592,14 +592,14 @@ spec = do
             KL.Colon,
             KL.Word "bar",
             KL.OpenParenthesis,
-            KL.Number 2,
+            KL.IntegerNumber 2,
             KL.ClosedParenthesis,
             KL.Colon,
             KL.Word "foobar",
             KL.OpenParenthesis,
-            KL.Number 1,
+            KL.IntegerNumber 1,
             KL.Comma,
-            KL.Number 2,
+            KL.IntegerNumber 2,
             KL.Comma,
             KL.FloatingNumber 3.14,
             KL.ClosedParenthesis,
@@ -714,18 +714,18 @@ spec = do
             KL.Colon,
             KL.Word "double",
             KL.Word "x",
-            KL.Plus,
+            KL.Word "+",
             KL.FloatingNumber 2.0,
             KL.SemiColon,
             KL.Word "test",
             KL.OpenParenthesis,
             KL.FloatingNumber 5.0,
             KL.ClosedParenthesis,
-            KL.Minus,
+            KL.Word "-",
             KL.FloatingNumber 2.0,
-            KL.Multiply,
+            KL.Word "*",
             KL.FloatingNumber 3.0,
-            KL.Plus,
+            KL.Word "+",
             KL.FloatingNumber 1.0,
             KL.SemiColon
         ] == [
@@ -843,8 +843,8 @@ spec = do
     it "Simple unary expression: -1;" $
         parseKoak
         [
-            KL.Minus,
-            KL.Number 1,
+            KL.Word "-",
+            KL.IntegerNumber 1,
             KL.SemiColon
         ] == [
                 KP.KDEFS_EXPR
@@ -871,11 +871,11 @@ spec = do
     it "Deep unary expression: -++-1;" $
         parseKoak
         [
-            KL.Minus,
-            KL.Plus,
-            KL.Plus,
-            KL.Minus,
-            KL.Number 1,
+            KL.Word "-",
+            KL.Word "+",
+            KL.Word "+",
+            KL.Word "-",
+            KL.IntegerNumber 1,
             KL.SemiColon
         ] == [
                 KP.KDEFS_EXPR
@@ -1049,17 +1049,17 @@ spec = do
         parseKoak
         [
             KL.Word "len",
-            KL.Assign,
-            KL.Number 99,
+            KL.Word "=",
+            KL.IntegerNumber 99,
             KL.Colon,
             KL.Word "i",
-            KL.Assign,
-            KL.Number 0,
+            KL.Word "=",
+            KL.IntegerNumber 0,
             KL.Colon,
             KL.OpenParenthesis,
             KL.Word "while",
             KL.Word "i",
-            KL.Lower,
+            KL.Word "<",
             KL.Word "len",
             KL.Word "do",
             KL.Word "print",
@@ -1068,10 +1068,10 @@ spec = do
             KL.ClosedParenthesis,
             KL.Colon,
             KL.Word "i",
-            KL.Assign,
+            KL.Word "=",
             KL.Word "i",
-            KL.Plus,
-            KL.Number 1,
+            KL.Word "+",
+            KL.IntegerNumber 1,
             KL.ClosedParenthesis,
             KL.Colon,
             KL.Word "print",
@@ -1262,18 +1262,18 @@ spec = do
         [
             KL.Word "for",
             KL.Word "i",
-            KL.Assign,
-            KL.Number 1,
+            KL.Word "=",
+            KL.IntegerNumber 1,
             KL.Comma ,
             KL.Word "i",
-            KL.Lower,
+            KL.Word "<",
             KL.Word "n",
             KL.Comma,
-            KL.Number 1,
+            KL.IntegerNumber 1,
             KL.Word "in",
             KL.Word "print",
             KL.OpenParenthesis,
-            KL.Number 42,
+            KL.IntegerNumber 42,
             KL.ClosedParenthesis,
             KL.SemiColon
         ] == [

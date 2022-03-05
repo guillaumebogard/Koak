@@ -215,8 +215,8 @@ parsePrototypeArgsType (Colon:xs) = parseType xs
 parsePrototypeArgsType (x:xs)     = throw $ newParsingError "parsePrototypeArgsType" [Colon] (Just x) xs
 
 parseMaybePrecedence :: [Token] -> (Maybe PRECEDENCE, [Token])
-parseMaybePrecedence (Number n:xs) = (Just $ PRECEDENCE n, xs)
-parseMaybePrecedence list          = (Nothing, list)
+parseMaybePrecedence (IntegerNumber n:xs) = (Just $ PRECEDENCE n, xs)
+parseMaybePrecedence list                 = (Nothing, list)
 
 parsePrototypeId :: [Token] -> (PROTOTYPE_ID, [Token])
 parsePrototypeId []   = throw $ newParsingError "parsePrototypeId" [] Nothing []
@@ -240,9 +240,9 @@ parseFor (Word "for":xs) = let (assign_id, rest) = parseIdentifier xs in parseFo
 parseFor (x:xs)          = throw $ newParsingError "parseIf" [Word "for"] (Just x) xs
 
 parseFor' :: [Token] -> IDENTIFIER -> (FOR, [Token])
-parseFor' []         _          = throw $ newParsingError "parseIf" [Assign] Nothing []
-parseFor' (Assign:xs) assign_id = let (assign_expr, rest) = parseExpression xs in parseFor'' rest assign_id assign_expr
-parseFor' (x:xs)     _          = throw $ newParsingError "parseIf" [Assign] (Just x) xs
+parseFor' []         _            = throw $ newParsingError "parseIf" [Word "="] Nothing []
+parseFor' (Word "=":xs) assign_id = let (assign_expr, rest) = parseExpression xs in parseFor'' rest assign_id assign_expr
+parseFor' (x:xs)     _            = throw $ newParsingError "parseIf" [Word "="] (Just x) xs
 
 parseFor'' :: [Token] -> IDENTIFIER -> EXPRESSION -> (FOR, [Token])
 parseFor'' []         _          _          = throw $ newParsingError "parseIf" [Comma] Nothing []
@@ -250,9 +250,9 @@ parseFor'' (Comma:xs) assign_id assign_expr = let (cmp_id, rest) = parseIdentifi
 parseFor'' (x:xs)     _          _          = throw $ newParsingError "parseIf" [Comma] (Just x) xs
 
 parseFor''' :: [Token] -> IDENTIFIER -> EXPRESSION -> IDENTIFIER -> (FOR, [Token])
-parseFor''' []         _          _          _      = throw $ newParsingError "parseIf" [Lower] Nothing []
-parseFor''' (Lower:xs) assign_id assign_expr cmp_id = let (cmp_expr, rest) = parseExpression xs in parseFor'''' rest assign_id assign_expr cmp_id cmp_expr
-parseFor''' (x:xs)     _          _          _      = throw $ newParsingError "parseIf" [Lower] (Just x) xs
+parseFor''' []            _         _           _      = throw $ newParsingError "parseIf" [Word "<"] Nothing []
+parseFor''' (Word "<":xs) assign_id assign_expr cmp_id = let (cmp_expr, rest) = parseExpression xs in parseFor'''' rest assign_id assign_expr cmp_id cmp_expr
+parseFor''' (x:xs)        _         _           _      = throw $ newParsingError "parseIf" [Word "<"] (Just x) xs
 
 parseFor'''' :: [Token] -> IDENTIFIER -> EXPRESSION -> IDENTIFIER -> EXPRESSION -> (FOR, [Token])
 parseFor'''' []             _          _          _      _    = throw $ newParsingError "parseIf" [Comma] Nothing []
@@ -365,12 +365,12 @@ parseCallExprArg'' (Comma:xs)             = let (expr, rest ) = parseExpression 
 parseCallExprArg'' (x:xs)                 = throw $ newParsingError "parseCallExprArg" [Comma, ClosedParenthesis] (Just x) xs
 
 parsePrimary :: [Token] -> (PRIMARY, [Token])
-parsePrimary []                      = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] Nothing []
+parsePrimary []                      = throw $ newParsingError "parsePrimary" [Word "{variable}", IntegerNumber 0, OpenParenthesis] Nothing []
 parsePrimary (Word x : xs)           = (PRIMARY_IDENTIFIER (IDENTIFIER x), xs)
-parsePrimary (Number x : xs)         = (PRIMARY_LITERAL $ LITERAL_DECIMAL $ DECIMAL_CONST  x, xs)
+parsePrimary (IntegerNumber x : xs)  = (PRIMARY_LITERAL $ LITERAL_DECIMAL $ DECIMAL_CONST  x, xs)
 parsePrimary (FloatingNumber x : xs) = (PRIMARY_LITERAL $ LITERAL_DOUBLE  $ DOUBLE_CONST   x, xs)
 parsePrimary (OpenParenthesis : xs)  = let (exprs, rest) = parseExpressions xs in parsePrimaryExpression (OpenParenthesis : rest) exprs
-parsePrimary (x:xs)                  = throw $ newParsingError "parsePrimary" [Word "{variable}", Number 0, OpenParenthesis] (Just x) xs
+parsePrimary (x:xs)                  = throw $ newParsingError "parsePrimary" [Word "{variable}", IntegerNumber 0, OpenParenthesis] (Just x) xs
 
 parsePrimaryExpression :: [Token] -> EXPRESSIONS -> (PRIMARY, [Token])
 parsePrimaryExpression []                                     _     = throw $ newParsingError "parsePrimaryExpression" [OpenParenthesis, ClosedParenthesis] Nothing []
@@ -385,41 +385,41 @@ parseIdentifier ((Word w):xs) = (IDENTIFIER w, xs)
 parseIdentifier (x:xs)        = throw $ newParsingError "parseIdentifier" [Word "{any}"] (Just x) xs
 
 parseUnOp :: [Token] -> (UN_OP, [Token])
-parseUnOp []              = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] Nothing []
-parseUnOp (Plus:xs)       = (UN_PLUS,  xs)
-parseUnOp (Minus:xs)      = (UN_MINUS, xs)
-parseUnOp (LogicalNot:xs) = (UN_NOT,   xs)
-parseUnOp (x:xs)          = throw $ newParsingError "parseUnOp" [Plus, Minus, LogicalNot] (Just x) xs
+parseUnOp []            = throw $ newParsingError "parseUnOp" [KL.Word "+", KL.Word "-", KL.Word "!"] Nothing []
+parseUnOp (Word "+":xs) = (UN_PLUS,  xs)
+parseUnOp (Word "-":xs) = (UN_MINUS, xs)
+parseUnOp (Word "!":xs) = (UN_NOT,   xs)
+parseUnOp (x:xs)        = throw $ newParsingError "parseUnOp" [KL.Word "+", KL.Word "-", KL.Word "!"] (Just x) xs
 
 isBinaryOp :: Token -> Bool
-isBinaryOp KL.Plus          = True
-isBinaryOp KL.Minus         = True
-isBinaryOp KL.Multiply      = True
-isBinaryOp KL.Divide        = True
-isBinaryOp KL.Modulo        = True
-isBinaryOp KL.Lower         = True
-isBinaryOp KL.LowerEqual    = True
-isBinaryOp KL.Greater       = True
-isBinaryOp KL.GreaterEqual  = True
-isBinaryOp KL.Equal         = True
-isBinaryOp KL.NotEqual      = True
-isBinaryOp KL.Assign        = True
-isBinaryOp _                = False
+isBinaryOp (KL.Word "+")  = True
+isBinaryOp (KL.Word "-")  = True
+isBinaryOp (KL.Word "*")  = True
+isBinaryOp (KL.Word "/")  = True
+isBinaryOp (KL.Word "%")  = True
+isBinaryOp (KL.Word "<=") = True
+isBinaryOp (KL.Word "<")  = True
+isBinaryOp (KL.Word ">=") = True
+isBinaryOp (KL.Word ">")  = True
+isBinaryOp (KL.Word "==") = True
+isBinaryOp (KL.Word "!=") = True
+isBinaryOp (KL.Word "=")  = True
+isBinaryOp _              = False
 
 getBinaryOp :: Token -> BIN_OP
-getBinaryOp KL.Plus          = BIN_PLUS
-getBinaryOp KL.Minus         = BIN_MINUS
-getBinaryOp KL.Multiply      = BIN_MULT
-getBinaryOp KL.Divide        = BIN_DIV
-getBinaryOp KL.Modulo        = BIN_MOD
-getBinaryOp KL.Lower         = BIN_LT
-getBinaryOp KL.LowerEqual    = BIN_LTE
-getBinaryOp KL.Greater       = BIN_GT
-getBinaryOp KL.GreaterEqual  = BIN_GTE
-getBinaryOp KL.Equal         = BIN_EQ
-getBinaryOp KL.NotEqual      = BIN_NEQ
-getBinaryOp KL.Assign        = BIN_ASSIGN
-getBinaryOp t                = throw $ newParsingError "getBinaryOp" [Plus, Minus, Multiply, Divide, Modulo, Lower, LowerEqual, Greater, GreaterEqual, Equal, NotEqual, Assign] (Just t) []
+getBinaryOp (KL.Word "+")  = BIN_PLUS
+getBinaryOp (KL.Word "-")  = BIN_MINUS
+getBinaryOp (KL.Word "*")  = BIN_MULT
+getBinaryOp (KL.Word "/")  = BIN_DIV
+getBinaryOp (KL.Word "%")  = BIN_MOD
+getBinaryOp (KL.Word "<=") = BIN_LTE
+getBinaryOp (KL.Word "<")  = BIN_LT
+getBinaryOp (KL.Word ">=") = BIN_GTE
+getBinaryOp (KL.Word ">")  = BIN_GT
+getBinaryOp (KL.Word "==") = BIN_EQ
+getBinaryOp (KL.Word "!=") = BIN_NEQ
+getBinaryOp (KL.Word "=")  = BIN_ASSIGN
+getBinaryOp t              = throw $ newParsingError "getBinaryOp" [Word "+", Word "-", Word "*", Word "/", Word "%", Word "<", Word "<=", Word ">", Word ">=", Word "==", Word "!=", Word "="] (Just t) []
 
 -- isUnaryOp :: Token -> Bool
 -- isUnaryOp KL.Plus       = True
@@ -428,10 +428,10 @@ getBinaryOp t                = throw $ newParsingError "getBinaryOp" [Plus, Minu
 -- isUnaryOp _             = False
 
 getUnaryOp :: Token -> UN_OP
-getUnaryOp KL.Plus          = UN_PLUS
-getUnaryOp KL.Minus         = UN_MINUS
-getUnaryOp KL.LogicalNot    = UN_NOT
-getUnaryOp t                = throw $ newParsingError "getUnaryOp" [Plus, Minus, LogicalNot] (Just t) []
+getUnaryOp (KL.Word "+") = UN_PLUS
+getUnaryOp (KL.Word "-") = UN_MINUS
+getUnaryOp (KL.Word "!") = UN_NOT
+getUnaryOp t             = throw $ newParsingError "getUnaryOp" [KL.Word "+", KL.Word "-", KL.Word "!"] (Just t) []
 
 getDefaultUnaryPrecedence :: UN_OP -> PRECEDENCE
 getDefaultUnaryPrecedence UN_PLUS    = PRECEDENCE 0
