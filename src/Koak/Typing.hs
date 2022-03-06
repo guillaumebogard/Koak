@@ -120,10 +120,10 @@ evaluateUnaryType kdefs (UNARY_UN op unary)
 evaluateUnaryType kdefs (UNARY_POSTFIX (POSTFIX primary Nothing)) = INT -- get primary type as basic type
 evaluateUnaryType kdefs (UNARY_POSTFIX (POSTFIX primary _)) = INT -- get primary type as function type
 
--- getFunctionType :: [KDEFS] -> IDENTIFIER -> TYPE
--- getFunctionType (KDEFS_DEFS ((PROTOTYPE identifier (PROTOTYPE_ARGS _ fnType))) :xs) functionName
---   | identifier == functionName = fnType
---   | otherwise                  = getFunctionType xs functionName
+getFunctionType :: [KDEFS] -> IDENTIFIER -> TYPE
+getFunctionType (KDEFS_DEFS ((PROTOTYPE identifier (PROTOTYPE_ARGS _ fnType))) :xs) functionName
+  | identifier == functionName = fnType
+  | otherwise                  = getFunctionType xs functionName
 
 
 -- find :: Foldable t => (a -> Bool) -> t a -> Maybe a
