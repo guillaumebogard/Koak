@@ -44,30 +44,26 @@ checkKoakTyping = checkKoakTyping' getDefaultKContext
 
 checkKoakTyping' :: KCONTEXT -> [KDEFS] -> ()
 checkKoakTyping' _       []     = ()
-checkKoakTyping' context (x:xs) = checkKdefTyping context x <->
-                                  checkKoakTyping' context xs
+checkKoakTyping' context (x:xs) = checkKoakTyping' (checkKdefTyping context x) xs
 
-checkKdefTyping :: KCONTEXT -> KDEFS -> ()
-checkKdefTyping context (KDEFS_DEFS defs)  = checkDefsTyping        context defs
+checkKdefTyping :: KCONTEXT -> KDEFS -> KCONTEXT
+checkKdefTyping context (KDEFS_DEFS defs@(DEFS proto _))  = checkDefsTyping (kContextEnterFunctionCall proto context) defs --> context
 checkKdefTyping context (KDEFS_EXPR exprs) = checkExpressionsTyping context exprs
 
 checkDefsTyping :: KCONTEXT -> DEFS -> ()
-checkDefsTyping context (DEFS prototype exprs) = checkExpressionsTyping context exprs
+checkDefsTyping context (DEFS _ exprs) = checkExpressionsTyping context exprs --> ()
 
-checkExpressionsTyping :: KCONTEXT -> EXPRESSIONS -> ()
-checkExpressionsTyping context (FOR_EXPR    for_expr  ) = checkForTyping            context for_expr
-checkExpressionsTyping context (IF_EXPR     if_expr   ) = checkIfTyping             context if_expr
-checkExpressionsTyping context (WHILE_EXPR  while_expr) = checkWhileTyping          context while_expr
-checkExpressionsTyping context (EXPRESSIONS expr exprs) = checkExpressionTyping     context expr <->
-                                                          checkExpressionListTyping context exprs
+checkExpressionsTyping :: KCONTEXT -> EXPRESSIONS -> KCONTEXT
+checkExpressionsTyping context (FOR_EXPR    for_expr  ) = checkForTyping            context for_expr --> context
+checkExpressionsTyping context (IF_EXPR     if_expr   ) = checkIfTyping             context if_expr --> context
+checkExpressionsTyping context (WHILE_EXPR  while_expr) = checkWhileTyping          context while_expr --> context
+checkExpressionsTyping context (EXPRESSIONS expr exprs) = checkExpressionListTyping context (expr:exprs)
 
-checkExpressionListTyping :: KCONTEXT -> [EXPRESSION] -> ()
-checkExpressionListTyping _ []           = ()
-checkExpressionListTyping context (x:xs) = checkExpressionTyping     context x <->
-                                           checkExpressionListTyping context xs
+checkExpressionListTyping :: KCONTEXT -> [EXPRESSION] -> KCONTEXT
+checkExpressionListTyping = foldl checkExpressionTyping
 
-checkExpressionTyping :: KCONTEXT -> EXPRESSION -> ()
-checkExpressionTyping context _ = ()
+checkExpressionTyping :: KCONTEXT -> EXPRESSION -> KCONTEXT
+checkExpressionTyping context _ = context
 
 checkForTyping :: KCONTEXT -> FOR -> ()
 checkForTyping context (FOR assign_id assign_expr cmp_id cmp_expr inc_expr exprs) = checkExpressionsTyping context exprs
@@ -83,23 +79,21 @@ checkWhileTyping :: KCONTEXT -> WHILE -> ()
 checkWhileTyping context (WHILE expr exprs) = checkExpressionTyping  context expr <->
                                               checkExpressionsTyping context exprs
 
+evaluateExpressionsType :: KDEFS -> EXPRESSIONS -> TYPE
+evaluateExpressionsType kdefs (FOR_EXPR    expr)       = evaluateForType        kdefs expr
+evaluateExpressionsType kdefs (IF_EXPR     expr)       = evaluateIfType         kdefs expr
+evaluateExpressionsType kdefs (WHILE_EXPR  expr)       = evaluateWhileType      kdefs expr
+evaluateExpressionsType kdefs (EXPRESSIONS expr []   ) = evaluateExpressionType kdefs expr
+evaluateExpressionsType kdefs (EXPRESSIONS _    exprs) = evaluateExpressionType kdefs $ last exprs
 
+evaluateForType :: KDEFS -> FOR -> TYPE
+evaluateForType kdefs (FOR _ _ _ _ _ exprs) = evaluateExpressionsType kdefs exprs
 
-evaluateExpressionsType :: EXPRESSIONS -> TYPE
-evaluateExpressionsType (FOR_EXPR    expr)       = evaluateForType        expr
-evaluateExpressionsType (IF_EXPR     expr)       = evaluateIfType         expr
-evaluateExpressionsType (WHILE_EXPR  expr)       = evaluateWhileType      expr
-evaluateExpressionsType (EXPRESSIONS expr []   ) = evaluateExpressionType expr
-evaluateExpressionsType (EXPRESSIONS _    exprs) = evaluateExpressionType $ last exprs
+evaluateIfType :: KDEFS -> IF -> TYPE
+evaluateIfType kdefs (IF _ exprs _) = evaluateExpressionsType kdefs exprs
 
-evaluateForType :: FOR -> TYPE
-evaluateForType (FOR _ _ _ _ _ exprs) = evaluateExpressionsType exprs
-
-evaluateIfType :: IF -> TYPE
-evaluateIfType (IF _ exprs _) = evaluateExpressionsType exprs
-
-evaluateWhileType :: WHILE -> TYPE
-evaluateWhileType  (WHILE _ exprs) = evaluateExpressionsType exprs
+evaluateWhileType :: KDEFS -> WHILE -> TYPE
+evaluateWhileType kdefs (WHILE _ exprs) = evaluateExpressionsType kdefs exprs
 
 checkPartialExpressionType :: KDEFS -> UNARY -> BIN_OP -> UNARY -> ()
 checkPartialExpressionType kdefs first op second = ()
@@ -137,5 +131,9 @@ evaluateUnaryType kdefs (UNARY_POSTFIX (POSTFIX primary _)) = INT -- get primary
 (<->) :: () -> () -> ()
 (<->) _ _ = ()
 
-(-->) :: () -> a -> a
+(<--) :: a -> b -> a
+(<--) a _ = a
+
+(-->) :: b -> a -> a
 (-->) _ a = a
+
