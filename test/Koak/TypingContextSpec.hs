@@ -7,7 +7,7 @@
 
 module Koak.TypingContextSpec       ( spec ) where
 
-import Control.Exception (evaluate)
+import Control.Exception            ( evaluate )
 
 import Test.Hspec                   ( Spec
                                     , it
@@ -25,6 +25,8 @@ import Koak.TypingContext           ( KCONTEXT(..)
                                     , TYPE_SIGNATURE(..)
                                     , getEmptyKContext
                                     , kContextPushDef
+                                    , kContextPushVar
+                                    , kContextEnterLocalContext
                                     )
 import qualified Koak.Parser as KP
 
@@ -43,7 +45,7 @@ spec = do
         getEmptyKContext
             ==
             KCONTEXT (GLOBAL_CONTEXT HM.empty) (DEF_CONTEXT HM.empty) Nothing
-    it "kContextPushDef: One push, empty context, simple signature 1" $
+    it "kContextPushDef: One def push, simple 1, success" $
         kContextPushDef
             (KP.DEFS
                 (KP.PROTOTYPE
@@ -75,7 +77,7 @@ spec = do
                     (KP.IDENTIFIER "foo", FUNCTION $ FUNCTION_TYPING [] INT)
                 ])
                 Nothing
-    it "kContextPushDef: One push, empty context, simple signature 2" $
+    it "kContextPushDef: One def push, simple 2, success" $
         kContextPushDef
             (KP.DEFS
                 (KP.PROTOTYPE
@@ -109,7 +111,7 @@ spec = do
                     (KP.IDENTIFIER "bar", FUNCTION $ FUNCTION_TYPING [INT] INT)
                 ])
                 Nothing
-    it "kContextPushDef: One push, empty context, simple signature 3" $
+    it "kContextPushDef: One def push, simple 3, success" $
         kContextPushDef
             (KP.DEFS
                 (KP.PROTOTYPE
@@ -143,7 +145,7 @@ spec = do
                     (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [DOUBLE] NIL)
                 ])
                 Nothing
-    it "kContextPushDef: One push, empty context, complex signature 1" $
+    it "kContextPushDef: One def push, complex 1, success" $
         kContextPushDef
             (KP.DEFS
                 (KP.PROTOTYPE
@@ -180,7 +182,7 @@ spec = do
                     (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [INT, DOUBLE, BOOLEAN, NIL] DOUBLE)
                 ])
                 Nothing
-    it "kContextPushDef: Multiple push, empty context, complex signature" $
+    it "kContextPushDef: Multiple def push, complex 1, success" $
             KP.DEFS
                 (KP.PROTOTYPE
                     (KP.IDENTIFIER "foo")
@@ -271,7 +273,7 @@ spec = do
                     (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [INT, INT, BOOLEAN, INT] BOOLEAN)
                 ])
                 Nothing
-    it "kContextPushDef: Pushing twice same function" $ do
+    it "kContextPushDef: Two same def push, simple 1, failure" $ do
         evaluate (
                 KP.DEFS
                     (KP.PROTOTYPE
@@ -322,13 +324,14 @@ spec = do
                 )
             )
             `shouldThrow`
-            (== ShadowedDefinitionByDefinition 
-                (KP.PROTOTYPE 
+            (== ShadowedDefinitionByDefinition
+                (KP.IDENTIFIER "foo")
+                (KP.PROTOTYPE
                     (KP.IDENTIFIER "foo")
                     (KP.PROTOTYPE_ARGS [] KP.INT)
                 )
             )
-    it "kContextPushDef: Pushing two functions with same name" $ do
+    it "kContextPushDef: Two same def push, complex 1, failure" $ do
         evaluate (
                 KP.DEFS
                     (KP.PROTOTYPE
@@ -389,7 +392,8 @@ spec = do
                 )
             )
             `shouldThrow`
-            (== ShadowedDefinitionByDefinition 
+            (== ShadowedDefinitionByDefinition
+                (KP.IDENTIFIER "foo")
                 (KP.PROTOTYPE
                     (KP.IDENTIFIER "foo")
                     (KP.PROTOTYPE_ARGS [
@@ -398,3 +402,293 @@ spec = do
                     ] KP.BOOLEAN)
                 )
             )
+    it "kContextPushDef: One global var push, simple 1, success." $ do
+            kContextPushVar
+                (
+                    KP.VAR_ASSIGNMENT
+                        (KP.IDENTIFIER "var1")
+                        KP.INT
+                )
+                getEmptyKContext
+            ==
+            KCONTEXT
+                (GLOBAL_CONTEXT $ HM.fromList [
+                    (KP.IDENTIFIER "var1", VAR INT)
+                ])
+                (DEF_CONTEXT    $ HM.fromList [])
+                Nothing
+    it "kContextPushDef: Multiple global var push, complex 1, success." $ do
+            kContextPushVar
+                (
+                    KP.VAR_ASSIGNMENT
+                        (KP.IDENTIFIER "var4")
+                        KP.BOOLEAN
+                )
+                (
+                    kContextPushVar
+                    (
+                        KP.VAR_ASSIGNMENT
+                            (KP.IDENTIFIER "var3")
+                            KP.INT
+                    )
+                    (
+                        kContextPushVar
+                        (
+                            KP.VAR_ASSIGNMENT
+                                (KP.IDENTIFIER "var2")
+                                KP.DOUBLE
+                        )
+                        (
+                            kContextPushVar
+                            (
+                                KP.VAR_ASSIGNMENT
+                                    (KP.IDENTIFIER "var1")
+                                    KP.INT
+                            )
+                            getEmptyKContext
+                        )
+                    )
+                )
+            ==
+            KCONTEXT
+                (GLOBAL_CONTEXT $ HM.fromList [
+                    (KP.IDENTIFIER "var1", VAR INT),
+                    (KP.IDENTIFIER "var2", VAR DOUBLE),
+                    (KP.IDENTIFIER "var3", VAR INT),
+                    (KP.IDENTIFIER "var4", VAR BOOLEAN)
+                ])
+                (DEF_CONTEXT    $ HM.fromList [])
+                Nothing
+    it "kContextPushDef: Multiple global var push & Multiple local var push, complex 1, success." $ do
+            kContextPushVar
+                (
+                    KP.VAR_ASSIGNMENT
+                        (KP.IDENTIFIER "var4")
+                        KP.BOOLEAN
+                )
+                (
+                    kContextPushVar
+                    (
+                        KP.VAR_ASSIGNMENT
+                            (KP.IDENTIFIER "var3")
+                            KP.INT
+                    )
+                    (
+                        kContextEnterLocalContext
+                        (
+                            kContextPushVar
+                            (
+                                KP.VAR_ASSIGNMENT
+                                    (KP.IDENTIFIER "var2")
+                                    KP.DOUBLE
+                            )
+                            (
+                                kContextPushVar
+                                (
+                                    KP.VAR_ASSIGNMENT
+                                        (KP.IDENTIFIER "var1")
+                                        KP.INT
+                                )
+                                getEmptyKContext
+                            )
+                        )
+                    )
+                )
+            ==
+            KCONTEXT
+                (GLOBAL_CONTEXT $ HM.fromList [
+                    (KP.IDENTIFIER "var1", VAR INT),
+                    (KP.IDENTIFIER "var2", VAR DOUBLE)
+                ])
+                (DEF_CONTEXT    $ HM.fromList [])
+                (Just $ LOCAL_CONTEXT $ HM.fromList [
+                    (KP.IDENTIFIER "var3", VAR INT),
+                    (KP.IDENTIFIER "var4", VAR BOOLEAN)
+                ])
+    it "kContextPushDef: Multiple global var push & Multiple local var with the same name, complex 1, failure." $ do
+            kContextPushVar
+                (
+                    KP.VAR_ASSIGNMENT
+                        (KP.IDENTIFIER "var2")
+                        KP.BOOLEAN
+                )
+                (
+                    kContextPushVar
+                    (
+                        KP.VAR_ASSIGNMENT
+                            (KP.IDENTIFIER "var1")
+                            KP.INT
+                    )
+                    (
+                        kContextEnterLocalContext
+                        (
+                            kContextPushVar
+                            (
+                                KP.VAR_ASSIGNMENT
+                                    (KP.IDENTIFIER "var2")
+                                    KP.DOUBLE
+                            )
+                            (
+                                kContextPushVar
+                                (
+                                    KP.VAR_ASSIGNMENT
+                                        (KP.IDENTIFIER "var1")
+                                        KP.INT
+                                )
+                                getEmptyKContext
+                            )
+                        )
+                    )
+                )
+            ==
+            KCONTEXT
+                (GLOBAL_CONTEXT $ HM.fromList [
+                    (KP.IDENTIFIER "var1", VAR INT),
+                    (KP.IDENTIFIER "var2", VAR DOUBLE)
+                ])
+                (DEF_CONTEXT    $ HM.fromList [])
+                (Just $ LOCAL_CONTEXT $ HM.fromList [
+                    (KP.IDENTIFIER "var1", VAR INT),
+                    (KP.IDENTIFIER "var2", VAR BOOLEAN)
+                ])
+    it "kContextPushDef: Two same global var push, simple 1, failure." $ do
+        evaluate (
+            kContextPushVar
+                (
+                    KP.VAR_ASSIGNMENT
+                        (KP.IDENTIFIER "var")
+                        KP.INT
+                )
+                (
+                    kContextPushVar
+                        (
+                            KP.VAR_ASSIGNMENT
+                                (KP.IDENTIFIER "var")
+                                KP.INT
+                        )
+                        getEmptyKContext
+                )
+            )   
+            `shouldThrow`
+            (== ShadowedVariableByVariable 
+                (KP.IDENTIFIER "var")
+                (KP.VAR_ASSIGNMENT
+                    (KP.IDENTIFIER "var")
+                    KP.INT
+                )
+            )
+    it "kContextPushDef: Two same local var push, simple 1, failure." $ do
+        evaluate (
+            kContextPushVar
+                (
+                    KP.VAR_ASSIGNMENT
+                        (KP.IDENTIFIER "var")
+                        KP.INT
+                )
+                (
+                    kContextPushVar
+                        (
+                            KP.VAR_ASSIGNMENT
+                                (KP.IDENTIFIER "var")
+                                KP.INT
+                        )
+                        (kContextEnterLocalContext getEmptyKContext)
+                )
+            )   
+            `shouldThrow`
+            (== ShadowedVariableByVariable 
+                (KP.IDENTIFIER "var")
+                (KP.VAR_ASSIGNMENT
+                    (KP.IDENTIFIER "var")
+                    KP.INT
+                )
+            )
+    it "kContextPushDef: One def push & One global var push with same name, simple 1, failure." $ do
+        evaluate (
+            kContextPushDef
+                (KP.DEFS
+                    (KP.PROTOTYPE
+                        (KP.IDENTIFIER "foo")
+                        (KP.PROTOTYPE_ARGS [] KP.INT)
+                    )
+                    (KP.EXPRESSIONS
+                        (KP.EXPRESSION
+                            (KP.UNARY_POSTFIX
+                                (KP.POSTFIX
+                                    (KP.PRIMARY_LITERAL
+                                        (KP.LITERAL_DECIMAL
+                                            (KP.DECIMAL_CONST 42)
+                                        )
+                                    )
+                                    Nothing
+                                )
+                            )
+                            []
+                        )
+                        []
+                    )
+                )
+                (
+                    kContextPushVar
+                    (
+                        KP.VAR_ASSIGNMENT
+                            (KP.IDENTIFIER "foo")
+                            KP.INT
+                    )
+                    getEmptyKContext
+                )
+            )
+            `shouldThrow`
+            (== ShadowedVariableByDefinition
+                (KP.IDENTIFIER "foo")
+                (KP.PROTOTYPE
+                    (KP.IDENTIFIER "foo")
+                    (KP.PROTOTYPE_ARGS [] KP.INT)
+                )
+            )
+    it "kContextPushDef: One def push & One global var push with same name, simple 1, failure." $ do
+        evaluate (
+            kContextPushVar
+                (
+                    KP.VAR_ASSIGNMENT
+                        (KP.IDENTIFIER "foo")
+                        KP.INT
+                )
+                (
+                    kContextPushDef
+                        (KP.DEFS
+                            (KP.PROTOTYPE
+                                (KP.IDENTIFIER "foo")
+                                (KP.PROTOTYPE_ARGS [] KP.INT)
+                            )
+                            (KP.EXPRESSIONS
+                                (KP.EXPRESSION
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_LITERAL
+                                                (KP.LITERAL_DECIMAL
+                                                    (KP.DECIMAL_CONST 42)
+                                                )
+                                            )
+                                            Nothing
+                                        )
+                                    )
+                                    []
+                                )
+                                []
+                            )
+                        )
+                        getEmptyKContext
+                )
+            )
+            `shouldThrow`
+            (== ShadowedDefinitionByVariable
+                (KP.IDENTIFIER "foo")
+                (KP.VAR_ASSIGNMENT
+                    (KP.IDENTIFIER "foo")
+                    KP.INT
+                )
+            )
+    -- it "kContextPushDef: One global var push & One def push with same name, simple 1, failure." $ do
+    -- it "kContextPushDef: One local var push & One def push with same name, simple 1, failure." $ do
+
