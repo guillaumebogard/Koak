@@ -159,24 +159,16 @@ kContextPushVar v@(KP.VAR_ASSIGNMENT i t) (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CON
     | HM.member i lc    = throw $ ShadowedVariableByVariable   i v
     | otherwise         = KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) (Just $ LOCAL_CONTEXT $ contextPushItem i (toTypeSignature v) lc)
 
-kContextFind :: KCONTEXT -> KP.IDENTIFIER -> Maybe (TYPE_SIGNATURE, CONTEXT_TYPE)
-kContextFind k@(KCONTEXT _ _ Nothing)   i = kContextFind' k i
-kContextFind k@(KCONTEXT _ _ (Just lc)) i = let found = localContextFind lc i
-    in case found of
-        (Just found') -> Just (found', CONTEXT_TYPE_LOCAL)
-        Nothing       -> kContextFind' k i
-
-kContextFind' :: KCONTEXT -> KP.IDENTIFIER -> Maybe (TYPE_SIGNATURE, CONTEXT_TYPE)
-kContextFind' k@(KCONTEXT gc _ _) i = let found = globalContextFind gc i
-    in case found of
-        (Just found') -> Just (found', CONTEXT_TYPE_GLOBAL)
-        Nothing       -> kContextFind' k i
-
-kContextFind'' :: KCONTEXT -> KP.IDENTIFIER -> Maybe (TYPE_SIGNATURE, CONTEXT_TYPE)
-kContextFind'' k@(KCONTEXT _ dc _) i = let found = defContextFind dc i
-    in case found of
-        (Just found') -> Just (found', CONTEXT_TYPE_DEF)
-        Nothing       -> kContextFind' k i
+kContextFind :: KCONTEXT -> KP.IDENTIFIER -> Maybe TYPE_SIGNATURE
+kContextFind k@(KCONTEXT gc dc Nothing  ) i
+    | let dc_res = defContextFind    dc i, isJust dc_res = dc_res
+    | let gc_res = globalContextFind gc i, isJust gc_res = gc_res
+    | otherwise                                          = Nothing
+kContextFind k@(KCONTEXT gc dc (Just lc)) i
+    | let lc_res = localContextFind  lc i, isJust lc_res = lc_res
+    | let dc_res = defContextFind    dc i, isJust dc_res = dc_res
+    | let gc_res = globalContextFind gc i, isJust gc_res = gc_res
+    | otherwise                                          = Nothing
 
 globalContextFind :: GLOBAL_CONTEXT -> KP.IDENTIFIER -> Maybe TYPE_SIGNATURE
 globalContextFind (GLOBAL_CONTEXT c) i = HM.lookup i c

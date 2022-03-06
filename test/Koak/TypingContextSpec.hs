@@ -26,6 +26,7 @@ import Koak.TypingContext           ( KCONTEXT(..)
                                     , getEmptyKContext
                                     , kContextPushDef
                                     , kContextPushVar
+                                    , kContextFind
                                     , kContextEnterLocalContext
                                     )
 import qualified Koak.Parser as KP
@@ -38,6 +39,7 @@ import Data.HashMap.Strict  as HM   ( HashMap
                                     )
 
 import Koak.Typing.Exception        ( KoakTypingException(..) )
+import Data.Maybe (isNothing)
 
 spec :: Spec
 spec = do
@@ -568,9 +570,9 @@ spec = do
                         )
                         getEmptyKContext
                 )
-            )   
+            )
             `shouldThrow`
-            (== ShadowedVariableByVariable 
+            (== ShadowedVariableByVariable
                 (KP.IDENTIFIER "var")
                 (KP.VAR_ASSIGNMENT
                     (KP.IDENTIFIER "var")
@@ -594,16 +596,16 @@ spec = do
                         )
                         (kContextEnterLocalContext getEmptyKContext)
                 )
-            )   
+            )
             `shouldThrow`
-            (== ShadowedVariableByVariable 
+            (== ShadowedVariableByVariable
                 (KP.IDENTIFIER "var")
                 (KP.VAR_ASSIGNMENT
                     (KP.IDENTIFIER "var")
                     KP.INT
                 )
             )
-    it "kContextPushDef: One def push & One global var push with same name, simple 1, failure." $ do
+    it "kContextPushDef: One global var & One def push with same name, simple 1, failure." $ do
         evaluate (
             kContextPushDef
                 (KP.DEFS
@@ -689,6 +691,194 @@ spec = do
                     KP.INT
                 )
             )
-    -- it "kContextPushDef: One global var push & One def push with same name, simple 1, failure." $ do
-    -- it "kContextPushDef: One local var push & One def push with same name, simple 1, failure." $ do
-
+    it "kContextPushDef: One def push & One local var push with same name, simple 1, failure." $ do
+        evaluate (
+            kContextPushVar
+                (
+                    KP.VAR_ASSIGNMENT
+                        (KP.IDENTIFIER "foo")
+                        KP.INT
+                )
+                (
+                    kContextPushDef
+                        (KP.DEFS
+                            (KP.PROTOTYPE
+                                (KP.IDENTIFIER "foo")
+                                (KP.PROTOTYPE_ARGS [] KP.INT)
+                            )
+                            (KP.EXPRESSIONS
+                                (KP.EXPRESSION
+                                    (KP.UNARY_POSTFIX
+                                        (KP.POSTFIX
+                                            (KP.PRIMARY_LITERAL
+                                                (KP.LITERAL_DECIMAL
+                                                    (KP.DECIMAL_CONST 42)
+                                                )
+                                            )
+                                            Nothing
+                                        )
+                                    )
+                                    []
+                                )
+                                []
+                            )
+                        )
+                        (kContextEnterLocalContext getEmptyKContext)
+                )
+            )
+            `shouldThrow`
+            (== ShadowedDefinitionByVariable
+                (KP.IDENTIFIER "foo")
+                (KP.VAR_ASSIGNMENT
+                    (KP.IDENTIFIER "foo")
+                    KP.INT
+                )
+            )
+    it "kContextFind: Empty context, failure." $
+        isNothing $
+        kContextFind
+            getEmptyKContext
+            (KP.IDENTIFIER "foo")
+    it "kContextFind: Only def context, failure." $
+        isNothing $
+        kContextFind
+            (
+                KCONTEXT
+                    (GLOBAL_CONTEXT $ HM.fromList [] )
+                    (DEF_CONTEXT    $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "func1", FUNCTION $ FUNCTION_TYPING [BOOLEAN, BOOLEAN] BOOLEAN),
+                            (KP.IDENTIFIER "func2", FUNCTION $ FUNCTION_TYPING [] INT)
+                        ]
+                    )
+                Nothing
+            )
+            (KP.IDENTIFIER "foo")
+    it "kContextFind: Only global var context, failure." $
+        isNothing $
+        kContextFind
+            (
+                KCONTEXT
+                    (GLOBAL_CONTEXT $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "var1", VAR BOOLEAN),
+                            (KP.IDENTIFIER "var2", VAR BOOLEAN),
+                            (KP.IDENTIFIER "var3", VAR BOOLEAN)
+                        ]
+                    )
+                    (DEF_CONTEXT HM.empty)
+                Nothing
+            )
+            (KP.IDENTIFIER "foo")
+    it "kContextFind: Only local var context, failure." $
+        isNothing $
+        kContextFind
+            (
+                KCONTEXT
+                    (GLOBAL_CONTEXT HM.empty)
+                    (DEF_CONTEXT    HM.empty)
+                    (Just $ LOCAL_CONTEXT $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "var1", VAR BOOLEAN),
+                            (KP.IDENTIFIER "var2", VAR BOOLEAN),
+                            (KP.IDENTIFIER "var3", VAR BOOLEAN)
+                        ]
+                    )
+            )
+            (KP.IDENTIFIER "foo")
+    it "kContextFind: Only def context, success." $
+        kContextFind
+            (
+                KCONTEXT
+                    (GLOBAL_CONTEXT $ HM.fromList [] )
+                    (DEF_CONTEXT    $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "func1", FUNCTION $ FUNCTION_TYPING [BOOLEAN, BOOLEAN] BOOLEAN),
+                            (KP.IDENTIFIER "func2", FUNCTION $ FUNCTION_TYPING [] INT)
+                        ]
+                    )
+                Nothing
+            )
+            (KP.IDENTIFIER "func2")
+            ==
+            Just  (FUNCTION $ FUNCTION_TYPING [] INT)
+    it "kContextFind: Only global var context, success." $
+        kContextFind
+            (
+                KCONTEXT
+                    (GLOBAL_CONTEXT $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "var1", VAR BOOLEAN),
+                            (KP.IDENTIFIER "var2", VAR BOOLEAN),
+                            (KP.IDENTIFIER "var3", VAR BOOLEAN)
+                        ]
+                    )
+                    (DEF_CONTEXT HM.empty)
+                Nothing
+            )
+            (KP.IDENTIFIER "var2")
+            ==
+            Just (VAR BOOLEAN)
+    it "kContextFind: Only local var context, success." $
+        kContextFind
+            (
+                KCONTEXT
+                    (GLOBAL_CONTEXT HM.empty)
+                    (DEF_CONTEXT    HM.empty)
+                    (Just $ LOCAL_CONTEXT $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "var1", VAR BOOLEAN),
+                            (KP.IDENTIFIER "var2", VAR BOOLEAN),
+                            (KP.IDENTIFIER "var3", VAR BOOLEAN)
+                        ]
+                    )
+            )
+            (KP.IDENTIFIER "var2")
+            ==
+            Just (VAR BOOLEAN)
+    it "kContextFind: Shadowed global var by local var with same type, success." $
+        kContextFind
+            (
+                KCONTEXT
+                    (GLOBAL_CONTEXT       $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "var1",         VAR INT),
+                            (KP.IDENTIFIER "shadowed_var", VAR DOUBLE),
+                            (KP.IDENTIFIER "var2",         VAR INT)
+                        ]
+                    )
+                    (DEF_CONTEXT HM.empty)
+                    (Just $ LOCAL_CONTEXT $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "var3",         VAR INT),
+                            (KP.IDENTIFIER "shadowed_var", VAR DOUBLE),
+                            (KP.IDENTIFIER "var4",         VAR INT)
+                        ]
+                    )
+            )
+            (KP.IDENTIFIER "shadowed_var")
+            ==
+            Just (VAR DOUBLE)
+    it "kContextFind: Shadowed global var by local var with different type, success." $
+        kContextFind
+            (
+                KCONTEXT
+                    (GLOBAL_CONTEXT       $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "var1",         VAR INT),
+                            (KP.IDENTIFIER "shadowed_var", VAR DOUBLE),
+                            (KP.IDENTIFIER "var2",         VAR INT)
+                        ]
+                    )
+                    (DEF_CONTEXT HM.empty)
+                    (Just $ LOCAL_CONTEXT $ HM.fromList
+                        [
+                            (KP.IDENTIFIER "var3",         VAR INT),
+                            (KP.IDENTIFIER "shadowed_var", VAR BOOLEAN),
+                            (KP.IDENTIFIER "var4",         VAR INT)
+                        ]
+                    )
+            )
+            (KP.IDENTIFIER "shadowed_var")
+            ==
+            Just (VAR BOOLEAN)
