@@ -49,6 +49,7 @@ test-suite koak-test
   other-modules:
       Argument.LexerSpec
       Argument.ParserSpec
+      Koak.Grammar.UtilsSpec
       Koak.LexerSpec
       Koak.ParserSpec
       Paths_koak
