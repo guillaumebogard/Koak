@@ -5,14 +5,13 @@
 -- TypingContext
 --
 
-module Koak.TypingContext           ( KCONTEXT(..)
-                                    , GLOBAL_CONTEXT(..)
-                                    , DEF_CONTEXT(..)
-                                    , LOCAL_CONTEXT(..)
-                                    , BASE_TYPE(..)
-                                    , FUNCTION_TYPING(..)
-                                    , TYPE_SIGNATURE(..)
-                                    , CONTEXT_TYPE(..)
+module Koak.TypingContext           ( Kcontext(..)
+                                    , GlobalContext(..)
+                                    , DefContext(..)
+                                    , LocalContext(..)
+                                    , BaseType(..)
+                                    , FunctionTyping(..)
+                                    , TypeSignature(..)
                                     , getDefaultKContext
                                     , getEmptyKContext
                                     , kContextPushDef
@@ -23,20 +22,20 @@ module Koak.TypingContext           ( KCONTEXT(..)
                                     , localContextFind
                                     , kContextEnterLocalContext
                                     , kContextEnterFunctionCall
+                                    , isUnaryFunctionParamMatchingFunction
+                                    , isBinaryFunctionParamMatchingFunction
+                                    , isFunctionParamMatchingFunction
+                                    , getFunctionReturnType
+                                    , prototypeIdToBaseType
+                                    , prototypeIdToVarAssignment
+                                    , typeToBaseType
+                                    , baseTypeToType
+                                    , toIdentifier
+                                    , toTypeSignature
                                     ) where
 
 
-import qualified Koak.Parser as KP  ( KDEFS(..)
-                                    , PROTOTYPE(..)
-                                    , PROTOTYPE_ARGS(..)
-                                    , PROTOTYPE_ID(..)
-                                    , DEFS (..)
-                                    , IDENTIFIER(..)
-                                    , TYPE(..)
-                                    , PRECEDENCE(..)
-                                    , VAR_ASSIGNMENT(..)
-                                    , BIN_OP(..)
-                                    )
+import qualified Koak.Parser as KP
 
 import Koak.Typing.Exception        ( KoakTypingException(..) )
 
@@ -55,169 +54,192 @@ import Data.Maybe                   ( isNothing
                                     )
 
 class Identify a where
-    toIdentifier :: a -> KP.IDENTIFIER
+    toIdentifier :: a -> KP.Identifier
 
-data BASE_TYPE  = INT
-                | DOUBLE
-                | BOOLEAN
-                | NIL
+data BaseType   = Int
+                | Double
+                | Boolean
+                | Nil
     deriving (Eq, Show)
 
-data FUNCTION_TYPING    = UNARY_FUNCTION_TYPING BASE_TYPE BASE_TYPE
-                        | BINARY_FUNCTION_TYPING KP.PRECEDENCE BASE_TYPE BASE_TYPE BASE_TYPE
-                        | FUNCTION_TYPING [BASE_TYPE] BASE_TYPE
+data FunctionTyping     = UnaryFunctionTyping                 BaseType           BaseType
+                        | BinaryFunctionTyping KP.Precedence  BaseType  BaseType BaseType
+                        | FunctionTyping                     [BaseType]          BaseType
     deriving (Eq, Show)
 
-data TYPE_SIGNATURE = PRIMITIVE_FUNCTION [FUNCTION_TYPING]
-                    | FUNCTION           FUNCTION_TYPING
-                    | VAR                BASE_TYPE
+data TypeSignature  = PrimitiveFunction [FunctionTyping]
+                    | Function           FunctionTyping
+                    | Var                BaseType
     deriving (Eq, Show)
 
 class Type a where
-    toTypeSignature :: a -> TYPE_SIGNATURE
+    toTypeSignature :: a -> TypeSignature
 
-type CONTEXT            = HashMap KP.IDENTIFIER TYPE_SIGNATURE
+type Context            = HashMap KP.Identifier TypeSignature
 
-newtype GLOBAL_CONTEXT  = GLOBAL_CONTEXT CONTEXT
+newtype GlobalContext   = GlobalContext Context
     deriving (Eq, Show)
 
-newtype DEF_CONTEXT     = DEF_CONTEXT    CONTEXT
+newtype DefContext      = DefContext    Context
     deriving (Eq, Show)
 
-newtype LOCAL_CONTEXT   = LOCAL_CONTEXT  CONTEXT
+newtype LocalContext    = LocalContext  Context
     deriving (Eq, Show)
 
-data CONTEXT_TYPE       = CONTEXT_TYPE_GLOBAL | CONTEXT_TYPE_DEF | CONTEXT_TYPE_LOCAL
-
-data KCONTEXT           = KCONTEXT GLOBAL_CONTEXT DEF_CONTEXT (Maybe LOCAL_CONTEXT)
+data Kcontext           = Kcontext GlobalContext DefContext (Maybe LocalContext)
     deriving (Eq, Show)
 
-getDefaultKContext :: KCONTEXT
-getDefaultKContext = KCONTEXT
+getDefaultKContext :: Kcontext
+getDefaultKContext = Kcontext
                         (
-                            GLOBAL_CONTEXT
+                            GlobalContext
                             HM.empty
                         )
                         (
-                            DEF_CONTEXT $
+                            DefContext $
                                 HM.fromList [
                                     (
-                                        KP.IDENTIFIER "+",
-                                        PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE]
+                                        KP.Identifier "+",
+                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
                                     ),
                                     (
-                                        KP.IDENTIFIER "-",
-                                        PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE]
+                                        KP.Identifier "-",
+                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
                                     ),
                                     (
-                                        KP.IDENTIFIER "*",
-                                        PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE]
+                                        KP.Identifier "*",
+                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
                                     ),
                                     (
-                                        KP.IDENTIFIER "/",
-                                        PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE]
+                                        KP.Identifier "/",
+                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
                                     ),
                                     (
-                                        KP.IDENTIFIER "%",
-                                        PRIMITIVE_FUNCTION [FUNCTION_TYPING [INT, INT] INT, FUNCTION_TYPING [DOUBLE, DOUBLE] DOUBLE, FUNCTION_TYPING [DOUBLE, INT] DOUBLE, FUNCTION_TYPING [INT, DOUBLE] DOUBLE]
+                                        KP.Identifier "%",
+                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
                                     )
                                 ]
                         )
                         Nothing
 
-getEmptyKContext :: KCONTEXT
-getEmptyKContext = KCONTEXT (GLOBAL_CONTEXT HM.empty) (DEF_CONTEXT HM.empty) Nothing
+getEmptyKContext :: Kcontext
+getEmptyKContext = Kcontext (GlobalContext HM.empty) (DefContext HM.empty) Nothing
 
-kContextPushDef :: KP.DEFS -> KCONTEXT -> KCONTEXT
-kContextPushDef def@(KP.DEFS p _) = kContextPushDef' p (toIdentifier def) (toTypeSignature def)
+kContextPushDef :: KP.Defs -> Kcontext -> Kcontext
+kContextPushDef def@(KP.Defs p _) = kContextPushDef' p (toIdentifier def) (toTypeSignature def)
 
-kContextPushDef' :: KP.PROTOTYPE  -> KP.IDENTIFIER -> TYPE_SIGNATURE -> KCONTEXT -> KCONTEXT
-kContextPushDef' p i ts (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) lc)
+kContextPushDef' :: KP.Prototype  -> KP.Identifier -> TypeSignature -> Kcontext -> Kcontext
+kContextPushDef' p i ts (Kcontext (GlobalContext gc) (DefContext dc) lc)
     | HM.member i gc = throw $ ShadowedVariableByDefinition   i p
     | HM.member i dc = throw $ ShadowedDefinitionByDefinition i p
-    | otherwise      = KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT $ contextPushItem i ts dc) lc
+    | otherwise      = Kcontext (GlobalContext gc) (DefContext $ contextPushItem i ts dc) lc
 
-kContextEnterFunctionCall :: KP.PROTOTYPE -> KCONTEXT -> KCONTEXT
-kContextEnterFunctionCall (KP.PROTOTYPE_UNARY  _ _ _ (KP.PROTOTYPE_ARGS args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
-kContextEnterFunctionCall (KP.PROTOTYPE_BINARY _ _ _ (KP.PROTOTYPE_ARGS args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
-kContextEnterFunctionCall (KP.PROTOTYPE _            (KP.PROTOTYPE_ARGS args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
+kContextEnterFunctionCall :: KP.Prototype -> Kcontext -> Kcontext
+kContextEnterFunctionCall (KP.PrototypeUnary    _     (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
+kContextEnterFunctionCall (KP.PrototypeBinary   _ _   (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
+kContextEnterFunctionCall (KP.PrototypeFunction _     (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
 
-kContextEnterFunctionCall' :: [KP.PROTOTYPE_ID] -> KCONTEXT -> KCONTEXT
+kContextEnterFunctionCall' :: [KP.PrototypeIdentifier] -> Kcontext -> Kcontext
 kContextEnterFunctionCall' args k = foldr (kContextPushVar . prototypeIdToVarAssignment) k args
 
-kContextEnterLocalContext :: KCONTEXT -> KCONTEXT
-kContextEnterLocalContext (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) _) = KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) (Just $ LOCAL_CONTEXT HM.empty)
+kContextEnterLocalContext :: Kcontext -> Kcontext
+kContextEnterLocalContext (Kcontext (GlobalContext gc) (DefContext dc) _) = Kcontext (GlobalContext gc) (DefContext dc) (Just $ LocalContext HM.empty)
 
-kContextPushVar :: KP.VAR_ASSIGNMENT -> KCONTEXT -> KCONTEXT
-kContextPushVar v@(KP.VAR_ASSIGNMENT i t) (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) Nothing)
+kContextPushVar :: KP.VarAssignment -> Kcontext -> Kcontext
+kContextPushVar v@(KP.VarAssignment i t) (Kcontext (GlobalContext gc) (DefContext dc) Nothing)
     | HM.member i dc    = throw $ ShadowedDefinitionByVariable i v
     | HM.member i gc    = throw $ ShadowedVariableByVariable   i v
-    | otherwise         = KCONTEXT (GLOBAL_CONTEXT $ contextPushItem i (toTypeSignature v) gc) (DEF_CONTEXT dc) Nothing
-kContextPushVar v@(KP.VAR_ASSIGNMENT i t) (KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) (Just (LOCAL_CONTEXT lc)))
+    | otherwise         = Kcontext (GlobalContext $ contextPushItem i (toTypeSignature v) gc) (DefContext dc) Nothing
+kContextPushVar v@(KP.VarAssignment i t) (Kcontext (GlobalContext gc) (DefContext dc) (Just (LocalContext lc)))
     | HM.member i dc    = throw $ ShadowedDefinitionByVariable i v
     -- | HM.member i gc    = throw $ ShadowedVariableByVariable   v -- Ignore global vars
     | HM.member i lc    = throw $ ShadowedVariableByVariable   i v
-    | otherwise         = KCONTEXT (GLOBAL_CONTEXT gc) (DEF_CONTEXT dc) (Just $ LOCAL_CONTEXT $ contextPushItem i (toTypeSignature v) lc)
+    | otherwise         = Kcontext (GlobalContext gc) (DefContext dc) (Just $ LocalContext $ contextPushItem i (toTypeSignature v) lc)
 
-kContextFind :: KCONTEXT -> KP.IDENTIFIER -> Maybe TYPE_SIGNATURE
-kContextFind k@(KCONTEXT gc dc Nothing  ) i
+kContextFind :: Kcontext -> KP.Identifier -> Maybe TypeSignature
+kContextFind k@(Kcontext gc dc Nothing  ) i
     | let dc_res = defContextFind    dc i, isJust dc_res = dc_res
     | let gc_res = globalContextFind gc i, isJust gc_res = gc_res
     | otherwise                                          = Nothing
-kContextFind k@(KCONTEXT gc dc (Just lc)) i
+kContextFind k@(Kcontext gc dc (Just lc)) i
     | let lc_res = localContextFind  lc i, isJust lc_res = lc_res
     | let dc_res = defContextFind    dc i, isJust dc_res = dc_res
     | let gc_res = globalContextFind gc i, isJust gc_res = gc_res
     | otherwise                                          = Nothing
 
-globalContextFind :: GLOBAL_CONTEXT -> KP.IDENTIFIER -> Maybe TYPE_SIGNATURE
-globalContextFind (GLOBAL_CONTEXT c) i = HM.lookup i c
+globalContextFind :: GlobalContext -> KP.Identifier -> Maybe TypeSignature
+globalContextFind (GlobalContext c) i = HM.lookup i c
 
-defContextFind :: DEF_CONTEXT -> KP.IDENTIFIER -> Maybe TYPE_SIGNATURE
-defContextFind (DEF_CONTEXT c) i = HM.lookup i c
+defContextFind :: DefContext -> KP.Identifier -> Maybe TypeSignature
+defContextFind (DefContext c) i = HM.lookup i c
 
-localContextFind :: LOCAL_CONTEXT -> KP.IDENTIFIER -> Maybe TYPE_SIGNATURE
-localContextFind (LOCAL_CONTEXT c) i = HM.lookup i c
+localContextFind :: LocalContext -> KP.Identifier -> Maybe TypeSignature
+localContextFind (LocalContext c) i = HM.lookup i c
 
-contextPushItem :: KP.IDENTIFIER -> TYPE_SIGNATURE -> CONTEXT -> CONTEXT
+contextPushItem :: KP.Identifier -> TypeSignature -> Context -> Context
 contextPushItem = insert
 
-instance Identify KP.DEFS where
-    toIdentifier (KP.DEFS (KP.PROTOTYPE_UNARY  _  _ i _) _) = i
-    toIdentifier (KP.DEFS (KP.PROTOTYPE_BINARY _  _ i _) _) = i
-    toIdentifier (KP.DEFS (KP.PROTOTYPE i      _)        _) = i
+instance Identify KP.Defs where
+    toIdentifier (KP.Defs (KP.PrototypeUnary      (KP.UnaryOp  i) _) _) = i
+    toIdentifier (KP.Defs (KP.PrototypeBinary   _ (KP.BinaryOp i) _) _) = i
+    toIdentifier (KP.Defs (KP.PrototypeFunction   i               _) _) = i
 
-instance Type KP.DEFS where
-    toTypeSignature (KP.DEFS   (KP.PROTOTYPE_UNARY  _ _   _ (KP.PROTOTYPE_ARGS [x]        return_type)) _) = FUNCTION $ UNARY_FUNCTION_TYPING (prototypeIdToBaseType x) (typeToBaseType return_type)
-    toTypeSignature (KP.DEFS p@(KP.PROTOTYPE_UNARY  _ _   _ (KP.PROTOTYPE_ARGS args       _          )) _) = throw    $ UnaryFunctionInvalidArgumentNumber p  (length args)
-    toTypeSignature (KP.DEFS   (KP.PROTOTYPE_BINARY _ pre _ (KP.PROTOTYPE_ARGS [x,y]      return_type)) _) = FUNCTION $ BINARY_FUNCTION_TYPING pre (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
-    toTypeSignature (KP.DEFS p@(KP.PROTOTYPE_BINARY _ _   _ (KP.PROTOTYPE_ARGS args       _          )) _) = throw    $ BinaryFunctionInvalidArgumentNumber p (length args)
-    toTypeSignature (KP.DEFS   (KP.PROTOTYPE _              (KP.PROTOTYPE_ARGS args       return_type)) _) = FUNCTION $ FUNCTION_TYPING (map prototypeIdToBaseType args) (typeToBaseType return_type)
+instance Type KP.Defs where
+    toTypeSignature (KP.Defs   (KP.PrototypeUnary        _ (KP.PrototypeArgs [x]        return_type)) _) = Function $ UnaryFunctionTyping (prototypeIdToBaseType x) (typeToBaseType return_type)
+    toTypeSignature (KP.Defs p@(KP.PrototypeUnary        _ (KP.PrototypeArgs args       _          )) _) = throw    $ UnaryFunctionInvalidArgumentNumber p  (length args)
+    toTypeSignature (KP.Defs   (KP.PrototypeBinary   pre _ (KP.PrototypeArgs [x,y]      return_type)) _) = Function $ BinaryFunctionTyping pre (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
+    toTypeSignature (KP.Defs p@(KP.PrototypeBinary   _   _ (KP.PrototypeArgs args       _          )) _) = throw    $ BinaryFunctionInvalidArgumentNumber p (length args)
+    toTypeSignature (KP.Defs   (KP.PrototypeFunction _     (KP.PrototypeArgs args       return_type)) _) = Function $ FunctionTyping (map prototypeIdToBaseType args) (typeToBaseType return_type)
 
-instance Identify KP.VAR_ASSIGNMENT where
-    toIdentifier (KP.VAR_ASSIGNMENT i _) = i
+instance Identify KP.UnaryOp where
+    toIdentifier (KP.UnaryOp i) = i
 
-instance Type KP.VAR_ASSIGNMENT where
-    toTypeSignature (KP.VAR_ASSIGNMENT _ var_type) = VAR $ typeToBaseType var_type
+instance Identify KP.BinaryOp where
+    toIdentifier (KP.BinaryOp i) = i
 
-prototypeIdToBaseType :: KP.PROTOTYPE_ID -> BASE_TYPE
-prototypeIdToBaseType (KP.PROTOTYPE_ID _ t) = typeToBaseType t
+instance Identify KP.VarAssignment where
+    toIdentifier (KP.VarAssignment i _) = i
 
-prototypeIdToVarAssignment :: KP.PROTOTYPE_ID -> KP.VAR_ASSIGNMENT
-prototypeIdToVarAssignment (KP.PROTOTYPE_ID i t) = KP.VAR_ASSIGNMENT i t
+instance Type KP.VarAssignment where
+    toTypeSignature (KP.VarAssignment _ var_type) = Var $ typeToBaseType var_type
 
-typeToBaseType :: KP.TYPE -> BASE_TYPE
-typeToBaseType KP.INT       = INT
-typeToBaseType KP.DOUBLE    = DOUBLE
-typeToBaseType KP.BOOLEAN   = BOOLEAN
-typeToBaseType KP.VOID      = NIL
+isUnaryFunctionParamMatchingFunction :: FunctionTyping -> BaseType -> Bool
+isUnaryFunctionParamMatchingFunction (UnaryFunctionTyping arg1 return_type) arg1'
+                                         = arg1 == arg1'
+isUnaryFunctionParamMatchingFunction _ _ = False 
 
-baseTypeToType :: BASE_TYPE -> KP.TYPE
-baseTypeToType INT      = KP.INT
-baseTypeToType DOUBLE   = KP.DOUBLE
-baseTypeToType BOOLEAN  = KP.BOOLEAN
-baseTypeToType NIL      = KP.VOID
+isBinaryFunctionParamMatchingFunction :: FunctionTyping -> BaseType -> BaseType -> Bool
+isBinaryFunctionParamMatchingFunction (BinaryFunctionTyping _ arg1 arg2 return_type) arg1' arg2'
+                                            = arg1 == arg1' && arg2 == arg2'
+isBinaryFunctionParamMatchingFunction _ _ _ = False
 
+isFunctionParamMatchingFunction :: FunctionTyping -> [BaseType] -> Bool
+isFunctionParamMatchingFunction (FunctionTyping args return_type) args'
+                                    = args == args'
+isFunctionParamMatchingFunction _ _ = False
+
+getFunctionReturnType :: FunctionTyping -> BaseType
+getFunctionReturnType (UnaryFunctionTyping  _      return_type) = return_type 
+getFunctionReturnType (BinaryFunctionTyping _ _ _  return_type) = return_type
+getFunctionReturnType (FunctionTyping       _      return_type) = return_type
+
+prototypeIdToBaseType :: KP.PrototypeIdentifier -> BaseType
+prototypeIdToBaseType (KP.PrototypeIdentifier _ t) = typeToBaseType t
+
+prototypeIdToVarAssignment :: KP.PrototypeIdentifier -> KP.VarAssignment
+prototypeIdToVarAssignment (KP.PrototypeIdentifier i t) = KP.VarAssignment i t
+
+typeToBaseType :: KP.Type -> BaseType
+typeToBaseType KP.Int       = Int
+typeToBaseType KP.Double    = Double
+typeToBaseType KP.Boolean   = Boolean
+typeToBaseType KP.Void      = Nil
+
+baseTypeToType :: BaseType -> KP.Type
+baseTypeToType Int      = KP.Int
+baseTypeToType Double   = KP.Double
+baseTypeToType Boolean  = KP.Boolean
+baseTypeToType Nil      = KP.Void
 
 -- sContextPushNewFrame :: SYMBOL_CONTEXT -> SYMBOL_CONTEXT
 -- sContextPushNewFrame (SYMBOL_CONTEXT kdefs stack) = SYMBOL_CONTEXT kdefs (VAR_FRAME [] :stack)
@@ -230,16 +252,16 @@ baseTypeToType NIL      = KP.VOID
 -- checkPushVarShadowsDefinition context@(SYMBOL_CONTEXT []     _        ) _ = context
 -- checkPushVarShadowsDefinition context@(SYMBOL_CONTEXT (x:xs) _        ) _ = context
 
--- checkPushVarShadowsDefinition' :: KDEFS -> VAR_SIGNATURE -> KDEFS
--- checkPushVarShadowsDefinition'  (KDEFS_DEFS (DEFS prototype e)) _  var = KDEFS_DEFS (DEFS prototype (checkPushVarShadowsDefinition'' def var) e)
--- checkPushVarShadowsDefinition'  kdef@(KDEFS_EXPR _)             _      = kdef
+-- checkPushVarShadowsDefinition' :: Kdefs -> VAR_SIGNATURE -> Kdefs
+-- checkPushVarShadowsDefinition'  (Kdefs_Defs (Defs prototype e)) _  var = Kdefs_Defs (Defs prototype (checkPushVarShadowsDefinition'' def var) e)
+-- checkPushVarShadowsDefinition'  kdef@(Kdefs_EXPR _)             _      = kdef
 
--- checkPushVarShadowsDefinition'' :: PROTOTYPE -> VAR_SIGNATURE -> PROTOTYPE
--- checkPushVarShadowsDefinition'' p@(PROTOTYPE_UNARY  _ _ identifier _) var = checkPushVarShadowsDefinition''' p identifier var
--- checkPushVarShadowsDefinition'' p@(PROTOTYPE_BINARY _ _ identifier _) var = checkPushVarShadowsDefinition''' p identifier var
--- checkPushVarShadowsDefinition'' p@(PROTOTYPE identifier _)            var = checkPushVarShadowsDefinition''' p identifier var 
+-- checkPushVarShadowsDefinition'' :: Prototype -> VAR_SIGNATURE -> Prototype
+-- checkPushVarShadowsDefinition'' p@(Prototype_UNARY  _ _ identifier _) var = checkPushVarShadowsDefinition''' p identifier var
+-- checkPushVarShadowsDefinition'' p@(Prototype_BINARY _ _ identifier _) var = checkPushVarShadowsDefinition''' p identifier var
+-- checkPushVarShadowsDefinition'' p@(Prototype identifier _)            var = checkPushVarShadowsDefinition''' p identifier var 
 
--- checkPushVarShadowsDefinition''' :: PROTOTYPE -> IDENTIFIER -> VAR_SIGNATURE -> PROTOTYPE
+-- checkPushVarShadowsDefinition''' :: Prototype -> Identifier -> VAR_SIGNATURE -> Prototype
 -- checkPushVarShadowsDefinition''' p identifier v@(VAR_SIGNATURE vi _)
 --     | identifier == vi = throw $ ShadowedDefinitionByVariable p v
 --     | otherwise        = p
@@ -257,10 +279,10 @@ baseTypeToType NIL      = KP.VOID
 -- sContextPushVars :: SYMBOL_CONTEXT -> [VAR_SIGNATURE] -> SYMBOL_CONTEXT
 -- sContextPushVars = foldl sContextPushVar
 
--- sContextPushPrototype :: SYMBOL_CONTEXT -> PROTOTYPE -> SYMBOL_CONTEXT
--- sContextPushPrototype context (PROTOTYPE_UNARY  _ _ _ prototype_args) = sContextPushPrototype' context prototype_args
--- sContextPushPrototype context (PROTOTYPE_BINARY _ _ _ prototype_args) = sContextPushPrototype' context prototype_args
--- sContextPushPrototype context (PROTOTYPE        _     prototype_args) = sContextPushPrototype' context prototype_args
+-- sContextPushPrototype :: SYMBOL_CONTEXT -> Prototype -> SYMBOL_CONTEXT
+-- sContextPushPrototype context (Prototype_UNARY  _ _ _ prototype_args) = sContextPushPrototype' context prototype_args
+-- sContextPushPrototype context (Prototype_BINARY _ _ _ prototype_args) = sContextPushPrototype' context prototype_args
+-- sContextPushPrototype context (Prototype        _     prototype_args) = sContextPushPrototype' context prototype_args
 
--- sContextPushPrototype' :: SYMBOL_CONTEXT -> PROTOTYPE_ARGS -> SYMBOL_CONTEXT
--- sContextPushPrototype' context (PROTOTYPE_ARGS vars _) = sContextPushVars context (map prototypeIdToVarSignature vars)
+-- sContextPushPrototype' :: SYMBOL_CONTEXT -> PrototypeArgs -> SYMBOL_CONTEXT
+-- sContextPushPrototype' context (PrototypeArgs vars _) = sContextPushVars context (map prototypeIdToVarSignature vars)

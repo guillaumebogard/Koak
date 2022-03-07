@@ -20,6 +20,7 @@ library
       Argument.Lexer
       Argument.Parser
       Exception
+      Koak.Grammar.Utils
       Koak.Lexer
       Koak.Parser
       Koak.Typing
@@ -53,6 +54,7 @@ test-suite koak-test
   other-modules:
       Argument.LexerSpec
       Argument.ParserSpec
+      Koak.Grammar.UtilsSpec
       Koak.LexerSpec
       Koak.ParserSpec
       Koak.TypingContextSpec

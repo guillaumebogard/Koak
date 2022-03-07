@@ -16,13 +16,13 @@ import Test.Hspec                   ( Spec
                                     , anyException
                                     )
 
-import Koak.TypingContext           ( KCONTEXT(..)
-                                    , GLOBAL_CONTEXT(..)
-                                    , DEF_CONTEXT(..)
-                                    , LOCAL_CONTEXT(..)
-                                    , BASE_TYPE(..)
-                                    , FUNCTION_TYPING(..)
-                                    , TYPE_SIGNATURE(..)
+import Koak.TypingContext           ( Kcontext(..)
+                                    , GlobalContext(..)
+                                    , DefContext(..)
+                                    , LocalContext(..)
+                                    , BaseType(..)
+                                    , FunctionTyping(..)
+                                    , TypeSignature(..)
                                     , getEmptyKContext
                                     , kContextPushDef
                                     , kContextPushVar
@@ -46,21 +46,21 @@ spec = do
     it "getEmptyKContext basic" $
         getEmptyKContext
             ==
-            KCONTEXT (GLOBAL_CONTEXT HM.empty) (DEF_CONTEXT HM.empty) Nothing
+            Kcontext (GlobalContext HM.empty) (DefContext HM.empty) Nothing
     it "kContextPushDef: One def push, simple 1, success" $
         kContextPushDef
-            (KP.DEFS
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "foo")
-                    (KP.PROTOTYPE_ARGS [] KP.INT)
+            (KP.Defs
+                (KP.PrototypeFunction
+                    (KP.Identifier "foo")
+                    (KP.PrototypeArgs [] KP.Int)
                 )
-                (KP.EXPRESSIONS
-                    (KP.EXPRESSION
-                        (KP.UNARY_POSTFIX
-                            (KP.POSTFIX
-                                (KP.PRIMARY_LITERAL
-                                    (KP.LITERAL_DECIMAL
-                                        (KP.DECIMAL_CONST 42)
+                (KP.Expressions
+                    (KP.Expression
+                        (KP.UnaryPostfix
+                            (KP.Postfix
+                                (KP.PrimaryLiteral
+                                    (KP.LiteralDecimal
+                                        (KP.DecimalConst 42)
                                     )
                                 )
                                 Nothing
@@ -73,28 +73,28 @@ spec = do
             )
             getEmptyKContext
             ==
-            KCONTEXT
-                (GLOBAL_CONTEXT $ HM.fromList [])
-                (DEF_CONTEXT    $ HM.fromList [
-                    (KP.IDENTIFIER "foo", FUNCTION $ FUNCTION_TYPING [] INT)
+            Kcontext
+                (GlobalContext $ HM.fromList [])
+                (DefContext    $ HM.fromList [
+                    (KP.Identifier "foo", Function $ FunctionTyping [] Int)
                 ])
                 Nothing
     it "kContextPushDef: One def push, simple 2, success" $
         kContextPushDef
-            (KP.DEFS
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "bar")
-                    (KP.PROTOTYPE_ARGS [
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "x") KP.INT
-                    ] KP.INT)
+            (KP.Defs
+                (KP.PrototypeFunction
+                    (KP.Identifier "bar")
+                    (KP.PrototypeArgs [
+                        KP.PrototypeIdentifier (KP.Identifier "x") KP.Int
+                    ] KP.Int)
                 )
-                (KP.EXPRESSIONS
-                    (KP.EXPRESSION
-                        (KP.UNARY_POSTFIX
-                            (KP.POSTFIX
-                                (KP.PRIMARY_LITERAL
-                                    (KP.LITERAL_DECIMAL
-                                        (KP.DECIMAL_CONST 42)
+                (KP.Expressions
+                    (KP.Expression
+                        (KP.UnaryPostfix
+                            (KP.Postfix
+                                (KP.PrimaryLiteral
+                                    (KP.LiteralDecimal
+                                        (KP.DecimalConst 42)
                                     )
                                 )
                                 Nothing
@@ -107,28 +107,28 @@ spec = do
             )
             getEmptyKContext
             ==
-            KCONTEXT
-                (GLOBAL_CONTEXT $ HM.fromList [])
-                (DEF_CONTEXT    $ HM.fromList [
-                    (KP.IDENTIFIER "bar", FUNCTION $ FUNCTION_TYPING [INT] INT)
+            Kcontext
+                (GlobalContext $ HM.fromList [])
+                (DefContext    $ HM.fromList [
+                    (KP.Identifier "bar", Function $ FunctionTyping [Int] Int)
                 ])
                 Nothing
     it "kContextPushDef: One def push, simple 3, success" $
         kContextPushDef
-            (KP.DEFS
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "foobar")
-                    (KP.PROTOTYPE_ARGS [
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "x") KP.DOUBLE
-                    ] KP.VOID)
+            (KP.Defs
+                (KP.PrototypeFunction
+                    (KP.Identifier "foobar")
+                    (KP.PrototypeArgs [
+                        KP.PrototypeIdentifier (KP.Identifier "x") KP.Double
+                    ] KP.Void)
                 )
-                (KP.EXPRESSIONS
-                    (KP.EXPRESSION
-                        (KP.UNARY_POSTFIX
-                            (KP.POSTFIX
-                                (KP.PRIMARY_LITERAL
-                                    (KP.LITERAL_DECIMAL
-                                        (KP.DECIMAL_CONST 42)
+                (KP.Expressions
+                    (KP.Expression
+                        (KP.UnaryPostfix
+                            (KP.Postfix
+                                (KP.PrimaryLiteral
+                                    (KP.LiteralDecimal
+                                        (KP.DecimalConst 42)
                                     )
                                 )
                                 Nothing
@@ -141,31 +141,31 @@ spec = do
             )
             getEmptyKContext
             ==
-            KCONTEXT
-                (GLOBAL_CONTEXT $ HM.fromList [])
-                (DEF_CONTEXT    $ HM.fromList [
-                    (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [DOUBLE] NIL)
+            Kcontext
+                (GlobalContext $ HM.fromList [])
+                (DefContext    $ HM.fromList [
+                    (KP.Identifier "foobar", Function $ FunctionTyping [Double] Nil)
                 ])
                 Nothing
     it "kContextPushDef: One def push, complex 1, success" $
         kContextPushDef
-            (KP.DEFS
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "foobar")
-                    (KP.PROTOTYPE_ARGS [
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.DOUBLE,
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
-                        KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.VOID
-                    ] KP.DOUBLE)
+            (KP.Defs
+                (KP.PrototypeFunction
+                    (KP.Identifier "foobar")
+                    (KP.PrototypeArgs [
+                        KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                        KP.PrototypeIdentifier (KP.Identifier "b") KP.Double,
+                        KP.PrototypeIdentifier (KP.Identifier "c") KP.Boolean,
+                        KP.PrototypeIdentifier (KP.Identifier "d") KP.Void
+                    ] KP.Double)
                 )
-                (KP.EXPRESSIONS
-                    (KP.EXPRESSION
-                        (KP.UNARY_POSTFIX
-                            (KP.POSTFIX
-                                (KP.PRIMARY_LITERAL
-                                    (KP.LITERAL_DECIMAL
-                                        (KP.DECIMAL_CONST 42)
+                (KP.Expressions
+                    (KP.Expression
+                        (KP.UnaryPostfix
+                            (KP.Postfix
+                                (KP.PrimaryLiteral
+                                    (KP.LiteralDecimal
+                                        (KP.DecimalConst 42)
                                     )
                                 )
                                 Nothing
@@ -178,25 +178,25 @@ spec = do
             )
             getEmptyKContext
             ==
-            KCONTEXT
-                (GLOBAL_CONTEXT $ HM.fromList [])
-                (DEF_CONTEXT    $ HM.fromList [
-                    (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [INT, DOUBLE, BOOLEAN, NIL] DOUBLE)
+            Kcontext
+                (GlobalContext $ HM.fromList [])
+                (DefContext    $ HM.fromList [
+                    (KP.Identifier "foobar", Function $ FunctionTyping [Int, Double, Boolean, Nil] Double)
                 ])
                 Nothing
     it "kContextPushDef: Multiple def push, complex 1, success" $
-            KP.DEFS
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "foo")
-                    (KP.PROTOTYPE_ARGS [] KP.INT)
+            KP.Defs
+                (KP.PrototypeFunction
+                    (KP.Identifier "foo")
+                    (KP.PrototypeArgs [] KP.Int)
                 )
-                (KP.EXPRESSIONS
-                    (KP.EXPRESSION
-                        (KP.UNARY_POSTFIX
-                            (KP.POSTFIX
-                                (KP.PRIMARY_LITERAL
-                                    (KP.LITERAL_DECIMAL
-                                        (KP.DECIMAL_CONST 42)
+                (KP.Expressions
+                    (KP.Expression
+                        (KP.UnaryPostfix
+                            (KP.Postfix
+                                (KP.PrimaryLiteral
+                                    (KP.LiteralDecimal
+                                        (KP.DecimalConst 42)
                                     )
                                 )
                                 Nothing
@@ -208,23 +208,23 @@ spec = do
                 )
             `kContextPushDef`
             (
-                KP.DEFS
-                    (KP.PROTOTYPE
-                        (KP.IDENTIFIER "bar")
-                        (KP.PROTOTYPE_ARGS [
-                            KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
-                            KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.DOUBLE,
-                            KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
-                            KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.VOID
-                        ] KP.DOUBLE)
+                KP.Defs
+                    (KP.PrototypeFunction
+                        (KP.Identifier "bar")
+                        (KP.PrototypeArgs [
+                            KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                            KP.PrototypeIdentifier (KP.Identifier "b") KP.Double,
+                            KP.PrototypeIdentifier (KP.Identifier "c") KP.Boolean,
+                            KP.PrototypeIdentifier (KP.Identifier "d") KP.Void
+                        ] KP.Double)
                     )
-                    (KP.EXPRESSIONS
-                        (KP.EXPRESSION
-                            (KP.UNARY_POSTFIX
-                                (KP.POSTFIX
-                                    (KP.PRIMARY_LITERAL
-                                        (KP.LITERAL_DECIMAL
-                                            (KP.DECIMAL_CONST 42)
+                    (KP.Expressions
+                        (KP.Expression
+                            (KP.UnaryPostfix
+                                (KP.Postfix
+                                    (KP.PrimaryLiteral
+                                        (KP.LiteralDecimal
+                                            (KP.DecimalConst 42)
                                         )
                                     )
                                     Nothing
@@ -236,23 +236,23 @@ spec = do
                     )
                 `kContextPushDef`
                 (
-                    KP.DEFS
-                        (KP.PROTOTYPE
-                            (KP.IDENTIFIER "foobar")
-                            (KP.PROTOTYPE_ARGS [
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.INT,
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.INT
-                            ] KP.BOOLEAN)
+                    KP.Defs
+                        (KP.PrototypeFunction
+                            (KP.Identifier "foobar")
+                            (KP.PrototypeArgs [
+                                KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                                KP.PrototypeIdentifier (KP.Identifier "b") KP.Int,
+                                KP.PrototypeIdentifier (KP.Identifier "c") KP.Boolean,
+                                KP.PrototypeIdentifier (KP.Identifier "d") KP.Int
+                            ] KP.Boolean)
                         )
-                        (KP.EXPRESSIONS
-                            (KP.EXPRESSION
-                                (KP.UNARY_POSTFIX
-                                    (KP.POSTFIX
-                                        (KP.PRIMARY_LITERAL
-                                            (KP.LITERAL_DECIMAL
-                                                (KP.DECIMAL_CONST 42)
+                        (KP.Expressions
+                            (KP.Expression
+                                (KP.UnaryPostfix
+                                    (KP.Postfix
+                                        (KP.PrimaryLiteral
+                                            (KP.LiteralDecimal
+                                                (KP.DecimalConst 42)
                                             )
                                         )
                                         Nothing
@@ -267,28 +267,28 @@ spec = do
                 )
             )
             ==
-            KCONTEXT
-                (GLOBAL_CONTEXT $ HM.fromList [])
-                (DEF_CONTEXT    $ HM.fromList [
-                    (KP.IDENTIFIER "foo",    FUNCTION $ FUNCTION_TYPING [] INT),
-                    (KP.IDENTIFIER "bar",    FUNCTION $ FUNCTION_TYPING [INT, DOUBLE, BOOLEAN, NIL] DOUBLE),
-                    (KP.IDENTIFIER "foobar", FUNCTION $ FUNCTION_TYPING [INT, INT, BOOLEAN, INT] BOOLEAN)
+            Kcontext
+                (GlobalContext $ HM.fromList [])
+                (DefContext    $ HM.fromList [
+                    (KP.Identifier "foo",    Function $ FunctionTyping [] Int),
+                    (KP.Identifier "bar",    Function $ FunctionTyping [Int, Double, Boolean, Nil] Double),
+                    (KP.Identifier "foobar", Function $ FunctionTyping [Int, Int, Boolean, Int] Boolean)
                 ])
                 Nothing
     it "kContextPushDef: Two same def push, simple 1, failure" $ do
         evaluate (
-                KP.DEFS
-                    (KP.PROTOTYPE
-                        (KP.IDENTIFIER "foo")
-                        (KP.PROTOTYPE_ARGS [] KP.INT)
+                KP.Defs
+                    (KP.PrototypeFunction
+                        (KP.Identifier "foo")
+                        (KP.PrototypeArgs [] KP.Int)
                     )
-                    (KP.EXPRESSIONS
-                        (KP.EXPRESSION
-                            (KP.UNARY_POSTFIX
-                                (KP.POSTFIX
-                                    (KP.PRIMARY_LITERAL
-                                        (KP.LITERAL_DECIMAL
-                                            (KP.DECIMAL_CONST 42)
+                    (KP.Expressions
+                        (KP.Expression
+                            (KP.UnaryPostfix
+                                (KP.Postfix
+                                    (KP.PrimaryLiteral
+                                        (KP.LiteralDecimal
+                                            (KP.DecimalConst 42)
                                         )
                                     )
                                     Nothing
@@ -300,18 +300,18 @@ spec = do
                     )
                 `kContextPushDef`
                 (
-                    KP.DEFS
-                        (KP.PROTOTYPE
-                            (KP.IDENTIFIER "foo")
-                            (KP.PROTOTYPE_ARGS [] KP.INT)
+                    KP.Defs
+                        (KP.PrototypeFunction
+                            (KP.Identifier "foo")
+                            (KP.PrototypeArgs [] KP.Int)
                         )
-                        (KP.EXPRESSIONS
-                            (KP.EXPRESSION
-                                (KP.UNARY_POSTFIX
-                                    (KP.POSTFIX
-                                        (KP.PRIMARY_LITERAL
-                                            (KP.LITERAL_DECIMAL
-                                                (KP.DECIMAL_CONST 42)
+                        (KP.Expressions
+                            (KP.Expression
+                                (KP.UnaryPostfix
+                                    (KP.Postfix
+                                        (KP.PrimaryLiteral
+                                            (KP.LiteralDecimal
+                                                (KP.DecimalConst 42)
                                             )
                                         )
                                         Nothing
@@ -327,30 +327,30 @@ spec = do
             )
             `shouldThrow`
             (== ShadowedDefinitionByDefinition
-                (KP.IDENTIFIER "foo")
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "foo")
-                    (KP.PROTOTYPE_ARGS [] KP.INT)
+                (KP.Identifier "foo")
+                (KP.PrototypeFunction
+                    (KP.Identifier "foo")
+                    (KP.PrototypeArgs [] KP.Int)
                 )
             )
     it "kContextPushDef: Two same def push, complex 1, failure" $ do
         evaluate (
-                KP.DEFS
-                    (KP.PROTOTYPE
-                        (KP.IDENTIFIER "foo")
-                        (KP.PROTOTYPE_ARGS [
-                                    KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.BOOLEAN,
-                                    KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.BOOLEAN
-                            ] KP.BOOLEAN
+                KP.Defs
+                    (KP.PrototypeFunction
+                        (KP.Identifier "foo")
+                        (KP.PrototypeArgs [
+                                    KP.PrototypeIdentifier (KP.Identifier "a") KP.Boolean,
+                                    KP.PrototypeIdentifier (KP.Identifier "b") KP.Boolean
+                            ] KP.Boolean
                         )
                     )
-                    (KP.EXPRESSIONS
-                        (KP.EXPRESSION
-                            (KP.UNARY_POSTFIX
-                                (KP.POSTFIX
-                                    (KP.PRIMARY_LITERAL
-                                        (KP.LITERAL_DECIMAL
-                                            (KP.DECIMAL_CONST 42)
+                    (KP.Expressions
+                        (KP.Expression
+                            (KP.UnaryPostfix
+                                (KP.Postfix
+                                    (KP.PrimaryLiteral
+                                        (KP.LiteralDecimal
+                                            (KP.DecimalConst 42)
                                         )
                                     )
                                     Nothing
@@ -362,24 +362,24 @@ spec = do
                     )
                 `kContextPushDef`
                 (
-                    KP.DEFS
-                        (KP.PROTOTYPE
-                            (KP.IDENTIFIER "foo")
-                            (KP.PROTOTYPE_ARGS [
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.INT,
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.INT,
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "c") KP.BOOLEAN,
-                                KP.PROTOTYPE_ID (KP.IDENTIFIER "d") KP.INT
+                    KP.Defs
+                        (KP.PrototypeFunction
+                            (KP.Identifier "foo")
+                            (KP.PrototypeArgs [
+                                KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                                KP.PrototypeIdentifier (KP.Identifier "b") KP.Int,
+                                KP.PrototypeIdentifier (KP.Identifier "c") KP.Boolean,
+                                KP.PrototypeIdentifier (KP.Identifier "d") KP.Int
 
-                            ] KP.VOID)
+                            ] KP.Void)
                         )
-                        (KP.EXPRESSIONS
-                            (KP.EXPRESSION
-                                (KP.UNARY_POSTFIX
-                                    (KP.POSTFIX
-                                        (KP.PRIMARY_LITERAL
-                                            (KP.LITERAL_DECIMAL
-                                                (KP.DECIMAL_CONST 42)
+                        (KP.Expressions
+                            (KP.Expression
+                                (KP.UnaryPostfix
+                                    (KP.Postfix
+                                        (KP.PrimaryLiteral
+                                            (KP.LiteralDecimal
+                                                (KP.DecimalConst 42)
                                             )
                                         )
                                         Nothing
@@ -395,101 +395,101 @@ spec = do
             )
             `shouldThrow`
             (== ShadowedDefinitionByDefinition
-                (KP.IDENTIFIER "foo")
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "foo")
-                    (KP.PROTOTYPE_ARGS [
-                            KP.PROTOTYPE_ID (KP.IDENTIFIER "a") KP.BOOLEAN,
-                            KP.PROTOTYPE_ID (KP.IDENTIFIER "b") KP.BOOLEAN
-                    ] KP.BOOLEAN)
+                (KP.Identifier "foo")
+                (KP.PrototypeFunction
+                    (KP.Identifier "foo")
+                    (KP.PrototypeArgs [
+                            KP.PrototypeIdentifier (KP.Identifier "a") KP.Boolean,
+                            KP.PrototypeIdentifier (KP.Identifier "b") KP.Boolean
+                    ] KP.Boolean)
                 )
             )
     it "kContextPushDef: One global var push, simple 1, success." $ do
             kContextPushVar
                 (
-                    KP.VAR_ASSIGNMENT
-                        (KP.IDENTIFIER "var1")
-                        KP.INT
+                    KP.VarAssignment
+                        (KP.Identifier "var1")
+                        KP.Int
                 )
                 getEmptyKContext
             ==
-            KCONTEXT
-                (GLOBAL_CONTEXT $ HM.fromList [
-                    (KP.IDENTIFIER "var1", VAR INT)
+            Kcontext
+                (GlobalContext $ HM.fromList [
+                    (KP.Identifier "var1", Var Int)
                 ])
-                (DEF_CONTEXT    $ HM.fromList [])
+                (DefContext    $ HM.fromList [])
                 Nothing
     it "kContextPushDef: Multiple global var push, complex 1, success." $ do
             kContextPushVar
                 (
-                    KP.VAR_ASSIGNMENT
-                        (KP.IDENTIFIER "var4")
-                        KP.BOOLEAN
+                    KP.VarAssignment
+                        (KP.Identifier "var4")
+                        KP.Boolean
                 )
                 (
                     kContextPushVar
                     (
-                        KP.VAR_ASSIGNMENT
-                            (KP.IDENTIFIER "var3")
-                            KP.INT
+                        KP.VarAssignment
+                            (KP.Identifier "var3")
+                            KP.Int
                     )
                     (
                         kContextPushVar
                         (
-                            KP.VAR_ASSIGNMENT
-                                (KP.IDENTIFIER "var2")
-                                KP.DOUBLE
+                            KP.VarAssignment
+                                (KP.Identifier "var2")
+                                KP.Double
                         )
                         (
                             kContextPushVar
                             (
-                                KP.VAR_ASSIGNMENT
-                                    (KP.IDENTIFIER "var1")
-                                    KP.INT
+                                KP.VarAssignment
+                                    (KP.Identifier "var1")
+                                    KP.Int
                             )
                             getEmptyKContext
                         )
                     )
                 )
             ==
-            KCONTEXT
-                (GLOBAL_CONTEXT $ HM.fromList [
-                    (KP.IDENTIFIER "var1", VAR INT),
-                    (KP.IDENTIFIER "var2", VAR DOUBLE),
-                    (KP.IDENTIFIER "var3", VAR INT),
-                    (KP.IDENTIFIER "var4", VAR BOOLEAN)
+            Kcontext
+                (GlobalContext $ HM.fromList [
+                    (KP.Identifier "var1", Var Int),
+                    (KP.Identifier "var2", Var Double),
+                    (KP.Identifier "var3", Var Int),
+                    (KP.Identifier "var4", Var Boolean)
                 ])
-                (DEF_CONTEXT    $ HM.fromList [])
+                (DefContext    $ HM.fromList [])
                 Nothing
     it "kContextPushDef: Multiple global var push & Multiple local var push, complex 1, success." $ do
             kContextPushVar
                 (
-                    KP.VAR_ASSIGNMENT
-                        (KP.IDENTIFIER "var4")
-                        KP.BOOLEAN
+                    KP.VarAssignment
+                        (KP.Identifier "var4")
+                        KP.Boolean
                 )
                 (
                     kContextPushVar
                     (
-                        KP.VAR_ASSIGNMENT
-                            (KP.IDENTIFIER "var3")
-                            KP.INT
+                        KP.VarAssignment
+                            (KP.Identifier "var3")
+                            KP.Int
                     )
                     (
                         kContextEnterLocalContext
                         (
                             kContextPushVar
                             (
-                                KP.VAR_ASSIGNMENT
-                                    (KP.IDENTIFIER "var2")
-                                    KP.DOUBLE
+                                KP.VarAssignment
+                                    (KP.Identifier "var2")
+                                    KP.Double
                             )
                             (
                                 kContextPushVar
                                 (
-                                    KP.VAR_ASSIGNMENT
-                                        (KP.IDENTIFIER "var1")
-                                        KP.INT
+                                    KP.VarAssignment
+                                        (KP.Identifier "var1")
+                                        KP.Int
                                 )
                                 getEmptyKContext
                             )
@@ -497,45 +497,45 @@ spec = do
                     )
                 )
             ==
-            KCONTEXT
-                (GLOBAL_CONTEXT $ HM.fromList [
-                    (KP.IDENTIFIER "var1", VAR INT),
-                    (KP.IDENTIFIER "var2", VAR DOUBLE)
+            Kcontext
+                (GlobalContext $ HM.fromList [
+                    (KP.Identifier "var1", Var Int),
+                    (KP.Identifier "var2", Var Double)
                 ])
-                (DEF_CONTEXT    $ HM.fromList [])
-                (Just $ LOCAL_CONTEXT $ HM.fromList [
-                    (KP.IDENTIFIER "var3", VAR INT),
-                    (KP.IDENTIFIER "var4", VAR BOOLEAN)
+                (DefContext    $ HM.fromList [])
+                (Just $ LocalContext $ HM.fromList [
+                    (KP.Identifier "var3", Var Int),
+                    (KP.Identifier "var4", Var Boolean)
                 ])
     it "kContextPushDef: Multiple global var push & Multiple local var with the same name, complex 1, failure." $ do
             kContextPushVar
                 (
-                    KP.VAR_ASSIGNMENT
-                        (KP.IDENTIFIER "var2")
-                        KP.BOOLEAN
+                    KP.VarAssignment
+                        (KP.Identifier "var2")
+                        KP.Boolean
                 )
                 (
                     kContextPushVar
                     (
-                        KP.VAR_ASSIGNMENT
-                            (KP.IDENTIFIER "var1")
-                            KP.INT
+                        KP.VarAssignment
+                            (KP.Identifier "var1")
+                            KP.Int
                     )
                     (
                         kContextEnterLocalContext
                         (
                             kContextPushVar
                             (
-                                KP.VAR_ASSIGNMENT
-                                    (KP.IDENTIFIER "var2")
-                                    KP.DOUBLE
+                                KP.VarAssignment
+                                    (KP.Identifier "var2")
+                                    KP.Double
                             )
                             (
                                 kContextPushVar
                                 (
-                                    KP.VAR_ASSIGNMENT
-                                        (KP.IDENTIFIER "var1")
-                                        KP.INT
+                                    KP.VarAssignment
+                                        (KP.Identifier "var1")
+                                        KP.Int
                                 )
                                 getEmptyKContext
                             )
@@ -543,83 +543,83 @@ spec = do
                     )
                 )
             ==
-            KCONTEXT
-                (GLOBAL_CONTEXT $ HM.fromList [
-                    (KP.IDENTIFIER "var1", VAR INT),
-                    (KP.IDENTIFIER "var2", VAR DOUBLE)
+            Kcontext
+                (GlobalContext $ HM.fromList [
+                    (KP.Identifier "var1", Var Int),
+                    (KP.Identifier "var2", Var Double)
                 ])
-                (DEF_CONTEXT    $ HM.fromList [])
-                (Just $ LOCAL_CONTEXT $ HM.fromList [
-                    (KP.IDENTIFIER "var1", VAR INT),
-                    (KP.IDENTIFIER "var2", VAR BOOLEAN)
+                (DefContext    $ HM.fromList [])
+                (Just $ LocalContext $ HM.fromList [
+                    (KP.Identifier "var1", Var Int),
+                    (KP.Identifier "var2", Var Boolean)
                 ])
     it "kContextPushDef: Two same global var push, simple 1, failure." $ do
         evaluate (
             kContextPushVar
                 (
-                    KP.VAR_ASSIGNMENT
-                        (KP.IDENTIFIER "var")
-                        KP.INT
+                    KP.VarAssignment
+                        (KP.Identifier "var")
+                        KP.Int
                 )
                 (
                     kContextPushVar
                         (
-                            KP.VAR_ASSIGNMENT
-                                (KP.IDENTIFIER "var")
-                                KP.INT
+                            KP.VarAssignment
+                                (KP.Identifier "var")
+                                KP.Int
                         )
                         getEmptyKContext
                 )
             )
             `shouldThrow`
             (== ShadowedVariableByVariable
-                (KP.IDENTIFIER "var")
-                (KP.VAR_ASSIGNMENT
-                    (KP.IDENTIFIER "var")
-                    KP.INT
+                (KP.Identifier "var")
+                (KP.VarAssignment
+                    (KP.Identifier "var")
+                    KP.Int
                 )
             )
     it "kContextPushDef: Two same local var push, simple 1, failure." $ do
         evaluate (
             kContextPushVar
                 (
-                    KP.VAR_ASSIGNMENT
-                        (KP.IDENTIFIER "var")
-                        KP.INT
+                    KP.VarAssignment
+                        (KP.Identifier "var")
+                        KP.Int
                 )
                 (
                     kContextPushVar
                         (
-                            KP.VAR_ASSIGNMENT
-                                (KP.IDENTIFIER "var")
-                                KP.INT
+                            KP.VarAssignment
+                                (KP.Identifier "var")
+                                KP.Int
                         )
                         (kContextEnterLocalContext getEmptyKContext)
                 )
             )
             `shouldThrow`
             (== ShadowedVariableByVariable
-                (KP.IDENTIFIER "var")
-                (KP.VAR_ASSIGNMENT
-                    (KP.IDENTIFIER "var")
-                    KP.INT
+                (KP.Identifier "var")
+                (KP.VarAssignment
+                    (KP.Identifier "var")
+                    KP.Int
                 )
             )
     it "kContextPushDef: One global var & One def push with same name, simple 1, failure." $ do
         evaluate (
             kContextPushDef
-                (KP.DEFS
-                    (KP.PROTOTYPE
-                        (KP.IDENTIFIER "foo")
-                        (KP.PROTOTYPE_ARGS [] KP.INT)
+                (KP.Defs
+                    (KP.PrototypeFunction
+                        (KP.Identifier "foo")
+                        (KP.PrototypeArgs [] KP.Int)
                     )
-                    (KP.EXPRESSIONS
-                        (KP.EXPRESSION
-                            (KP.UNARY_POSTFIX
-                                (KP.POSTFIX
-                                    (KP.PRIMARY_LITERAL
-                                        (KP.LITERAL_DECIMAL
-                                            (KP.DECIMAL_CONST 42)
+                    (KP.Expressions
+                        (KP.Expression
+                            (KP.UnaryPostfix
+                                (KP.Postfix
+                                    (KP.PrimaryLiteral
+                                        (KP.LiteralDecimal
+                                            (KP.DecimalConst 42)
                                         )
                                     )
                                     Nothing
@@ -633,43 +633,43 @@ spec = do
                 (
                     kContextPushVar
                     (
-                        KP.VAR_ASSIGNMENT
-                            (KP.IDENTIFIER "foo")
-                            KP.INT
+                        KP.VarAssignment
+                            (KP.Identifier "foo")
+                            KP.Int
                     )
                     getEmptyKContext
                 )
             )
             `shouldThrow`
             (== ShadowedVariableByDefinition
-                (KP.IDENTIFIER "foo")
-                (KP.PROTOTYPE
-                    (KP.IDENTIFIER "foo")
-                    (KP.PROTOTYPE_ARGS [] KP.INT)
+                (KP.Identifier "foo")
+                (KP.PrototypeFunction
+                    (KP.Identifier "foo")
+                    (KP.PrototypeArgs [] KP.Int)
                 )
             )
     it "kContextPushDef: One def push & One global var push with same name, simple 1, failure." $ do
         evaluate (
             kContextPushVar
                 (
-                    KP.VAR_ASSIGNMENT
-                        (KP.IDENTIFIER "foo")
-                        KP.INT
+                    KP.VarAssignment
+                        (KP.Identifier "foo")
+                        KP.Int
                 )
                 (
                     kContextPushDef
-                        (KP.DEFS
-                            (KP.PROTOTYPE
-                                (KP.IDENTIFIER "foo")
-                                (KP.PROTOTYPE_ARGS [] KP.INT)
+                        (KP.Defs
+                            (KP.PrototypeFunction
+                                (KP.Identifier "foo")
+                                (KP.PrototypeArgs [] KP.Int)
                             )
-                            (KP.EXPRESSIONS
-                                (KP.EXPRESSION
-                                    (KP.UNARY_POSTFIX
-                                        (KP.POSTFIX
-                                            (KP.PRIMARY_LITERAL
-                                                (KP.LITERAL_DECIMAL
-                                                    (KP.DECIMAL_CONST 42)
+                            (KP.Expressions
+                                (KP.Expression
+                                    (KP.UnaryPostfix
+                                        (KP.Postfix
+                                            (KP.PrimaryLiteral
+                                                (KP.LiteralDecimal
+                                                    (KP.DecimalConst 42)
                                                 )
                                             )
                                             Nothing
@@ -685,34 +685,34 @@ spec = do
             )
             `shouldThrow`
             (== ShadowedDefinitionByVariable
-                (KP.IDENTIFIER "foo")
-                (KP.VAR_ASSIGNMENT
-                    (KP.IDENTIFIER "foo")
-                    KP.INT
+                (KP.Identifier "foo")
+                (KP.VarAssignment
+                    (KP.Identifier "foo")
+                    KP.Int
                 )
             )
     it "kContextPushDef: One def push & One local var push with same name, simple 1, failure." $ do
         evaluate (
             kContextPushVar
                 (
-                    KP.VAR_ASSIGNMENT
-                        (KP.IDENTIFIER "foo")
-                        KP.INT
+                    KP.VarAssignment
+                        (KP.Identifier "foo")
+                        KP.Int
                 )
                 (
                     kContextPushDef
-                        (KP.DEFS
-                            (KP.PROTOTYPE
-                                (KP.IDENTIFIER "foo")
-                                (KP.PROTOTYPE_ARGS [] KP.INT)
+                        (KP.Defs
+                            (KP.PrototypeFunction
+                                (KP.Identifier "foo")
+                                (KP.PrototypeArgs [] KP.Int)
                             )
-                            (KP.EXPRESSIONS
-                                (KP.EXPRESSION
-                                    (KP.UNARY_POSTFIX
-                                        (KP.POSTFIX
-                                            (KP.PRIMARY_LITERAL
-                                                (KP.LITERAL_DECIMAL
-                                                    (KP.DECIMAL_CONST 42)
+                            (KP.Expressions
+                                (KP.Expression
+                                    (KP.UnaryPostfix
+                                        (KP.Postfix
+                                            (KP.PrimaryLiteral
+                                                (KP.LiteralDecimal
+                                                    (KP.DecimalConst 42)
                                                 )
                                             )
                                             Nothing
@@ -728,157 +728,157 @@ spec = do
             )
             `shouldThrow`
             (== ShadowedDefinitionByVariable
-                (KP.IDENTIFIER "foo")
-                (KP.VAR_ASSIGNMENT
-                    (KP.IDENTIFIER "foo")
-                    KP.INT
+                (KP.Identifier "foo")
+                (KP.VarAssignment
+                    (KP.Identifier "foo")
+                    KP.Int
                 )
             )
     it "kContextFind: Empty context, failure." $
         isNothing $
         kContextFind
             getEmptyKContext
-            (KP.IDENTIFIER "foo")
+            (KP.Identifier "foo")
     it "kContextFind: Only def context, failure." $
         isNothing $
         kContextFind
             (
-                KCONTEXT
-                    (GLOBAL_CONTEXT $ HM.fromList [] )
-                    (DEF_CONTEXT    $ HM.fromList
+                Kcontext
+                    (GlobalContext $ HM.fromList [] )
+                    (DefContext    $ HM.fromList
                         [
-                            (KP.IDENTIFIER "func1", FUNCTION $ FUNCTION_TYPING [BOOLEAN, BOOLEAN] BOOLEAN),
-                            (KP.IDENTIFIER "func2", FUNCTION $ FUNCTION_TYPING [] INT)
+                            (KP.Identifier "func1", Function $ FunctionTyping [Boolean, Boolean] Boolean),
+                            (KP.Identifier "func2", Function $ FunctionTyping [] Int)
                         ]
                     )
                 Nothing
             )
-            (KP.IDENTIFIER "foo")
+            (KP.Identifier "foo")
     it "kContextFind: Only global var context, failure." $
         isNothing $
         kContextFind
             (
-                KCONTEXT
-                    (GLOBAL_CONTEXT $ HM.fromList
+                Kcontext
+                    (GlobalContext $ HM.fromList
                         [
-                            (KP.IDENTIFIER "var1", VAR BOOLEAN),
-                            (KP.IDENTIFIER "var2", VAR BOOLEAN),
-                            (KP.IDENTIFIER "var3", VAR BOOLEAN)
+                            (KP.Identifier "var1", Var Boolean),
+                            (KP.Identifier "var2", Var Boolean),
+                            (KP.Identifier "var3", Var Boolean)
                         ]
                     )
-                    (DEF_CONTEXT HM.empty)
+                    (DefContext HM.empty)
                 Nothing
             )
-            (KP.IDENTIFIER "foo")
+            (KP.Identifier "foo")
     it "kContextFind: Only local var context, failure." $
         isNothing $
         kContextFind
             (
-                KCONTEXT
-                    (GLOBAL_CONTEXT HM.empty)
-                    (DEF_CONTEXT    HM.empty)
-                    (Just $ LOCAL_CONTEXT $ HM.fromList
+                Kcontext
+                    (GlobalContext HM.empty)
+                    (DefContext    HM.empty)
+                    (Just $ LocalContext $ HM.fromList
                         [
-                            (KP.IDENTIFIER "var1", VAR BOOLEAN),
-                            (KP.IDENTIFIER "var2", VAR BOOLEAN),
-                            (KP.IDENTIFIER "var3", VAR BOOLEAN)
+                            (KP.Identifier "var1", Var Boolean),
+                            (KP.Identifier "var2", Var Boolean),
+                            (KP.Identifier "var3", Var Boolean)
                         ]
                     )
             )
-            (KP.IDENTIFIER "foo")
+            (KP.Identifier "foo")
     it "kContextFind: Only def context, success." $
         kContextFind
             (
-                KCONTEXT
-                    (GLOBAL_CONTEXT $ HM.fromList [] )
-                    (DEF_CONTEXT    $ HM.fromList
+                Kcontext
+                    (GlobalContext $ HM.fromList [] )
+                    (DefContext    $ HM.fromList
                         [
-                            (KP.IDENTIFIER "func1", FUNCTION $ FUNCTION_TYPING [BOOLEAN, BOOLEAN] BOOLEAN),
-                            (KP.IDENTIFIER "func2", FUNCTION $ FUNCTION_TYPING [] INT)
+                            (KP.Identifier "func1", Function $ FunctionTyping [Boolean, Boolean] Boolean),
+                            (KP.Identifier "func2", Function $ FunctionTyping [] Int)
                         ]
                     )
                 Nothing
             )
-            (KP.IDENTIFIER "func2")
+            (KP.Identifier "func2")
             ==
-            Just  (FUNCTION $ FUNCTION_TYPING [] INT)
+            Just  (Function $ FunctionTyping [] Int)
     it "kContextFind: Only global var context, success." $
         kContextFind
             (
-                KCONTEXT
-                    (GLOBAL_CONTEXT $ HM.fromList
+                Kcontext
+                    (GlobalContext $ HM.fromList
                         [
-                            (KP.IDENTIFIER "var1", VAR BOOLEAN),
-                            (KP.IDENTIFIER "var2", VAR BOOLEAN),
-                            (KP.IDENTIFIER "var3", VAR BOOLEAN)
+                            (KP.Identifier "var1", Var Boolean),
+                            (KP.Identifier "var2", Var Boolean),
+                            (KP.Identifier "var3", Var Boolean)
                         ]
                     )
-                    (DEF_CONTEXT HM.empty)
+                    (DefContext HM.empty)
                 Nothing
             )
-            (KP.IDENTIFIER "var2")
+            (KP.Identifier "var2")
             ==
-            Just (VAR BOOLEAN)
+            Just (Var Boolean)
     it "kContextFind: Only local var context, success." $
         kContextFind
             (
-                KCONTEXT
-                    (GLOBAL_CONTEXT HM.empty)
-                    (DEF_CONTEXT    HM.empty)
-                    (Just $ LOCAL_CONTEXT $ HM.fromList
+                Kcontext
+                    (GlobalContext HM.empty)
+                    (DefContext    HM.empty)
+                    (Just $ LocalContext $ HM.fromList
                         [
-                            (KP.IDENTIFIER "var1", VAR BOOLEAN),
-                            (KP.IDENTIFIER "var2", VAR BOOLEAN),
-                            (KP.IDENTIFIER "var3", VAR BOOLEAN)
+                            (KP.Identifier "var1", Var Boolean),
+                            (KP.Identifier "var2", Var Boolean),
+                            (KP.Identifier "var3", Var Boolean)
                         ]
                     )
             )
-            (KP.IDENTIFIER "var2")
+            (KP.Identifier "var2")
             ==
-            Just (VAR BOOLEAN)
+            Just (Var Boolean)
     it "kContextFind: Shadowed global var by local var with same type, success." $
         kContextFind
             (
-                KCONTEXT
-                    (GLOBAL_CONTEXT       $ HM.fromList
+                Kcontext
+                    (GlobalContext       $ HM.fromList
                         [
-                            (KP.IDENTIFIER "var1",         VAR INT),
-                            (KP.IDENTIFIER "shadowed_var", VAR DOUBLE),
-                            (KP.IDENTIFIER "var2",         VAR INT)
+                            (KP.Identifier "var1",         Var Int),
+                            (KP.Identifier "shadowed_var", Var Double),
+                            (KP.Identifier "var2",         Var Int)
                         ]
                     )
-                    (DEF_CONTEXT HM.empty)
-                    (Just $ LOCAL_CONTEXT $ HM.fromList
+                    (DefContext HM.empty)
+                    (Just $ LocalContext $ HM.fromList
                         [
-                            (KP.IDENTIFIER "var3",         VAR INT),
-                            (KP.IDENTIFIER "shadowed_var", VAR DOUBLE),
-                            (KP.IDENTIFIER "var4",         VAR INT)
+                            (KP.Identifier "var3",         Var Int),
+                            (KP.Identifier "shadowed_var", Var Double),
+                            (KP.Identifier "var4",         Var Int)
                         ]
                     )
             )
-            (KP.IDENTIFIER "shadowed_var")
+            (KP.Identifier "shadowed_var")
             ==
-            Just (VAR DOUBLE)
+            Just (Var Double)
     it "kContextFind: Shadowed global var by local var with different type, success." $
         kContextFind
             (
-                KCONTEXT
-                    (GLOBAL_CONTEXT       $ HM.fromList
+                Kcontext
+                    (GlobalContext       $ HM.fromList
                         [
-                            (KP.IDENTIFIER "var1",         VAR INT),
-                            (KP.IDENTIFIER "shadowed_var", VAR DOUBLE),
-                            (KP.IDENTIFIER "var2",         VAR INT)
+                            (KP.Identifier "var1",         Var Int),
+                            (KP.Identifier "shadowed_var", Var Double),
+                            (KP.Identifier "var2",         Var Int)
                         ]
                     )
-                    (DEF_CONTEXT HM.empty)
-                    (Just $ LOCAL_CONTEXT $ HM.fromList
+                    (DefContext HM.empty)
+                    (Just $ LocalContext $ HM.fromList
                         [
-                            (KP.IDENTIFIER "var3",         VAR INT),
-                            (KP.IDENTIFIER "shadowed_var", VAR BOOLEAN),
-                            (KP.IDENTIFIER "var4",         VAR INT)
+                            (KP.Identifier "var3",         Var Int),
+                            (KP.Identifier "shadowed_var", Var Boolean),
+                            (KP.Identifier "var4",         Var Int)
                         ]
                     )
             )
-            (KP.IDENTIFIER "shadowed_var")
+            (KP.Identifier "shadowed_var")
             ==
-            Just (VAR BOOLEAN)
+            Just (Var Boolean)

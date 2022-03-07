@@ -22,7 +22,7 @@ instance Show KoakException where
     show (KoakUnknownTokenException token)                = "Unknown token: "             ++ [token]
     show (KoakInvalidNumberException token)               = "Invalid number: "            ++ token
     show (KoakParserMissingToken at expected actual [])   = "At " ++ at ++ ", expected: " ++ expected ++ ". Got: " ++ actual ++ "."
-    show (KoakParserMissingToken at expected actual rest) = "At " ++ at ++ ", expected: " ++ expected ++ ". Got: " ++ actual ++ "." ++ rest
+    show (KoakParserMissingToken at expected actual rest) = "At " ++ at ++ ", expected: " ++ expected ++ ". Got: " ++ actual ++ ". " ++ rest
     show  KoakHelpException                               = usage
 
 instance Eq KoakException where
