@@ -9,26 +9,27 @@ module Exception     ( KoakException(..) ) where
 
 import GHC.Exception ( Exception )
 
-data KoakException = KoakArgumentParserException String
-                   | KoakHelpException
+data KoakException = KoakHelpException
+                   | KoakArgumentParserException String
                    | KoakUnknownTokenException Char
                    | KoakInvalidNumberException String
-                   | KoakParserMissingToken String String String String
+                   | KoakParserMissingTokenException String String String String
 
 instance Exception KoakException
 
 instance Show KoakException where
-    show (KoakArgumentParserException err)                = "Argument Parser Exception: " ++ err
-    show (KoakUnknownTokenException token)                = "Unknown token: "             ++ [token]
-    show (KoakInvalidNumberException token)               = "Invalid number: "            ++ token
-    show (KoakParserMissingToken at expected actual [])   = "At " ++ at ++ ", expected: " ++ expected ++ ". Got: " ++ actual ++ "."
-    show (KoakParserMissingToken at expected actual rest) = "At " ++ at ++ ", expected: " ++ expected ++ ". Got: " ++ actual ++ ". " ++ rest
-    show  KoakHelpException                               = usage
+    show  KoakHelpException                                        = usage
+    show (KoakArgumentParserException err)                         = "Argument Parser Exception: " ++ err
+    show (KoakUnknownTokenException token)                         = "Unknown token: "             ++ [token]
+    show (KoakInvalidNumberException token)                        = "Invalid number: "            ++ token
+    show (KoakParserMissingTokenException at expected actual [])   = "At " ++ at ++ ", expected: " ++ expected ++ ". Got: " ++ actual ++ "."
+    show (KoakParserMissingTokenException at expected actual rest) = "At " ++ at ++ ", expected: " ++ expected ++ ". Got: " ++ actual ++ ". " ++ rest
 
 instance Eq KoakException where
-    (KoakArgumentParserException left) == (KoakArgumentParserException right) = left == right
-    KoakHelpException                  == KoakHelpException                   = True
-    _                                  == _                                   = False
+    KoakHelpException                                             == KoakHelpException                                             = True
+    (KoakArgumentParserException left)                            == (KoakArgumentParserException right)                           = left == right
+    (KoakParserMissingTokenException lAt lExpected lActual lRest) == (KoakParserMissingTokenException rAt rExpected rActual rRest) = lAt == rAt && lExpected == rExpected && lActual == rActual && lRest == rRest
+    _                                                             == _                                                             = False
 
 usage :: String
 usage = "Usage: ./koak file\n"                     ++

@@ -34,7 +34,7 @@ module Koak.Parser        ( Stmt(..)
                           ) where
 
 import Control.Exception  ( throw )
-import Exception          ( KoakException( KoakParserMissingToken ) )
+import Exception          ( KoakException( KoakParserMissingTokenException ) )
 
 import Koak.Lexer as KL   ( Token(..)
                           , tokenizeKoak
@@ -137,7 +137,7 @@ parseTokenizedKoak :: [KL.Token] -> Stmt
 parseTokenizedKoak = parseStmt
 
 createParsingError :: String -> [KL.Token] -> Maybe KL.Token -> [KL.Token] -> KoakException
-createParsingError at expected actual rest = KoakParserMissingToken at (show expected) (show actual) (show rest)
+createParsingError at expected actual rest = KoakParserMissingTokenException at (show expected) (show actual) (show rest)
 
 parseStmt :: [KL.Token] -> Stmt
 parseStmt []     = Stmt []

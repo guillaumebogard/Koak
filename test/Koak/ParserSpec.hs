@@ -5,15 +5,18 @@
 -- Koak.LexerSpec
 --
 
-module Koak.ParserSpec  ( spec ) where
+module Koak.ParserSpec   ( spec ) where
 
+import Control.Exception ( evaluate )
 import Test.Hspec        ( Spec
                          , it
-                         , shouldBe
                          , shouldThrow
+                         , anyException
                          )
 
+import Exception         ( KoakException( KoakParserMissingTokenException ) )
 import Koak.Parser as KP
+import Koak.Lexer  as KL ( Token(..) )
 
 spec :: Spec
 spec = do
