@@ -9,20 +9,22 @@ module Koak.Lexer           ( Token(..)
                             , tokenizeKoak
                             ) where
 
-import Data.Char            ( isAlphaNum
-                            , isAlpha
+import Data.Char            ( isDigit
                             , isSpace
-                            , isDigit
                             )
 import Text.Read            ( readMaybe )
 import Control.Exception    ( throw )
 
-import Exception            ( KoakException(KoakUnknownTokenException, KoakInvalidNumberException) )
+import Exception            ( KoakException(KoakInvalidNumberException) )
+import Koak.Grammar.Utils   ( isAlphaWordChar
+                            , isAlphaNumWordChar
+                            , isSpecialWordChar
+                            )
 
 data Token  = Word String           -- 'if', 'def', 'foobar', 'i'
             | FloatingNumber Double -- '3.14159265', '.01'
             | IntegerNumber Int     -- '0', '0123456789'
-            | OpenParenthesis       -- '('
+            | OpenedParenthesis     -- '('
             | ClosedParenthesis     -- ')'
             | SemiColon             -- ';'
             | Colon                 -- ':'
@@ -31,7 +33,7 @@ data Token  = Word String           -- 'if', 'def', 'foobar', 'i'
 
 tokenizeKoak :: String -> [Token]
 tokenizeKoak []           = []
-tokenizeKoak ('(':xs)     = OpenParenthesis   : tokenizeKoak xs
+tokenizeKoak ('(':xs)     = OpenedParenthesis   : tokenizeKoak xs
 tokenizeKoak (')':xs)     = ClosedParenthesis : tokenizeKoak xs
 tokenizeKoak (';':xs)     = SemiColon         : tokenizeKoak xs
 tokenizeKoak (':':xs)     = Colon             : tokenizeKoak xs
@@ -43,18 +45,6 @@ tokenizeKoak line@(x:xs)
     | isDigit x           = let (token, leftover) = parseNumber line False  in token : tokenizeKoak leftover
     | otherwise           = let (token, leftover) = parseSpecialWord line   in token : tokenizeKoak leftover
 
-isSyntaxToken :: Char -> Bool
-isSyntaxToken c = c `elem` "();:,"
-
-isAlphaWordChar :: Char -> Bool
-isAlphaWordChar c = isAlpha c || c == '\'' || c == '_'
-
-isAlphaNumWordChar :: Char -> Bool
-isAlphaNumWordChar c = isAlphaNum c || c == '\'' || c == '_'
-
-isSpecialWordChar :: Char -> Bool
-isSpecialWordChar c = not (isAlphaNumWordChar c) && not (isSpace c) && not (isSyntaxToken c)
-
 parseAlphaWord :: String -> (Token, String)
 parseAlphaWord unparsed = let (parsed, rest) = span isAlphaNumWordChar unparsed in (Word parsed, rest)
 
@@ -62,7 +52,7 @@ parseSpecialWord :: String -> (Token, String)
 parseSpecialWord unparsed = let (parsed, rest) = span isSpecialWordChar unparsed in (Word parsed, rest)
 
 parseDot :: String -> (Token, String)
-parseDot line@(_:x2:xs)
+parseDot line@(_:x2:_)
     | isDigit x2        = parseNumber line True
     | otherwise         = parseSpecialWord line
 parseDot line           = parseSpecialWord line
