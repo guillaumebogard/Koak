@@ -22,41 +22,33 @@ import qualified Data.Ord
 spec :: Spec
 spec = do
     it "One simple def: def foo () : int 42;" $
-        parseKoak
-        [
-            KL.Word "def",
-            KL.Word "foo",
-            KL.OpenParenthesis,
-            KL.ClosedParenthesis,
-            KL.Colon,
-            KL.Word "int",
-            KL.IntegerNumber 42,
-            KL.SemiColon
-        ] == [
-                KP.KDEFS_DEFS
-                    (KP.DEFS
-                        (KP.PROTOTYPE
-                            (KP.IDENTIFIER "foo")
-                            (KP.PROTOTYPE_ARGS [] KP.INT)
-                        )
-                        (KP.EXPRESSIONS
-                            (KP.EXPRESSION
-                                (KP.UNARY_POSTFIX
-                                    (KP.POSTFIX
-                                        (KP.PRIMARY_LITERAL
-                                            (KP.LITERAL_DECIMAL
-                                                (KP.DECIMAL_CONST 42)
-                                            )
+        parseKoak "def foo () : int 42;"
+        == KP.Stmt [
+            KP.KdefDef
+                (KP.Defs
+                    (KP.PrototypeFunction
+                        (KP.Identifier "foo")
+                        (KP.PrototypeArgs [] KP.Int)
+                    )
+                    (KP.Expressions
+                        (KP.Expression
+                            (KP.UnaryPostfix
+                                (KP.Postfix
+                                    (KP.PrimaryLiteral
+                                        (KP.LiteralDecimal
+                                            (KP.DecimalConst 42)
                                         )
-                                        Nothing
                                     )
+                                    Nothing
                                 )
-                                []
                             )
                             []
                         )
+                        []
                     )
+                )
             ]
+{--
     it "One simple def w one arg: def foo (x : int) : int 42;" $
         parseKoak
         [
@@ -1353,3 +1345,4 @@ spec = do
                         )
                     )
             ]
+--}

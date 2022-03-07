@@ -42,68 +42,93 @@ import Koak.Lexer as KL   ( Token(..)
 import Koak.Grammar.Utils ( isSpecialWord )
 
 newtype Stmt   = Stmt [Kdefs]
+    deriving (Show, Eq)
 
 data Kdefs     = KdefDef        Defs
                | KdefExpression Expressions
+    deriving (Show, Eq)
 
 data Defs      = Defs Prototype Expressions
+    deriving (Show, Eq)
 
 data Prototype = PrototypeUnary               UnaryOp    PrototypeArgs
                | PrototypeBinary   Precedence BinaryOp   PrototypeArgs
                | PrototypeFunction            Identifier PrototypeArgs
+    deriving (Show, Eq)
 
 data PrototypeArgs       = PrototypeArgs [PrototypeIdentifier] Type
+    deriving (Show, Eq)
 
 data PrototypeIdentifier = PrototypeIdentifier Identifier Type
+    deriving (Show, Eq)
 
 data Type = Int
           | Double
           | Boolean
           | Void
+    deriving (Show, Eq)
 
 data Boolean = True
              | False
+    deriving (Show, Eq)
 
 data Expressions = ExpressionFor   For
                  | ExpressionIf    If
                  | ExpressionWhile While
                  | Expressions     Expression [Expression]
+    deriving (Show, Eq)
 
 data For         = For   Identifier Expression  Identifier Expression Expression Expressions
+    deriving (Show, Eq)
 
 data If          = If    Expression Expressions (Maybe Expressions)
+    deriving (Show, Eq)
 
 data While       = While Expression Expressions
+    deriving (Show, Eq)
 
 data Expression  = Expression Unary [(BinaryOp, Unary)]
+    deriving (Show, Eq)
 
 data Unary = Unary        UnaryOp Unary
            | UnaryPostfix Postfix
+    deriving (Show, Eq)
 
 data Postfix = Postfix Primary (Maybe CallExpression)
+    deriving (Show, Eq)
 
 newtype CallExpression = CallExpression (Maybe CallExpressionArgs)
+    deriving (Show, Eq)
 
 data CallExpressionArgs = CallExpressionArgs Expression [Expression]
+    deriving (Show, Eq)
 
 data Primary = PrimaryIdentifier  Identifier
              | PrimaryLiteral     Literal
              | PrimaryExpressions Expressions
+    deriving (Show, Eq)
 
 newtype Identifier   = Identifier   String
+    deriving (Show, Eq)
 
 newtype UnaryOp      = UnaryOp      Identifier
+    deriving (Show, Eq)
 
 newtype BinaryOp     = BinaryOp     Identifier
+    deriving (Show, Eq)
 
 newtype Precedence   = Precedence   Int
+    deriving (Show, Eq)
 
 newtype DecimalConst = DecimalConst Int
+    deriving (Show, Eq)
 
 newtype DoubleConst  = DoubleConst  Double
+    deriving (Show, Eq)
 
 data Literal = LiteralDecimal DecimalConst
              | LiteralDouble  DoubleConst
+    deriving (Show, Eq)
 
 parseKoak :: String -> Stmt
 parseKoak = parseTokenizedKoak . tokenizeKoak
@@ -157,10 +182,10 @@ parseUnaryOp (x:xs)          = throw $ createParsingError "parseUnaryOp" [KL.Wor
 
 parsePrototypeArgs :: [KL.Token] -> (PrototypeArgs, [KL.Token])
 parsePrototypeArgs []     = throw $ createParsingError "parsePrototypeArgs" [] Nothing []
-parsePrototypeArgs tokens = let rest                           = parsePrototypeArgsCheckOpenedParenthesis tokens in
-                            let (prototypeIdentifiers, rest' ) = parsePrototypeArgsList                   rest   in
-                            let (returnType          , rest'') = parsePrototypeArgsReturnType             rest'  in
-                            let rest'''                        = parsePrototypeArgsCheckClosedParenthesis rest'' in
+parsePrototypeArgs tokens = let rest                            = parsePrototypeArgsCheckOpenedParenthesis tokens  in
+                            let (prototypeIdentifiers, rest'  ) = parsePrototypeArgsList                   rest    in
+                            let rest''                          = parsePrototypeArgsCheckClosedParenthesis rest'   in
+                            let (returnType          , rest''') = parsePrototypeArgsReturnType             rest''  in
                             (PrototypeArgs prototypeIdentifiers returnType, rest''')
 
 parsePrototypeArgsCheckOpenedParenthesis :: [KL.Token] -> [KL.Token]
@@ -198,9 +223,9 @@ parseType (KL.Word "void":xs)   = (Void   , xs)
 parseType (x:xs)                = throw $ createParsingError "parseType" [KL.Word "int", KL.Word "double", KL.Word "bool", KL.Word "void"] (Just x) xs
 
 parsePrototypeArgsReturnType :: [KL.Token] -> (Type, [KL.Token])
-parsePrototypeArgsReturnType []            = throw $ createParsingError "parsePrototypeArgsType" [KL.Colon] Nothing []
+parsePrototypeArgsReturnType []            = throw $ createParsingError "parsePrototypeArgsReturnType" [KL.Colon] Nothing []
 parsePrototypeArgsReturnType (KL.Colon:xs) = parseType xs
-parsePrototypeArgsReturnType (x:xs)        = throw $ createParsingError "parsePrototypeArgsType" [KL.Colon] (Just x) xs
+parsePrototypeArgsReturnType (x:xs)        = throw $ createParsingError "parsePrototypeArgsReturnType" [KL.Colon] (Just x) xs
 
 parsePrototypeArgsCheckClosedParenthesis :: [KL.Token] -> [KL.Token]
 parsePrototypeArgsCheckClosedParenthesis []                        = throw $ createParsingError "parsePrototypeArgs" [] Nothing []
@@ -295,8 +320,7 @@ parseIfThen ifExpr (KL.Word "then":xs) = uncurry (parseIfThenMaybeElse ifExpr) $
 parseIfThen _      (x:xs)              = throw $ createParsingError "parseIf" [KL.Word "then"] (Just x) xs
 
 parseIfThenMaybeElse :: Expression -> Expressions -> [KL.Token] -> (If, [Token])
-parseIfThenMaybeElse ifExpr thenExprs (KL.Word "else":xs) = let (elseExprs, rest) = parseExpressions xs in
-                                                            (If ifExpr thenExprs (Just elseExprs), rest)
+parseIfThenMaybeElse ifExpr thenExprs (KL.Word "else":xs) = let (elseExprs, rest) = parseExpressions xs in (If ifExpr thenExprs (Just elseExprs), rest)
 parseIfThenMaybeElse ifExpr thenExprs tokens              = (If ifExpr thenExprs Nothing         , tokens)
 
 parseWhile :: [KL.Token] -> (While, [KL.Token])
@@ -322,7 +346,7 @@ parseExpression' tokens@(KL.Word w:xs)
                                       let (binaryOpsUnaries, rest') = parseExpression' rest in
                                       ((BinaryOp $ Identifier w, unary) : binaryOpsUnaries, rest')
     | otherwise                     = ([], tokens)
-parseExpression' (x:xs)             = throw $ createParsingError "parseExpression" [Word "{expression}"] (Just x) xs
+parseExpression' tokens             = ([], tokens)
 
 parseExpressionList :: [KL.Token] -> ([Expression], [KL.Token])
 parseExpressionList (Colon:xs) = let (first, rest ) = parseExpression     xs   in
@@ -331,11 +355,11 @@ parseExpressionList (Colon:xs) = let (first, rest ) = parseExpression     xs   i
 parseExpressionList tokens     = ([], tokens)
 
 parseUnary :: [KL.Token] -> (Unary, [KL.Token])
-parseUnary []                 = throw $ createParsingError "parseUnary" [] Nothing []
+parseUnary []                    = throw $ createParsingError "parseUnary" [] Nothing []
 parseUnary tokens@(KL.Word w:xs)
-  | isSpecialWord w           = let (unOp   , rest) = parseUnary   xs     in (Unary (UnaryOp $ Identifier w) unOp, rest)
-  | otherwise                 = let (postfix, rest) = parsePostfix tokens in (UnaryPostfix postfix               , rest)
-parseUnary (x:xs)             = throw $ createParsingError "parseUnary" [Word "{unary}"] (Just x) xs
+  | isSpecialWord w              = let (unOp   , rest) = parseUnary   xs     in (Unary (UnaryOp $ Identifier w) unOp, rest)
+  | otherwise                    = let (postfix, rest) = parsePostfix tokens in (UnaryPostfix postfix               , rest)
+parseUnary tokens                = let (postfix, rest) = parsePostfix tokens in (UnaryPostfix postfix               , rest)
 
 parsePostfix :: [KL.Token] -> (Postfix, [KL.Token])
 parsePostfix []     = throw $ createParsingError "parsePostfix" [] Nothing []
@@ -380,8 +404,8 @@ parsePrimary (KL.OpenedParenthesis:xs) = let (exprs, rest) = parseExpressions xs
 parsePrimary (x:xs)                    = throw $ createParsingError "parsePrimary" [KL.Word "{variable}", KL.IntegerNumber 0, KL.OpenedParenthesis] (Just x) xs
 
 parsePrimaryExpressions :: [KL.Token] -> Expressions -> (Primary, [KL.Token])
-parsePrimaryExpressions []                                             _     = throw $ createParsingError "parsePrimaryExpression" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing []
+parsePrimaryExpressions []                                             _     = throw $ createParsingError "parsePrimaryExpressions" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing []
 parsePrimaryExpressions (KL.OpenedParenthesis:KL.ClosedParenthesis:xs) exprs = (PrimaryExpressions exprs, xs)
-parsePrimaryExpressions (x                   :KL.ClosedParenthesis:xs) _     = throw $ createParsingError "parsePrimaryExpression" [KL.OpenedParenthesis] (Just x) xs
-parsePrimaryExpressions (KL.OpenedParenthesis:x                   :xs) _     = throw $ createParsingError "parsePrimaryExpression" [KL.ClosedParenthesis] (Just x) xs
-parsePrimaryExpressions tokens                                         _     = throw $ createParsingError "parsePrimaryExpression" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing tokens
+parsePrimaryExpressions (x                   :KL.ClosedParenthesis:xs) _     = throw $ createParsingError "parsePrimaryExpressions" [KL.OpenedParenthesis] (Just x) xs
+parsePrimaryExpressions (KL.OpenedParenthesis:x                   :xs) _     = throw $ createParsingError "parsePrimaryExpressions" [KL.ClosedParenthesis] (Just x) xs
+parsePrimaryExpressions tokens                                         _     = throw $ createParsingError "parsePrimaryExpressions" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing tokens
