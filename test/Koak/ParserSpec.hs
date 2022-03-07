@@ -7,14 +7,14 @@
 
 module Koak.ParserSpec  ( spec ) where
 
-import Test.Hspec       ( Spec
-                        , it
-                        , shouldBe
-                        , shouldThrow
-                        , anyException
-                        )
+import Test.Hspec        ( Spec
+                         , it
+                         , shouldBe
+                         , shouldThrow
+                         , anyException
+                         )
 
-import Koak.Lexer as KL ( Token(..) )
+import Koak.Lexer  as KL ( Token(..) )
 import Koak.Parser as KP
 
 import qualified Data.Ord
