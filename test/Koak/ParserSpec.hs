@@ -5,23 +5,23 @@
 -- Koak.LexerSpec
 --
 
-module Koak.ParserSpec   ( spec ) where
+module Koak.ParserSpec             ( spec ) where
 
-import Control.Exception ( evaluate )
-import Test.Hspec        ( Spec
-                         , it
-                         , shouldThrow
-                         , anyException
-                         )
+import Control.Exception           ( evaluate )
+import Test.Hspec                  ( Spec
+                                   , it
+                                   , shouldThrow
+                                   , anyException
+                                   )
 
-import Exception         ( KoakException( KoakParserMissingTokenException ) )
-import Koak.Parser as KP
-import Koak.Lexer  as KL ( Token(..) )
+import Exception                   ( KoakException( KoakParserMissingTokenException ) )
+import qualified Koak.Parser as KP
+import qualified Koak.Lexer  as KL ( Token(..) )
 
 spec :: Spec
 spec = do
     it "One simple def: def foo () : int 42;" $
-        parseKoak "def foo () : int 42;"
+        KP.parseKoak "def foo () : int 42;"
         == KP.Stmt [
             KP.KdefDef
                 (KP.Defs
@@ -48,7 +48,7 @@ spec = do
                 )
             ]
     it "One simple def w one arg: def foo (x : int) : int 42;" $
-        parseKoak "def foo (x : int) : int 42;"
+        KP.parseKoak "def foo (x : int) : int 42;"
         == KP.Stmt [
             KP.KdefDef
                 (KP.Defs
@@ -81,7 +81,7 @@ spec = do
                 )
             ]
     it "One simple def w many arg: def foo (x : int y : double z : void) : int 42;" $
-        parseKoak "def foo (x : int y : double z : void) : int 42;"
+        KP.parseKoak "def foo (x : int y : double z : void) : int 42;"
         == KP.Stmt [
             KP.KdefDef
                 (KP.Defs
@@ -120,7 +120,7 @@ spec = do
                 )
             ]
     it "Multiple simple def w args: def foo (x : int y : double z : void) : int 42; def bar(a : double) : double a;" $
-        parseKoak "def foo (x : int y : double z : void) : int 42; def bar(a : double) : double a;"
+        KP.parseKoak "def foo (x : int y : double z : void) : int 42; def bar(a : double) : double a;"
         == KP.Stmt [
             KP.KdefDef
                 (KP.Defs
@@ -186,7 +186,7 @@ spec = do
                 )
             ]
     it "Simple function call without args: foo();" $
-        parseKoak "foo();"
+        KP.parseKoak "foo();"
         == KP.Stmt [
             KP.KdefExpression
                 (KP.Expressions
@@ -207,7 +207,7 @@ spec = do
                 )
             ]
     it "Simple function call with one number as argument: foo(1);" $
-        parseKoak "foo(1);"
+        KP.parseKoak "foo(1);"
         == KP.Stmt [
             KP.KdefExpression
                 (KP.Expressions
@@ -243,7 +243,7 @@ spec = do
                 )
             ]
     it "Simple function call with one variable as argument: foo(my_var);" $
-        parseKoak "foo(my_var);"
+        KP.parseKoak "foo(my_var);"
         == KP.Stmt [
             KP.KdefExpression
                 (KP.Expressions
@@ -277,7 +277,7 @@ spec = do
                 )
             ]
     it "Simple function call with multiple primary arguments: foo(1, my_var, 3.14);" $
-        parseKoak "foo(1, my_var, 3.14);"
+        KP.parseKoak "foo(1, my_var, 3.14);"
         == KP.Stmt [
             KP.KdefExpression
                 (KP.Expressions
@@ -336,7 +336,7 @@ spec = do
                 )
             ]
     it "function call with multiple arguments and expressions: foo(-1 * 3, my_var, bar(1, -2.12), my_var_2 / 2);" $
-        parseKoak "foo(-1 * 3, my_var, bar(1, -2.12), my_var_2 / 2);"
+        KP.parseKoak "foo(-1 * 3, my_var, bar(1, -2.12), my_var_2 / 2);"
         == KP.Stmt [
             KP.KdefExpression
                 (KP.Expressions
@@ -472,7 +472,7 @@ spec = do
                 )
             ]
     it "Chained simple function call: foo(): bar(2): foobar(1, 2, 3.14);" $
-        parseKoak "foo(): bar(2): foobar(1, 2, 3.14);"
+        KP.parseKoak "foo(): bar(2): foobar(1, 2, 3.14);"
         == KP.Stmt [
                 KP.KdefExpression
                     (KP.Expressions
@@ -571,7 +571,7 @@ spec = do
                     )
         ]
     it "Simple def and simple call: def test ( x : double ) : double x + 2.0; test (5.0) - 2.0 * 3.0 + 1.0;" $
-        parseKoak "def test ( x : double ) : double x + 2.0; test (5.0) - 2.0 * 3.0 + 1.0;"
+        KP.parseKoak "def test ( x : double ) : double x + 2.0; test (5.0) - 2.0 * 3.0 + 1.0;"
         == KP.Stmt [
                 KP.KdefDef
                     (KP.Defs
@@ -693,7 +693,7 @@ spec = do
                     )
             ]
     it "Simple unary expression: -1;" $
-        parseKoak "-1;"
+        KP.parseKoak "-1;"
         == KP.Stmt [
             KP.KdefExpression
                 (KP.Expressions
@@ -719,7 +719,7 @@ spec = do
                 )
             ]
     it "Deep unary expression: - + + -1;" $
-        parseKoak "- + + -1;"
+        KP.parseKoak "- + + -1;"
         == KP.Stmt [
                 KP.KdefExpression
                     (KP.Expressions
@@ -760,7 +760,7 @@ spec = do
                     )
             ]
     it "Simple if: if a then b;" $
-        parseKoak "if a then b;"
+        KP.parseKoak "if a then b;"
         == KP.Stmt [
                 KP.KdefExpression
                     (KP.ExpressionIf
@@ -795,7 +795,7 @@ spec = do
                     )
             ]
     it "Simple if else: if a then b else c;" $
-        parseKoak "if a then b else c;"
+        KP.parseKoak "if a then b else c;"
         == KP.Stmt [
                 KP.KdefExpression
                     (KP.ExpressionIf
@@ -843,7 +843,7 @@ spec = do
                     )
             ]
     it "Simple while: while a do b;" $
-        parseKoak "while a do b;"
+        KP.parseKoak "while a do b;"
         == KP.Stmt [
                 KP.KdefExpression
                     (KP.ExpressionWhile
@@ -877,7 +877,7 @@ spec = do
                     )
             ]
     it "real world while: len = 99 : i = 0 : (while i < len do print(i) : i = i + 1) : print(i);" $
-        parseKoak "len = 99 : i = 0 : (while i < len do print(i) : i = i + 1) : print(i);"
+        KP.parseKoak "len = 99 : i = 0 : (while i < len do print(i) : i = i + 1) : print(i);"
         == KP.Stmt [
                 KP.KdefExpression
                     (KP.Expressions
@@ -1067,81 +1067,109 @@ spec = do
                     )
             ]
     it "Simple for: for i = 1, i < n, 1 in print(42);" $
-        parseKoak "for i = 1, i < n, 1 in print(42);"
+        KP.parseKoak "for i = 1, i < n, 1 in print(42);"
         == KP.Stmt [
-                KP.KdefExpression
-                    (KP.ExpressionFor
-                        (KP.For
-                            (KP.Identifier "i")
-                            (KP.Expression
-                                (KP.UnaryPostfix
-                                    (KP.Postfix
-                                        (KP.PrimaryLiteral
-                                            (KP.LiteralDecimal
-                                                (KP.DecimalConst 1)
-                                            )
-                                        )
-                                        Nothing
+            KP.KdefExpression
+                (KP.ExpressionFor
+                    (KP.For
+                        (KP.Expression
+                            (KP.UnaryPostfix
+                                (KP.Postfix
+                                    (KP.PrimaryIdentifier
+                                        (KP.Identifier "i")
                                     )
+                                    Nothing
                                 )
-                                []
                             )
-                            (KP.Identifier "i")
+                            [
+                                (
+                                    KP.BinaryOp
+                                        (KP.Identifier "=")
+                                ,
+                                    KP.UnaryPostfix
+                                        (KP.Postfix
+                                            (KP.PrimaryLiteral
+                                                (KP.LiteralDecimal
+                                                    (KP.DecimalConst 1)
+                                                )
+                                            )
+                                            Nothing
+                                        )
+                                )
+                            ]
+                        )
+                        (KP.Expression
+                            (KP.UnaryPostfix
+                                (KP.Postfix
+                                    (KP.PrimaryIdentifier
+                                        (KP.Identifier "i")
+                                    )
+                                    Nothing
+                                )
+                            )
+                            [
+                                (
+                                    KP.BinaryOp
+                                        (KP.Identifier "<")
+                                ,
+                                    KP.UnaryPostfix
+                                        (KP.Postfix
+                                            (KP.PrimaryIdentifier
+                                                (KP.Identifier "n")
+                                            )
+                                            Nothing
+                                        )
+                                )
+                            ]
+                        )
+                        (KP.Expression
+                            (KP.UnaryPostfix
+                                (KP.Postfix
+                                    (KP.PrimaryLiteral
+                                        (KP.LiteralDecimal
+                                            (KP.DecimalConst 1)
+                                        )
+                                    )
+                                    Nothing
+                                )
+                            )
+                            []
+                        )
+                        (KP.Expressions
                             (KP.Expression
                                 (KP.UnaryPostfix
                                     (KP.Postfix
                                         (KP.PrimaryIdentifier
-                                            (KP.Identifier "n")
+                                            (KP.Identifier "print")
                                         )
-                                        Nothing
-                                    )
-                                )
-                                []
-                            )
-                            (KP.Expression
-                                (KP.UnaryPostfix
-                                    (KP.Postfix
-                                        (KP.PrimaryLiteral
-                                            (KP.LiteralDecimal
-                                                (KP.DecimalConst 1)
-                                            )
-                                        )
-                                        Nothing
-                                    )
-                                )
-                                []
-                            )
-                            (KP.Expressions
-                                (KP.Expression
-                                    (KP.UnaryPostfix
-                                        (KP.Postfix
-                                            (KP.PrimaryIdentifier
-                                                (KP.Identifier "print")
-                                            )
-                                            (Just $ KP.CallExpression
-                                                (Just $ KP.CallExpressionArgs
-                                                    (KP.Expression
-                                                        (KP.UnaryPostfix
-                                                            (KP.Postfix
-                                                                (KP.PrimaryLiteral
-                                                                    (KP.LiteralDecimal
-                                                                        (KP.DecimalConst 42)
+                                        (Just
+                                            (KP.CallExpression
+                                                (Just
+                                                    (KP.CallExpressionArgs
+                                                        (KP.Expression
+                                                            (KP.UnaryPostfix
+                                                                (KP.Postfix
+                                                                    (KP.PrimaryLiteral
+                                                                        (KP.LiteralDecimal
+                                                                            (KP.DecimalConst 42)
+                                                                        )
                                                                     )
+                                                                    Nothing
                                                                 )
-                                                                Nothing
                                                             )
+                                                            []
                                                         )
                                                         []
                                                     )
-                                                    []
                                                 )
                                             )
                                         )
                                     )
-                                    []
                                 )
                                 []
                             )
+                            []
                         )
                     )
+                )
             ]
