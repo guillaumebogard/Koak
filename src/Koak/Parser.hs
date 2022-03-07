@@ -311,27 +311,27 @@ parseFor'''''' assignId assignExpr cmpId cmpExpr incExpr expressions tokens = (F
 
 parseIf :: [KL.Token] -> (If, [KL.Token])
 parseIf []                = throw $ createParsingError "parseIf" [KL.Word "if"] Nothing []
-parseIf (KL.Word "if":xs) = uncurry parseIfThen $ parseExpression xs
+parseIf (KL.Word "if":xs) = uncurry parseIf' $ parseExpression xs
 parseIf (x:xs)            = throw $ createParsingError "parseIf" [KL.Word "if"] (Just x) xs
 
-parseIfThen :: Expression -> [KL.Token] -> (If, [Token])
-parseIfThen _      []                  = throw $ createParsingError "parseIf" [KL.Word "then"] Nothing []
-parseIfThen ifExpr (KL.Word "then":xs) = uncurry (parseIfThenMaybeElse ifExpr) $ parseExpressions xs
-parseIfThen _      (x:xs)              = throw $ createParsingError "parseIf" [KL.Word "then"] (Just x) xs
+parseIf' :: Expression -> [KL.Token] -> (If, [Token])
+parseIf' _      []                  = throw $ createParsingError "parseIf" [KL.Word "then"] Nothing []
+parseIf' ifExpr (KL.Word "then":xs) = uncurry (parseIf'' ifExpr) $ parseExpressions xs
+parseIf' _      (x:xs)              = throw $ createParsingError "parseIf" [KL.Word "then"] (Just x) xs
 
-parseIfThenMaybeElse :: Expression -> Expressions -> [KL.Token] -> (If, [Token])
-parseIfThenMaybeElse ifExpr thenExprs (KL.Word "else":xs) = let (elseExprs, rest) = parseExpressions xs in (If ifExpr thenExprs (Just elseExprs), rest)
-parseIfThenMaybeElse ifExpr thenExprs tokens              = (If ifExpr thenExprs Nothing         , tokens)
+parseIf'' :: Expression -> Expressions -> [KL.Token] -> (If, [Token])
+parseIf'' ifExpr thenExprs (KL.Word "else":xs) = let (elseExprs, rest) = parseExpressions xs in (If ifExpr thenExprs (Just elseExprs), rest)
+parseIf'' ifExpr thenExprs tokens              = (If ifExpr thenExprs Nothing         , tokens)
 
 parseWhile :: [KL.Token] -> (While, [KL.Token])
 parseWhile []                   = throw $ createParsingError "parseWhile" [KL.Word "while"] Nothing []
-parseWhile (KL.Word "while":xs) = uncurry parseWhileDo $ parseExpression xs
+parseWhile (KL.Word "while":xs) = uncurry parseWhile' $ parseExpression xs
 parseWhile (x:xs)               = throw $ createParsingError "parseWhile" [KL.Word "while"] (Just x) xs
 
-parseWhileDo :: Expression -> [KL.Token] -> (While, [KL.Token])
-parseWhileDo _         []                = throw $ createParsingError "parseWhile" [KL.Word "do"] Nothing []
-parseWhileDo whileExpr (KL.Word "do":xs) = let (doExprs, rest) = parseExpressions xs in (While whileExpr doExprs, rest)
-parseWhileDo _         (x:xs)            = throw $ createParsingError "parseWhile" [KL.Word "do"] (Just x) xs
+parseWhile' :: Expression -> [KL.Token] -> (While, [KL.Token])
+parseWhile' _         []                = throw $ createParsingError "parseWhile" [KL.Word "do"] Nothing []
+parseWhile' whileExpr (KL.Word "do":xs) = let (doExprs, rest) = parseExpressions xs in (While whileExpr doExprs, rest)
+parseWhile' _         (x:xs)            = throw $ createParsingError "parseWhile" [KL.Word "do"] (Just x) xs
 
 parseExpression :: [KL.Token] -> (Expression, [KL.Token])
 parseExpression []     = throw $ createParsingError "parseExpression" [] Nothing []
