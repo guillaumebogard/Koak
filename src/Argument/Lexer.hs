@@ -18,5 +18,5 @@ tokenizeArguments []            = []
 tokenizeArguments ("-h":xs)     = Help : tokenizeArguments xs
 tokenizeArguments ("--help":xs) = Help : tokenizeArguments xs
 tokenizeArguments (x:xs)
-    | head x == '-' = UnknownOption x : tokenizeArguments xs
-    | otherwise     = Filepath x      : tokenizeArguments xs
+    | head x == '-'             = UnknownOption x : tokenizeArguments xs
+    | otherwise                 = Filepath x      : tokenizeArguments xs
