@@ -5,41 +5,41 @@
 -- Koak.Parser
 --
 
-module Koak.Parser        ( Stmt(..)
-                          , Kdefs(..)
-                          , Defs(..)
-                          , Prototype(..)
-                          , PrototypeArgs(..)
-                          , PrototypeIdentifier(..)
-                          , Type(..)
-                          , Boolean(..)
-                          , Expressions(..)
-                          , For(..)
-                          , If(..)
-                          , While(..)
-                          , Expression(..)
-                          , Unary(..)
-                          , Postfix(..)
-                          , CallExpression(..)
-                          , CallExpressionArgs(..)
-                          , Primary(..)
-                          , Identifier(..)
-                          , UnaryOp(..)
-                          , BinaryOp(..)
-                          , Precedence(..)
-                          , DecimalConst(..)
-                          , DoubleConst(..)
-                          , Literal(..)
-                          , parseKoak
-                          ) where
+module Koak.Parser                  ( Stmt(..)
+                                    , Kdefs(..)
+                                    , Defs(..)
+                                    , Prototype(..)
+                                    , PrototypeArgs(..)
+                                    , PrototypeIdentifier(..)
+                                    , Type(..)
+                                    , Boolean(..)
+                                    , Expressions(..)
+                                    , For(..)
+                                    , If(..)
+                                    , While(..)
+                                    , Expression(..)
+                                    , Unary(..)
+                                    , Postfix(..)
+                                    , CallExpression(..)
+                                    , CallExpressionArgs(..)
+                                    , Primary(..)
+                                    , Identifier(..)
+                                    , UnaryOp(..)
+                                    , BinaryOp(..)
+                                    , Precedence(..)
+                                    , DecimalConst(..)
+                                    , DoubleConst(..)
+                                    , Literal(..)
+                                    , parseKoak
+                                    ) where
 
-import Control.Exception  ( throw )
-import Exception          ( KoakException( KoakParserMissingToken ) )
+import Control.Exception            ( throw )
+import Exception                    ( KoakException( KoakParserMissingToken ) )
 
-import Koak.Lexer as KL   ( Token(..)
-                          , tokenizeKoak
-                          )
-import Koak.Grammar.Utils ( isSpecialWord )
+import qualified Koak.Lexer as KL   ( Token(..)
+                                    , tokenizeKoak
+                                    )
+import Koak.Grammar.Utils           ( isSpecialWord )
 
 newtype Stmt   = Stmt [Kdefs]
     deriving (Show, Eq)
@@ -131,7 +131,7 @@ data Literal = LiteralDecimal DecimalConst
     deriving (Show, Eq)
 
 parseKoak :: String -> Stmt
-parseKoak = parseTokenizedKoak . tokenizeKoak
+parseKoak = parseTokenizedKoak . KL.tokenizeKoak
 
 parseTokenizedKoak :: [KL.Token] -> Stmt
 parseTokenizedKoak = parseStmt
@@ -205,9 +205,9 @@ parsePrototypeIdentifier []     = throw $ createParsingError "parsePrototypeIden
 parsePrototypeIdentifier tokens = let (identifier, rest) = parseIdentifier tokens in parsePrototypeIdentifier' rest identifier
 
 parsePrototypeIdentifier' :: [KL.Token] -> Identifier -> (PrototypeIdentifier, [KL.Token])
-parsePrototypeIdentifier' []         _          = throw $ createParsingError "parsePrototypeIdentifier" [Colon] Nothing []
-parsePrototypeIdentifier' (Colon:xs) identifier = let (prototypeType, rest) = parseType xs in (PrototypeIdentifier identifier prototypeType, rest)
-parsePrototypeIdentifier' (x:xs)     _          = throw $ createParsingError "parsePrototypeIdentifier" [Colon] (Just x) xs
+parsePrototypeIdentifier' []         _             = throw $ createParsingError "parsePrototypeIdentifier" [KL.Colon] Nothing []
+parsePrototypeIdentifier' (KL.Colon:xs) identifier = let (prototypeType, rest) = parseType xs in (PrototypeIdentifier identifier prototypeType, rest)
+parsePrototypeIdentifier' (x:xs)     _             = throw $ createParsingError "parsePrototypeIdentifier" [KL.Colon] (Just x) xs
 
 parseIdentifier :: [KL.Token] -> (Identifier, [KL.Token])
 parseIdentifier []                      = throw $ createParsingError "parseIdentifier" [KL.Word "{any}"] Nothing []
@@ -244,8 +244,8 @@ parsePrototypeBinary' Nothing           binaryOp prototypeArgs tokens = (Prototy
 parsePrototypeBinary' (Just precedence) binaryOp prototypeArgs tokens = (PrototypeBinary precedence binaryOp prototypeArgs, tokens)
 
 parseMaybePrecedence :: [KL.Token] -> (Maybe Precedence, [KL.Token])
-parseMaybePrecedence (IntegerNumber value:xs) = (Just $ Precedence value, xs)
-parseMaybePrecedence tokens                   = (Nothing, tokens)
+parseMaybePrecedence (KL.IntegerNumber value:xs) = (Just $ Precedence value, xs)
+parseMaybePrecedence tokens                      = (Nothing, tokens)
 
 parseBinaryOp :: [KL.Token] -> (BinaryOp, [KL.Token])
 parseBinaryOp []              = throw $ createParsingError "parseBinaryOp" [KL.Word "{any}"] Nothing []
@@ -314,12 +314,12 @@ parseIf []                = throw $ createParsingError "parseIf" [KL.Word "if"] 
 parseIf (KL.Word "if":xs) = uncurry parseIf' $ parseExpression xs
 parseIf (x:xs)            = throw $ createParsingError "parseIf" [KL.Word "if"] (Just x) xs
 
-parseIf' :: Expression -> [KL.Token] -> (If, [Token])
+parseIf' :: Expression -> [KL.Token] -> (If, [KL.Token])
 parseIf' _      []                  = throw $ createParsingError "parseIf" [KL.Word "then"] Nothing []
 parseIf' ifExpr (KL.Word "then":xs) = uncurry (parseIf'' ifExpr) $ parseExpressions xs
 parseIf' _      (x:xs)              = throw $ createParsingError "parseIf" [KL.Word "then"] (Just x) xs
 
-parseIf'' :: Expression -> Expressions -> [KL.Token] -> (If, [Token])
+parseIf'' :: Expression -> Expressions -> [KL.Token] -> (If, [KL.Token])
 parseIf'' ifExpr thenExprs (KL.Word "else":xs) = let (elseExprs, rest) = parseExpressions xs in (If ifExpr thenExprs (Just elseExprs), rest)
 parseIf'' ifExpr thenExprs tokens              = (If ifExpr thenExprs Nothing         , tokens)
 
@@ -349,10 +349,10 @@ parseExpression' tokens@(KL.Word w:xs)
 parseExpression' tokens             = ([], tokens)
 
 parseExpressionList :: [KL.Token] -> ([Expression], [KL.Token])
-parseExpressionList (Colon:xs) = let (first, rest ) = parseExpression     xs   in
-                                 let (next , rest') = parseExpressionList rest in
-                                 (first : next, rest')
-parseExpressionList tokens     = ([], tokens)
+parseExpressionList (KL.Colon:xs) = let (first, rest ) = parseExpression     xs   in
+                                    let (next , rest') = parseExpressionList rest in
+                                    (first : next, rest')
+parseExpressionList tokens        = ([], tokens)
 
 parseUnary :: [KL.Token] -> (Unary, [KL.Token])
 parseUnary []                    = throw $ createParsingError "parseUnary" [] Nothing []
