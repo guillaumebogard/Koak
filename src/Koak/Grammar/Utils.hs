@@ -41,10 +41,10 @@ isAlphaNumWordChar :: Char -> Bool
 isAlphaNumWordChar c = isAlphaNum c || c == '\'' || c == '_'
 
 isAlphaNumWord :: String -> Bool
-isAlphaNumWord = all isAlphaWordChar
+isAlphaNumWord = all isAlphaNumWordChar
 
 isSpecialWordChar :: Char -> Bool
 isSpecialWordChar c = not (isAlphaNumWordChar c) && not (isSpace c) && not (isSyntaxToken c)
 
 isSpecialWord :: String -> Bool
-isSpecialWord = all isAlphaWordChar
+isSpecialWord = all isSpecialWordChar
