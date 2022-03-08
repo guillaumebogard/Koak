@@ -100,12 +100,12 @@ buildExpressionTree' context (bin:(Un un):xs) tree              = buildExpressio
 buildExpressionTree' _       _                _                 = error ""
 
 convertExpressionToList :: Kcontext -> KP.Expression -> [UnitExpression]
-convertExpressionToList context (KP.Expression unary [])                          = [Un unary] 
+convertExpressionToList context (KP.Expression unary [])                          = [Un unary]
 convertExpressionToList context expr@(KP.Expression first ((binop, second) : xs)) = Un first : convertExpressionToList' context expr
 
 convertExpressionToList' :: Kcontext -> KP.Expression -> [UnitExpression]
-convertExpressionToList' context (KP.Expression _ [])                     = [] 
-convertExpressionToList' context (KP.Expression _ ((binop, second) : xs)) = 
+convertExpressionToList' context (KP.Expression _ [])                     = []
+convertExpressionToList' context (KP.Expression _ ((binop, second) : xs)) =
     Bin binop : Un second : convertExpressionToList' context (KP.Expression second xs)
 
 placeTokenInTree :: Kcontext -> BinaryTreeExpression -> UnitExpression -> BinaryTreeExpression -> BinaryTreeExpression
@@ -165,20 +165,68 @@ checkPartialExpressionType kdefs first op second = ()
 
 
 evaluateUnaryTyping :: Kcontext -> KP.Unary -> EvaluationResult
-evaluateUnaryTyping context (KP.Unary op unary) = let found = kContextFind context (KP.Identifier "remplacer op") in
-                                                  let next  = evaluateUnaryTyping context unary                   in
-                                                        case found of
-                                                            Nothing                               -> throw $ UnknownDefinition (KP.Identifier "remplacer op")
-                                                            (Just (PrimitiveFunction func_list)) -> evaluateUnaryTyping' context next func_list
-                                                            (Just (Function func))                -> evaluateUnaryTyping' context next [func]
-                                                            (Just _)                              -> throw $ NotAUnaryFunction (KP.Identifier "remplacer op")
-evaluateUnaryTyping context _ = EvaluationResult Nil context
+evaluateUnaryTyping context (KP.Unary (KP.UnaryOp identifier) unary) =
+    let found = kContextFind context identifier     in
+    let next  = evaluateUnaryTyping context unary   in
+    EvaluationResult
+        (getFunctionReturnType $
+            findUnaryMatchingFunction
+                (getEvaluatedKcontext next)
+                identifier
+                (getEvaluatedType     next)
+        )
+        (getEvaluatedKcontext next)
+evaluateUnaryTyping context (KP.UnaryPostfix postfix) = evaluatePostfixTyping context postfix
 
-evaluateUnaryTyping' :: Kcontext -> EvaluationResult -> [FunctionTyping] -> EvaluationResult
-evaluateUnaryTyping' context right_res []                                 = throw $ MismatchedArgumentType (KP.Identifier "remplacer op") []
-evaluateUnaryTyping' context right_res (x:xs)
-    | isUnaryFunctionParamMatchingFunction x (getEvaluatedType right_res) = EvaluationResult (getFunctionReturnType x) context
-    | otherwise                                                           = evaluateUnaryTyping' context right_res xs
+findUnaryMatchingFunction :: Kcontext -> KP.Identifier -> BaseType -> FunctionTyping
+findUnaryMatchingFunction context func_name arg_type = findUnaryMatchingFunction' func_name arg_type (kContextFind context func_name)
+
+findUnaryMatchingFunction' :: KP.Identifier -> BaseType -> Maybe TypeSignature -> FunctionTyping
+findUnaryMatchingFunction' func_name _        Nothing                              = throw $ UnknownDefinition func_name
+findUnaryMatchingFunction' func_name arg_type (Just (PrimitiveFunction func_list)) =
+    let found = find (isUnaryFunctionParamMatchingFunction arg_type) func_list
+    in case found of
+    Nothing              -> throw $ MismatchedArgumentType func_name [baseTypeToType arg_type]
+    (Just matching_func) -> matching_func
+findUnaryMatchingFunction' func_name arg_type (Just (Function func))
+    | isUnaryFunctionParamMatchingFunction arg_type func                           = func
+    | otherwise                                                                    = throw $ MismatchedArgumentType func_name [baseTypeToType arg_type] 
+findUnaryMatchingFunction' func_name _        (Just _)                             = throw $ NotAUnaryFunction func_name
+
+evaluatePostfixTyping :: Kcontext -> KP.Postfix -> EvaluationResult
+evaluatePostfixTyping context (KP.Postfix (KP.PrimaryLiteral    (KP.LiteralDecimal _)) Nothing)          = EvaluationResult Int    context
+evaluatePostfixTyping context (KP.Postfix (KP.PrimaryLiteral    (KP.LiteralDouble  _)) Nothing)          = EvaluationResult Double context
+evaluatePostfixTyping context (KP.Postfix (KP.PrimaryIdentifier identifier           ) Nothing)          = evaluatePostfixTypingVar   context identifier
+evaluatePostfixTyping context (KP.Postfix (KP.PrimaryIdentifier identifier           ) (Just call_expr)) = evaluateFunctionCallTyping context identifier call_expr
+evaluatePostfixTyping context (KP.Postfix (KP.PrimaryExpressions expressions         ) Nothing)          = evaluateExpressionsTyping  context expressions
+evaluatePostfixTyping context _ = error ""
+
+evaluatePostfixTypingVar :: Kcontext -> KP.Identifier -> EvaluationResult
+evaluatePostfixTypingVar context identifier = evaluatePostfixTypingVar' context identifier $ kContextFind context identifier
+
+evaluatePostfixTypingVar' :: Kcontext -> KP.Identifier -> Maybe TypeSignature -> EvaluationResult
+evaluatePostfixTypingVar' context identifier Nothing               = throw $ UnknownDefinition identifier
+evaluatePostfixTypingVar' context identifier (Just (Var var_type)) = EvaluationResult var_type context
+evaluatePostfixTypingVar' context identifier (Just _             ) = throw $ NotAVar identifier
+
+evaluateFunctionCallTyping :: Kcontext -> KP.Identifier -> KP.CallExpression -> EvaluationResult
+evaluateFunctionCallTyping context identifier (KP.CallExpression Nothing)                                 = evaluateFunctionCallTyping' context identifier []
+evaluateFunctionCallTyping context identifier (KP.CallExpression (Just (KP.CallExpressionArgs arg args))) = EvaluationResult Nil context
+
+evaluateFunctionCallTyping' :: Kcontext -> KP.Identifier -> [BaseType] -> EvaluationResult
+evaluateFunctionCallTyping' context identifier args = evaluateFunctionCallTyping'' context identifier args (kContextFind context identifier)
+
+evaluateFunctionCallTyping'' :: Kcontext -> KP.Identifier -> [BaseType] -> Maybe TypeSignature -> EvaluationResult
+evaluateFunctionCallTyping'' context identifier args Nothing             = error ""
+evaluateFunctionCallTyping'' context identifier args (Just (Function _)) = error ""
+evaluateFunctionCallTyping'' context identifier args (Just _)            = error ""
+
+
+-- evaluateUnaryTyping' :: Kcontext -> EvaluationResult -> [FunctionTyping] -> EvaluationResult
+-- evaluateUnaryTyping' context right_res []                                 = throw $ MismatchedArgumentType (KP.Identifier "remplacer op") []
+-- evaluateUnaryTyping' context right_res (x:xs)
+--     | isUnaryFunctionParamMatchingFunction x (getEvaluatedType right_res) = EvaluationResult (getFunctionReturnType x) context
+--     | otherwise                                                           = evaluateUnaryTyping' context right_res xs
 
 
 --     | getUnopType context op == evaluateUnaryType context unary       = evaluateUnaryType context unary

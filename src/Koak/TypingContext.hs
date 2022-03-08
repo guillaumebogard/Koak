@@ -212,19 +212,19 @@ localContextFind (LocalContext c) i = HM.lookup i c
 contextPushItem :: KP.Identifier -> TypeSignature -> Context -> Context
 contextPushItem = insert
 
-isUnaryFunctionParamMatchingFunction :: FunctionTyping -> BaseType -> Bool
-isUnaryFunctionParamMatchingFunction (UnaryFunctionTyping arg1 return_type) arg1'
-                                         = arg1 == arg1'
+isUnaryFunctionParamMatchingFunction :: BaseType -> FunctionTyping -> Bool
+isUnaryFunctionParamMatchingFunction arg1 (UnaryFunctionTyping func_arg1 return_type)
+                                         = arg1 == func_arg1
 isUnaryFunctionParamMatchingFunction _ _ = False 
 
-isBinaryFunctionParamMatchingFunction :: FunctionTyping -> BaseType -> BaseType -> Bool
-isBinaryFunctionParamMatchingFunction (BinaryFunctionTyping _ arg1 arg2 return_type) arg1' arg2'
-                                            = arg1 == arg1' && arg2 == arg2'
+isBinaryFunctionParamMatchingFunction :: BaseType -> BaseType -> FunctionTyping -> Bool
+isBinaryFunctionParamMatchingFunction arg1 arg2 (BinaryFunctionTyping _ func_arg1 func_arg2 return_type)
+                                            = arg1 == func_arg1 && arg2 == func_arg2
 isBinaryFunctionParamMatchingFunction _ _ _ = False
 
-isFunctionParamMatchingFunction :: FunctionTyping -> [BaseType] -> Bool
-isFunctionParamMatchingFunction (FunctionTyping args return_type) args'
-                                    = args == args'
+isFunctionParamMatchingFunction :: [BaseType] -> FunctionTyping -> Bool
+isFunctionParamMatchingFunction args (FunctionTyping func_args return_type)
+                                    = args == func_args
 isFunctionParamMatchingFunction _ _ = False
 
 getFunctionReturnType :: FunctionTyping -> BaseType
