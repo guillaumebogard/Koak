@@ -11,10 +11,8 @@ import Control.Exception           ( evaluate )
 import Test.Hspec                  ( Spec
                                    , it
                                    , shouldThrow
-                                   , anyException
                                    )
 
-import Exception                   ( KoakException( KoakParserMissingTokenException ) )
 import qualified Koak.Parser as KP
 import qualified Koak.Lexer  as KL ( Token(..) )
 
@@ -58,7 +56,7 @@ spec = do
                             [
                                 KP.PrototypeIdentifier
                                     (KP.Identifier "x")
-                                    (KP.Int)
+                                    KP.Int
                             ]
                             KP.Int)
                     )

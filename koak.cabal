@@ -19,10 +19,13 @@ library
   exposed-modules:
       Argument.Lexer
       Argument.Parser
+      Argument.Parser.Exception
       Exception
       Koak.Grammar.Utils
       Koak.Lexer
+      Koak.Lexer.Exception
       Koak.Parser
+      Koak.Parser.Exception
   other-modules:
       Paths_koak
   hs-source-dirs:

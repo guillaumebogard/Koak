@@ -12,10 +12,9 @@ module Koak.Lexer           ( Token(..)
 import Data.Char            ( isDigit
                             , isSpace
                             )
-import Text.Read            ( readMaybe )
 import Control.Exception    ( throw )
 
-import Exception            ( KoakException(KoakInvalidNumberException) )
+import Koak.Lexer.Exception ( KoakLexerException( KoakLexerInvalidNumberException ) )
 import Koak.Grammar.Utils   ( isAlphaWordChar
                             , isAlphaNumWordChar
                             , isSpecialWordChar
@@ -32,53 +31,54 @@ data Token  = Word String           -- 'if', 'def', 'foobar', 'i'
             deriving (Show, Eq)
 
 tokenizeKoak :: String -> [Token]
-tokenizeKoak []           = []
-tokenizeKoak ('(':xs)     = OpenedParenthesis   : tokenizeKoak xs
-tokenizeKoak (')':xs)     = ClosedParenthesis : tokenizeKoak xs
-tokenizeKoak (';':xs)     = SemiColon         : tokenizeKoak xs
-tokenizeKoak (':':xs)     = Colon             : tokenizeKoak xs
-tokenizeKoak (',':xs)     = Comma             : tokenizeKoak xs
-tokenizeKoak line@('.':_) = let (token, leftover) = parseDot line in token : tokenizeKoak leftover
+tokenizeKoak      []       = []
+tokenizeKoak      ('(':xs) = OpenedParenthesis : tokenizeKoak xs
+tokenizeKoak      (')':xs) = ClosedParenthesis : tokenizeKoak xs
+tokenizeKoak      (';':xs) = SemiColon         : tokenizeKoak xs
+tokenizeKoak      (':':xs) = Colon             : tokenizeKoak xs
+tokenizeKoak      (',':xs) = Comma             : tokenizeKoak xs
+tokenizeKoak line@('.':_ ) = uncurry addToTokensAndContinueTokenize $ parseDot                     line
 tokenizeKoak line@(x:xs)
-    | isSpace x           = tokenizeKoak xs
-    | isAlphaWordChar x   = let (token, leftover) = parseAlphaWord line     in token : tokenizeKoak leftover
-    | isDigit x           = let (token, leftover) = parseNumber line False  in token : tokenizeKoak leftover
-    | otherwise           = let (token, leftover) = parseSpecialWord line   in token : tokenizeKoak leftover
+    | isSpace         x    = tokenizeKoak xs
+    | isDigit         x    = uncurry addToTokensAndContinueTokenize $ parseNumberStartingWithDigit line
+    | isAlphaWordChar x    = uncurry addToTokensAndContinueTokenize $ parseAlphaWord               line
+    | otherwise            = uncurry addToTokensAndContinueTokenize $ parseSpecialWord             line
+
+addToTokensAndContinueTokenize :: Token -> String -> [Token]
+addToTokensAndContinueTokenize token rest = token : tokenizeKoak rest
 
 parseAlphaWord :: String -> (Token, String)
-parseAlphaWord unparsed = let (parsed, rest) = span isAlphaNumWordChar unparsed in (Word parsed, rest)
+parseAlphaWord   unparsed = uncurry wrapParsedAroundWord $ span isAlphaNumWordChar unparsed
 
 parseSpecialWord :: String -> (Token, String)
-parseSpecialWord unparsed = let (parsed, rest) = span isSpecialWordChar unparsed in (Word parsed, rest)
+parseSpecialWord unparsed = uncurry wrapParsedAroundWord $ span isSpecialWordChar  unparsed
+
+wrapParsedAroundWord :: String -> String -> (Token, String)
+wrapParsedAroundWord parsed rest = (Word parsed, rest)
 
 parseDot :: String -> (Token, String)
-parseDot line@(_:x2:_)
-    | isDigit x2        = parseNumber line True
-    | otherwise         = parseSpecialWord line
-parseDot line           = parseSpecialWord line
+parseDot line@(_:lineWithoutDot@(x2:_))
+    | isDigit   x2 = parseNumberStartingWithDot lineWithoutDot
+    | otherwise    = parseSpecialWord           line
+parseDot line      = parseSpecialWord           line
 
-parseNumber :: String -> Bool -> (Token, String)
-parseNumber unparsed floating = parseNumber' $ parseNumber'' "" unparsed floating
+parseNumberStartingWithDot :: String -> (Token, String)
+parseNumberStartingWithDot = parseNumberStartingWithDot' . span isDigit
 
-parseNumber' :: (String, String, Bool) -> (Token, String)
-parseNumber' (parsed, rest, floating) = (refineNumber parsed floating, rest)
+parseNumberStartingWithDot' :: (String, String) -> (Token, String)
+parseNumberStartingWithDot'  (fractionalPart, rest) = parseNumberStartingWithDot'' ('.' : fractionalPart, rest)
 
-parseNumber'' :: String -> String -> Bool -> (String, String, Bool)
-parseNumber'' parsed []          floating = (reverse parsed, [], floating)
-parseNumber'' parsed ('.':rs)    _        = parseNumber'' ('.':parsed) rs True
-parseNumber'' parsed rest@(r:rs) floating
-    | isDigit r                           = parseNumber'' (r:parsed) rs floating
-    | otherwise                           = (reverse parsed, rest, floating)
+parseNumberStartingWithDot'' :: (String, String) -> (Token, String)
+parseNumberStartingWithDot'' (fractionalPart, rest) = (FloatingNumber $ read $ '0' : fractionalPart, rest)
 
-refineNumber :: String -> Bool -> Token
-refineNumber rawNumber@('.':_) _ = FloatingNumber $ refineFloatingNumber ('0':rawNumber) $ readMaybe $ '0':rawNumber
-refineNumber rawNumber False     = IntegerNumber  $ refineIntegerNumber  rawNumber       $ readMaybe       rawNumber
-refineNumber rawNumber True      = FloatingNumber $ refineFloatingNumber rawNumber       $ readMaybe       rawNumber
+parseNumberStartingWithDigit :: String -> (Token, String)
+parseNumberStartingWithDigit = parseNumberStartingWithDigit' . span isDigit
 
-refineIntegerNumber :: String -> Maybe Int -> Int
-refineIntegerNumber _               (Just x) = x
-refineIntegerNumber impureRawNumber Nothing  = throw $ KoakInvalidNumberException impureRawNumber
+parseNumberStartingWithDigit' :: (String, String) -> (Token, String)
+parseNumberStartingWithDigit' (dp, '.':fp@(x2:_))
+    | isDigit   x2                       = uncurry (parseNumberStartingWithDigit'' dp) $ span isDigit fp
+    | otherwise                          = throw $ KoakLexerInvalidNumberException $ dp ++ "."
+parseNumberStartingWithDigit' (dp, rest) = (IntegerNumber $ read dp, rest)
 
-refineFloatingNumber :: String -> Maybe Double -> Double
-refineFloatingNumber _               (Just x) = x
-refineFloatingNumber impureRawNumber Nothing  = throw $ KoakInvalidNumberException impureRawNumber
+parseNumberStartingWithDigit'' :: String -> String -> String -> (Token, String)
+parseNumberStartingWithDigit'' dp fp rest = (FloatingNumber $ read $ dp ++ '.' : fp, rest)
