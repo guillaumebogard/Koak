@@ -41,6 +41,10 @@ import Koak.Typing.Exception        ( KoakTypingException(..) )
 
 import Control.Exception            ( throw )
 
+import Data.Hashable                ( Hashable
+                                    , hashWithSalt
+                                    )
+
 import Data.HashMap.Strict  as HM   ( HashMap
                                     , fromList
                                     , empty
@@ -88,6 +92,35 @@ newtype LocalContext    = LocalContext  Context
 
 data Kcontext           = Kcontext GlobalContext DefContext (Maybe LocalContext)
     deriving (Eq, Show)
+
+
+instance Identify KP.Defs where
+    toIdentifier (KP.Defs (KP.PrototypeUnary      (KP.UnaryOp  i) _) _) = i
+    toIdentifier (KP.Defs (KP.PrototypeBinary   _ (KP.BinaryOp i) _) _) = i
+    toIdentifier (KP.Defs (KP.PrototypeFunction   i               _) _) = i
+
+instance Type KP.Defs where
+    toTypeSignature (KP.Defs   (KP.PrototypeUnary        _ (KP.PrototypeArgs [x]        return_type)) _) = Function $ UnaryFunctionTyping (prototypeIdToBaseType x) (typeToBaseType return_type)
+    toTypeSignature (KP.Defs p@(KP.PrototypeUnary        _ (KP.PrototypeArgs args       _          )) _) = throw    $ UnaryFunctionInvalidArgumentNumber p  (length args)
+    toTypeSignature (KP.Defs   (KP.PrototypeBinary   pre _ (KP.PrototypeArgs [x,y]      return_type)) _) = Function $ BinaryFunctionTyping pre (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
+    toTypeSignature (KP.Defs p@(KP.PrototypeBinary   _   _ (KP.PrototypeArgs args       _          )) _) = throw    $ BinaryFunctionInvalidArgumentNumber p (length args)
+    toTypeSignature (KP.Defs   (KP.PrototypeFunction _     (KP.PrototypeArgs args       return_type)) _) = Function $ FunctionTyping (map prototypeIdToBaseType args) (typeToBaseType return_type)
+
+instance Identify KP.UnaryOp where
+    toIdentifier (KP.UnaryOp i) = i
+
+instance Identify KP.BinaryOp where
+    toIdentifier (KP.BinaryOp i) = i
+
+instance Identify KP.VarAssignment where
+    toIdentifier (KP.VarAssignment i _) = i
+
+instance Type KP.VarAssignment where
+    toTypeSignature (KP.VarAssignment _ var_type) = Var $ typeToBaseType var_type
+
+instance Hashable KP.Identifier where
+    hashWithSalt salt (KP.Identifier string)   = salt `hashWithSalt` string
+
 
 getDefaultKContext :: Kcontext
 getDefaultKContext = Kcontext
@@ -178,30 +211,6 @@ localContextFind (LocalContext c) i = HM.lookup i c
 
 contextPushItem :: KP.Identifier -> TypeSignature -> Context -> Context
 contextPushItem = insert
-
-instance Identify KP.Defs where
-    toIdentifier (KP.Defs (KP.PrototypeUnary      (KP.UnaryOp  i) _) _) = i
-    toIdentifier (KP.Defs (KP.PrototypeBinary   _ (KP.BinaryOp i) _) _) = i
-    toIdentifier (KP.Defs (KP.PrototypeFunction   i               _) _) = i
-
-instance Type KP.Defs where
-    toTypeSignature (KP.Defs   (KP.PrototypeUnary        _ (KP.PrototypeArgs [x]        return_type)) _) = Function $ UnaryFunctionTyping (prototypeIdToBaseType x) (typeToBaseType return_type)
-    toTypeSignature (KP.Defs p@(KP.PrototypeUnary        _ (KP.PrototypeArgs args       _          )) _) = throw    $ UnaryFunctionInvalidArgumentNumber p  (length args)
-    toTypeSignature (KP.Defs   (KP.PrototypeBinary   pre _ (KP.PrototypeArgs [x,y]      return_type)) _) = Function $ BinaryFunctionTyping pre (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
-    toTypeSignature (KP.Defs p@(KP.PrototypeBinary   _   _ (KP.PrototypeArgs args       _          )) _) = throw    $ BinaryFunctionInvalidArgumentNumber p (length args)
-    toTypeSignature (KP.Defs   (KP.PrototypeFunction _     (KP.PrototypeArgs args       return_type)) _) = Function $ FunctionTyping (map prototypeIdToBaseType args) (typeToBaseType return_type)
-
-instance Identify KP.UnaryOp where
-    toIdentifier (KP.UnaryOp i) = i
-
-instance Identify KP.BinaryOp where
-    toIdentifier (KP.BinaryOp i) = i
-
-instance Identify KP.VarAssignment where
-    toIdentifier (KP.VarAssignment i _) = i
-
-instance Type KP.VarAssignment where
-    toTypeSignature (KP.VarAssignment _ var_type) = Var $ typeToBaseType var_type
 
 isUnaryFunctionParamMatchingFunction :: FunctionTyping -> BaseType -> Bool
 isUnaryFunctionParamMatchingFunction (UnaryFunctionTyping arg1 return_type) arg1'
