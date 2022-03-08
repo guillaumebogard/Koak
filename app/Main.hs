@@ -7,25 +7,28 @@
 
 module Main where
 
-import System.Environment    ( getArgs )
-import System.Exit           ( ExitCode(ExitFailure)
-                             , exitWith
-                             , exitSuccess
-                             )
-import Control.Exception     ( handle )
+import System.Environment                         ( getArgs )
+import System.Exit                                ( ExitCode(ExitFailure)
+                                                  , exitWith
+                                                  , exitSuccess
+                                                  )
+import Control.Exception                          ( handle )
 
-import Exception             ( KoakException(..) )
-import Argument.Parser as AP ( KoakArguments(..)
-                             , Filepath(..)
-                             , parseArguments
-                             )
+import Exception                                  ( KoakException(..) )
+import qualified Argument.Parser.Exception as APE ( KoakArgumentParserException( KoakHelpException ) )
+import qualified Argument.Parser as AP            ( KoakArguments(..)
+                                                  , Filepath(..)
+                                                  , parseArguments
+                                                  )
 
 main :: IO ()
-main = handle exceptionHandler $ getArgs >>= handleExecution . parseArguments
+main = handle exceptionHandler $ getArgs >>= handleExecution . AP.parseArguments
 
-handleExecution :: KoakArguments -> IO ()
-handleExecution (KoakArguments (AP.Filepath file)) = readFile file >>= putStrLn
+handleExecution :: AP.KoakArguments -> IO ()
+handleExecution (AP.KoakArguments (AP.Filepath file)) = readFile file >>= putStrLn
 
 exceptionHandler :: KoakException -> IO ()
-exceptionHandler KoakHelpException = print KoakHelpException >> exitSuccess
-exceptionHandler err               = print err               >> exitWith (ExitFailure 84)
+exceptionHandler (KoakAPE APE.KoakHelpException) = print APE.KoakHelpException >> exitSuccess
+exceptionHandler (KoakAPE err)                   = print err                   >> exitWith (ExitFailure 84)
+exceptionHandler (KoakKLE err)                   = print err                   >> exitWith (ExitFailure 84)
+exceptionHandler (KoakKPE err)                   = print err                   >> exitWith (ExitFailure 84)

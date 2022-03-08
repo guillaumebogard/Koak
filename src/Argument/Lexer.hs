@@ -9,14 +9,13 @@ module Argument.Lexer ( Token(..)
                       , tokenizeArguments
                       ) where
 
-data Token = Filepath String
+data Token = Help
            | UnknownOption String
-           | Help
+           | Filepath String
 
 tokenizeArguments :: [String] -> [Token]
-tokenizeArguments []            = []
-tokenizeArguments ("-h":xs)     = Help : tokenizeArguments xs
-tokenizeArguments ("--help":xs) = Help : tokenizeArguments xs
-tokenizeArguments (x:xs)
-    | head x == '-' = UnknownOption x : tokenizeArguments xs
-    | otherwise     = Filepath x      : tokenizeArguments xs
+tokenizeArguments []                = []
+tokenizeArguments ("-h"        :xs) = Help              : tokenizeArguments xs
+tokenizeArguments ("--help"    :xs) = Help              : tokenizeArguments xs
+tokenizeArguments (opt@('-':_) :xs) = UnknownOption opt : tokenizeArguments xs
+tokenizeArguments (x           :xs) = Filepath x        : tokenizeArguments xs
