@@ -142,20 +142,24 @@ getBinOpPrecedence context binop = let signature = kContextFind context (toIdent
 evaluateExpressionTyping' :: Kcontext -> BinaryTreeExpression -> EvaluationResult
 evaluateExpressionTyping' context (ExprLeaf unary)                                                                = evaluateUnaryTyping context unary
 evaluateExpressionTyping' context (ExprNode binary@(KP.BinaryOp (KP.Identifier "=")) left@(ExprLeaf unary) right) = let rightResult = evaluateExpressionTyping' context right in
-                                                                                                                    evaluateAssignment context unary (getEvaluatedType rightResult)
+                                                                                                                    evaluateAssignment (getEvaluatedKcontext rightResult) unary (getEvaluatedType rightResult)
 evaluateExpressionTyping' context (ExprNode binary@(KP.BinaryOp (KP.Identifier "=")) _ _ )                        = throw AssignmentToRValue
 evaluateExpressionTyping' context (ExprNode (KP.BinaryOp binary) left right)                                      = let leftResult  = evaluateExpressionTyping' context left                                   in
                                                                                                                     let rightResult = evaluateExpressionTyping' (getEvaluatedKcontext leftResult)  right       in
                                                                                                                     evaluateBinOperation (getEvaluatedKcontext rightResult) binary (getEvaluatedType leftResult) (getEvaluatedType rightResult)
 
 evaluateAssignment :: Kcontext -> KP.Unary -> BaseType -> EvaluationResult
-evaluateAssignment context (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing)) base_type =
-        EvaluationResult
-            base_type
-            (kContextPushVar (KP.VarAssignment identifier (baseTypeToType base_type)) context)
+evaluateAssignment context (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing)) base_type = evaluateAssignment' context identifier base_type (kContextFind context identifier)
 evaluateAssignment _ _ _                                                                                      = throw AssignmentToRValue
 
--- evaluateAssignment :: Kcontext -> KP.Identifier -> BaseType -> Maybe TypeSignature -> EvaluationResult
+evaluateAssignment' :: Kcontext -> KP.Identifier -> BaseType -> Maybe TypeSignature -> EvaluationResult
+evaluateAssignment' context identifier base_type Nothing               = EvaluationResult
+                                                                            base_type
+                                                                            (kContextPushVar (KP.VarAssignment identifier (baseTypeToType base_type)) context)
+evaluateAssignment' context identifier base_type (Just (Var var_type))
+    | var_type /= base_type                                            = throw $ ShadowedVariableByVariable identifier (KP.VarAssignment identifier (baseTypeToType var_type))
+    | otherwise                                                        = EvaluationResult base_type context
+evaluateAssignment' _       identifier _          _                    = throw $ NotAVar identifier
 
 evaluateBinOperation :: Kcontext -> KP.Identifier -> BaseType -> BaseType -> EvaluationResult
 evaluateBinOperation context binary left_type right_type = EvaluationResult (getFunctionReturnType (findBinaryMatchingFunction context binary left_type right_type)) context

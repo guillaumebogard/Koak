@@ -64,7 +64,7 @@ spec = do
             (KP.Identifier "i")
             (KP.VarAssignment
                 (KP.Identifier "i")
-                KP.Double
+                KP.Int
             )
         )
     it "Basic expression" $
@@ -337,13 +337,7 @@ spec = do
                     )
             )
         `shouldThrow`
-        (== KTE.ShadowedDefinitionByVariable
-            (KP.Identifier "foo")
-            (KP.VarAssignment
-                (KP.Identifier "foo")
-                KP.Int
-            )
-        )
+        (== KTE.NotAVar (KP.Identifier "foo"))
     it "Shadowing definition by a var 2" $
         evaluate
             (
@@ -384,7 +378,7 @@ spec = do
             (KP.Identifier "a")
             (KP.VarAssignment
                 (KP.Identifier "a")
-                KP.Double
+                KP.Int
             )
         )
     it "Unknown var" $
