@@ -41,7 +41,13 @@ spec = do
     it "Bad assign, wrong type." $
         evaluate(KT.checkKoakTyping $ KP.getKdefsFromStmt $ KP.parseKoak "i = 1: i = 42.42;")
         `shouldThrow`
-        (== KTE.AssignmentOfDifferentType (KP.Identifier "i") KP.Double KP.Int)
+        (== KTE.ShadowedVariableByVariable 
+            (KP.Identifier "foo")
+            (KP.VarAssignment
+                (KP.Identifier "foo")
+                KP.Double
+            )
+        )
     it "Basic expression" $
         KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak "---1 + 3 * 4 / 1 + 3.0;")
             ==
@@ -66,39 +72,39 @@ spec = do
             ))
             ==
             ()
-    it "Bad function call. Bad argument number 1." $ do
+    it "Bad function call. Bad argument number 1." $
         evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
-            (
-                "def foo(a:int b:double): int 42;" ++
-                "foo(2.2);"
-            )))
-            `shouldThrow`
-            (== KTE.MismatchedArgumentNumber (KP.Identifier "foo") 1)
-    it "Bad function call. Bad argument number 1." $ do
+        (
+            "def foo(a:int b:double): int 42;" ++
+            "foo(2.2);"
+        )))
+        `shouldThrow`
+        (== KTE.MismatchedArgumentNumber (KP.Identifier "foo") 1)
+    it "Bad function call. Bad argument number 1." $
         evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
-            (
-                "def foo(a:int b:double): int 42;" ++
-                "foo();"
-            )))
-            `shouldThrow`
-            (== KTE.MismatchedArgumentNumber (KP.Identifier "foo") 0)
-    it "Bad function call. Bad argument number 2." $ do
+        (
+            "def foo(a:int b:double): int 42;" ++
+            "foo();"
+        )))
+        `shouldThrow`
+        (== KTE.MismatchedArgumentNumber (KP.Identifier "foo") 0)
+    it "Bad function call. Bad argument number 2." $
         evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
-            (
-                "def foo(a:int b:double): int 42;" ++
-                "foo(2.2, 1, 3, 5);"
-            )))
-            `shouldThrow`
-            (== KTE.MismatchedArgumentNumber (KP.Identifier "foo") 4)
-    it "Bad function call. Bad argument type." $ do
+        (
+            "def foo(a:int b:double): int 42;" ++
+            "foo(2.2, 1, 3, 5);"
+        )))
+        `shouldThrow`
+        (== KTE.MismatchedArgumentNumber (KP.Identifier "foo") 4)
+    it "Bad function call. Bad argument type." $
         evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
-            (
-                "def foo(a:int b:double): int 42;" ++
-                "foo(2.2, 4.2);"
-            )))
-            `shouldThrow`
-            (== KTE.MismatchedArgumentType (KP.Identifier "foo") [KP.Double, KP.Double])
-    it "Complex function def" $
+        (
+            "def foo(a:int b:double): int 42;" ++
+            "foo(2.2, 4.2);"
+        )))
+        `shouldThrow`
+        (== KTE.MismatchedArgumentType (KP.Identifier "foo") [KP.Double, KP.Double])
+    it "Basic function with a while" $
         KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
             (
                 "def foo(): int" ++
@@ -109,3 +115,106 @@ spec = do
             ))
             ==
             ()
+    it "Basic function with a for" $
+        KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+            (
+                "def foo(): double" ++
+                "for i = 0.0, i < 42.1, 2.0 in" ++
+                "   i;"
+            ))
+            ==
+            ()
+    it "Shadowing global by a local variable 1" $
+        KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+            (
+                "i = 0" ++
+                "def foo(): double" ++
+                "   i = 2.1;"
+            ))
+            ==
+            ()
+    it "Shadowing global by a local variable 2" $
+        KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+            (
+                "i = 0" ++
+                "def foo(i:double): double" ++
+                "   i + 1;"
+            ))
+            ==
+            ()
+    it "Shadowing definition by a definition 1" $
+        evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+        (
+            "def foo(a:int b:double): int 42;" ++
+            "def foo(a:int b:double): int 42;"
+        )))
+        `shouldThrow`
+        (== KTE.ShadowedDefinitionByDefinition
+            (KP.Identifier "foo")
+            (KP.PrototypeFunction
+                (KP.Identifier "foo")
+                (KP.PrototypeArgs
+                    [
+                        KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                        KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
+                    ] KP.Int)
+            )
+        )
+    it "Shadowing definition by a definition 2" $
+        evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+        (
+            "def foo(a:int b:double): double 42;" ++
+            "def foo(): int 42;"
+        )))
+        `shouldThrow`
+        (== KTE.ShadowedDefinitionByDefinition
+            (KP.Identifier "foo")
+            (KP.PrototypeFunction
+                (KP.Identifier "foo")
+                (KP.PrototypeArgs [] KP.Double)
+            )
+        )
+    it "Shadowing definition by a var 1" $
+        evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+        (
+            "def foo(a:int b:double): double 42;" ++
+            "foo = 1;"
+        )))
+        `shouldThrow`
+        (== KTE.ShadowedDefinitionByVariable 
+            (KP.Identifier "foo")
+            (KP.VarAssignment
+                (KP.Identifier "foo")
+                KP.Double
+            )
+        )
+    it "Shadowing definition by a var 2" $
+        evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+        (
+            "def foo(a:int b:double): double 42;" ++
+            "def bar(): double" ++
+            "   foo = 1:" ++
+            "   2.1;"
+        )))
+        `shouldThrow`
+        (== KTE.ShadowedDefinitionByVariable 
+            (KP.Identifier "foo")
+            (KP.VarAssignment
+                (KP.Identifier "foo")
+                KP.Int
+            )
+        )
+    it "Shadowing var by a var 2" $
+        evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+        (
+            "a = 1;" ++
+            "a = 2.5;"
+        )))
+        `shouldThrow`
+        (== KTE.ShadowedVariableByVariable 
+            (KP.Identifier "a")
+            (KP.VarAssignment
+                (KP.Identifier "a")
+                KP.Double
+            )
+        )

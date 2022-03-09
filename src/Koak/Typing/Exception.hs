@@ -20,7 +20,6 @@ data KoakTypingException    = UnknownDefinition  Identifier
                             | NotABinaryFunction Identifier
                             | NotAFunction       Identifier
                             | NotAVar            Identifier
-                            | AssignmentOfDifferentType Identifier Type Type
                             | MismatchedArgumentNumber  Identifier Int
                             | MismatchedArgumentType    Identifier [Type]
                             | MismatchedReturnType      Identifier Type Type
@@ -39,7 +38,6 @@ instance Show KoakTypingException where
     show (NotABinaryFunction identifier)                        = show identifier ++ " is not a binary function."
     show (NotAFunction       identifier)                        = show identifier ++ " is not a function."
     show (NotAVar            identifier)                        = show identifier ++ " is not a variable."
-    show (AssignmentOfDifferentType identifier expected got)    = "Assignment of a bad type on variable named " ++ show identifier ++ " . Expected: " ++ show expected ++ " . Got: " ++ show got ++ " ."
     show (MismatchedArgumentNumber identifier arguments_nb)     = "Mismatched arguments number in a function call " ++ show identifier ++ " . No matching function with" ++ show arguments_nb ++ " arguments."
     show (MismatchedArgumentType identifier arguments_type)     = "Mismatched arguments type in a function call " ++ show identifier ++ " . No matching function with these following types" ++ show arguments_type ++ "."
     show (MismatchedReturnType   identifier got expected)       = "Mismatched return type in a function called "  ++ show identifier ++ " . Got: '" ++ show got ++ "', but expected '" ++ show expected ++ "'."
