@@ -24,7 +24,10 @@ import Koak.TypingContext           ( Kcontext(..)
                                     , kContextEnterFunctionCall
                                     , baseTypeToType
                                     , kContextFind
+                                    , kContextPushFunction
+                                    , kContextPushVar
                                     , isUnaryFunctionParamMatchingFunction
+                                    , isBinaryFunctionParamMatchingFunction
                                     , getFunctionReturnType
                                     , toIdentifier
                                     , toTypeSignature
@@ -42,11 +45,12 @@ checkKoakTyping' :: Kcontext -> [KP.Kdefs] -> Kcontext
 checkKoakTyping' = foldl checkKdefTyping
 
 checkKdefTyping :: Kcontext -> KP.Kdefs -> Kcontext
-checkKdefTyping context (KP.KdefDef defs@(KP.Defs proto _)) = checkDefsTyping (kContextEnterFunctionCall proto context) defs --> context
+checkKdefTyping context (KP.KdefDef defs@(KP.Defs proto _)) = kContextPushFunction proto context <--
+                                                              checkDefsTyping (kContextEnterFunctionCall proto context) defs
 checkKdefTyping context (KP.KdefExpression exprs          ) = getEvaluatedKcontext $ evaluateExpressionsTyping context exprs
 
-checkDefsTyping :: Kcontext -> KP.Defs -> ()
-checkDefsTyping context (KP.Defs _ exprs) = evaluateExpressionsTyping context exprs --> ()
+checkDefsTyping :: Kcontext -> KP.Defs -> Kcontext
+checkDefsTyping context (KP.Defs _ exprs) = getEvaluatedKcontext $ evaluateExpressionsTyping context exprs
 
 evaluateExpressionsTyping :: Kcontext -> KP.Expressions -> EvaluationResult
 evaluateExpressionsTyping context (KP.ExpressionFor    for_expr  ) = evaluateForTyping            context for_expr
@@ -84,7 +88,7 @@ evaluateWhileTyping context (KP.While cmp_expr exprs) = evaluateExpressionsTypin
 evaluateExpressionTyping :: Kcontext -> KP.Expression -> EvaluationResult
 evaluateExpressionTyping context expression = evaluateExpressionTyping' context $ buildExpressionTree context expression
 
--------------------evalexpr---------------
+-------------------evalexpr------------------
 
 data BinaryTreeExpression = ExprNode KP.BinaryOp BinaryTreeExpression BinaryTreeExpression | ExprLeaf KP.Unary
 
@@ -132,14 +136,44 @@ getBinOpPrecedence context binop = let signature = kContextFind context (toIdent
         Just (Function (BinaryFunctionTyping (KP.Precedence  pre) _ _ _))              -> pre
         _                                                                              -> error "Not a binOp"
 
+-- getBinOpType = 
+
 -------------------------------------------
 
 evaluateExpressionTyping' :: Kcontext -> BinaryTreeExpression -> EvaluationResult
--- evaluateExpressionTyping' context (ExprLeaf unary)             = evaluateUnary context unary
--- evaluateExpressionTyping' context (ExprNode binary left right) = let binResult   = evaluateBinary context binary in
---                                                                  let leftResult  = evaluateExpressionTyping' context left in 
---                                                                  let rightResult = evaluateExpressionTyping' context right in error ""
-evaluateExpressionTyping' _ _ = error ""
+evaluateExpressionTyping' context (ExprLeaf unary)                                                                = evaluateUnaryTyping context unary
+evaluateExpressionTyping' context (ExprNode binary@(KP.BinaryOp (KP.Identifier "=")) left@(ExprLeaf unary) right) = let rightResult = evaluateExpressionTyping' context left in
+                                                                                                                    evaluateAssignment context unary (getEvaluatedType rightResult)
+evaluateExpressionTyping' context (ExprNode binary@(KP.BinaryOp (KP.Identifier "=")) _ _ )                        = throw AssignmentToRValue
+evaluateExpressionTyping' context (ExprNode (KP.BinaryOp binary) left right)                                      = let leftResult  = evaluateExpressionTyping' context left                                   in
+                                                                                                                    let rightResult = evaluateExpressionTyping' (getEvaluatedKcontext leftResult)  right       in
+                                                                                                                    evaluateBinOperation (getEvaluatedKcontext rightResult) binary (getEvaluatedType leftResult) (getEvaluatedType rightResult)
+
+evaluateAssignment :: Kcontext -> KP.Unary -> BaseType -> EvaluationResult
+evaluateAssignment context (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing)) base_type =
+        EvaluationResult
+            base_type
+            (kContextPushVar (KP.VarAssignment identifier (baseTypeToType base_type)) context)
+evaluateAssignment _ _ _                                                                                      = throw AssignmentToRValue
+
+evaluateBinOperation :: Kcontext -> KP.Identifier -> BaseType -> BaseType -> EvaluationResult
+evaluateBinOperation context binary left_type right_type = EvaluationResult (getFunctionReturnType (findBinaryMatchingFunction context binary left_type right_type)) context
+
+findBinaryMatchingFunction :: Kcontext -> KP.Identifier -> BaseType -> BaseType -> FunctionTyping
+findBinaryMatchingFunction context func_name left_type right_type = findBinaryMatchingFunction' func_name left_type right_type (kContextFind context func_name)
+
+findBinaryMatchingFunction' :: KP.Identifier -> BaseType -> BaseType -> Maybe TypeSignature -> FunctionTyping
+findBinaryMatchingFunction' func_name _         _          Nothing                              = throw $ UnknownDefinition func_name
+findBinaryMatchingFunction' func_name left_type right_type (Just (PrimitiveFunction func_list)) =
+    let found = find (isBinaryFunctionParamMatchingFunction left_type right_type) func_list
+    in case found of
+    Nothing              -> throw $ MismatchedArgumentType func_name [baseTypeToType left_type, baseTypeToType right_type]
+    (Just matching_func) -> matching_func
+findBinaryMatchingFunction' func_name left_type right_type (Just (Function func))
+    | isBinaryFunctionParamMatchingFunction left_type right_type func                           = func
+    | otherwise                                                                                 = throw $ MismatchedArgumentType func_name [baseTypeToType left_type, baseTypeToType right_type]
+findBinaryMatchingFunction' func_name _        _           (Just _)                             = throw $ NotABinaryFunction func_name
+
 
 ---------------------------------------------------
 {-
@@ -217,7 +251,7 @@ evaluateFunctionCallTyping' :: Kcontext -> KP.Identifier -> [BaseType] -> Evalua
 evaluateFunctionCallTyping' context identifier args = evaluateFunctionCallTyping'' context identifier args (kContextFind context identifier)
 
 evaluateFunctionCallTyping'' :: Kcontext -> KP.Identifier -> [BaseType] -> Maybe TypeSignature -> EvaluationResult
-evaluateFunctionCallTyping'' context identifier args Nothing             = error ""
+evaluateFunctionCallTyping'' context identifier args Nothing             = throw $ UnknownDefinition identifier
 evaluateFunctionCallTyping'' context identifier args (Just (Function _)) = error ""
 evaluateFunctionCallTyping'' context identifier args (Just _)            = error ""
 
