@@ -101,9 +101,9 @@ instance Identify KP.Defs where
 
 instance Type KP.Defs where
     toTypeSignature (KP.Defs   (KP.PrototypeUnary        _ (KP.PrototypeArgs [x]        return_type)) _) = Function $ UnaryFunctionTyping (prototypeIdToBaseType x) (typeToBaseType return_type)
-    toTypeSignature (KP.Defs p@(KP.PrototypeUnary        _ (KP.PrototypeArgs args       _          )) _) = throw    $ UnaryFunctionInvalidArgumentNumber p  (length args)
+    toTypeSignature (KP.Defs p@(KP.PrototypeUnary        u (KP.PrototypeArgs args       _          )) _) = throw    $ MismatchedArgumentNumber (toIdentifier u)  (length args)
     toTypeSignature (KP.Defs   (KP.PrototypeBinary   pre _ (KP.PrototypeArgs [x,y]      return_type)) _) = Function $ BinaryFunctionTyping pre (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
-    toTypeSignature (KP.Defs p@(KP.PrototypeBinary   _   _ (KP.PrototypeArgs args       _          )) _) = throw    $ BinaryFunctionInvalidArgumentNumber p (length args)
+    toTypeSignature (KP.Defs p@(KP.PrototypeBinary   _   b (KP.PrototypeArgs args       _          )) _) = throw    $ MismatchedArgumentNumber (toIdentifier b) (length args)
     toTypeSignature (KP.Defs   (KP.PrototypeFunction _     (KP.PrototypeArgs args       return_type)) _) = Function $ FunctionTyping (map prototypeIdToBaseType args) (typeToBaseType return_type)
 
 instance Identify KP.UnaryOp where

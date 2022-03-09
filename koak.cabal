@@ -61,6 +61,7 @@ test-suite koak-test
       Koak.LexerSpec
       Koak.ParserSpec
       Koak.TypingContextSpec
+      Koak.TypingSpec
       Paths_koak
   hs-source-dirs:
       test

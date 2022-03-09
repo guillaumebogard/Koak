@@ -32,6 +32,7 @@ module Koak.Parser                            ( Stmt(..)
                                               , Literal(..)
                                               , VarAssignment(..)
                                               , parseKoak
+                                              , getKdefsFromStmt
                                               ) where
 
 import Control.Exception                      ( throw )

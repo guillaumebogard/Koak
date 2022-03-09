@@ -404,7 +404,7 @@ spec = do
                     ] KP.Boolean)
                 )
             )
-    it "kContextPushDef: One global var push, simple 1, success." $ do
+    it "kContextPushVar: One global var push, simple 1, success." $ do
             kContextPushVar
                 (
                     KP.VarAssignment
@@ -419,7 +419,7 @@ spec = do
                 ])
                 (DefContext    $ HM.fromList [])
                 Nothing
-    it "kContextPushDef: Multiple global var push, complex 1, success." $ do
+    it "kContextPushVar: Multiple global var push, complex 1, success." $ do
             kContextPushVar
                 (
                     KP.VarAssignment
@@ -461,7 +461,7 @@ spec = do
                 ])
                 (DefContext    $ HM.fromList [])
                 Nothing
-    it "kContextPushDef: Multiple global var push & Multiple local var push, complex 1, success." $ do
+    it "kContextPushVar: Multiple global var push & Multiple local var push, complex 1, success." $ do
             kContextPushVar
                 (
                     KP.VarAssignment
@@ -507,7 +507,7 @@ spec = do
                     (KP.Identifier "var3", Var Int),
                     (KP.Identifier "var4", Var Boolean)
                 ])
-    it "kContextPushDef: Multiple global var push & Multiple local var with the same name, complex 1, failure." $ do
+    it "kContextPushVar: Multiple global var push & Multiple local var with the same name, complex 1, failure." $ do
             kContextPushVar
                 (
                     KP.VarAssignment
@@ -553,7 +553,7 @@ spec = do
                     (KP.Identifier "var1", Var Int),
                     (KP.Identifier "var2", Var Boolean)
                 ])
-    it "kContextPushDef: Two same global var push, simple 1, failure." $ do
+    it "kContextPushVar: Two same global var push, simple 1, failure." $ do
         evaluate (
             kContextPushVar
                 (
@@ -579,7 +579,7 @@ spec = do
                     KP.Int
                 )
             )
-    it "kContextPushDef: Two same local var push, simple 1, failure." $ do
+    it "kContextPushVar: Two same local var push, simple 1, failure." $ do
         evaluate (
             kContextPushVar
                 (
@@ -605,7 +605,7 @@ spec = do
                     KP.Int
                 )
             )
-    it "kContextPushDef: One global var & One def push with same name, simple 1, failure." $ do
+    it "kContextPushVar: One global var & One def push with same name, simple 1, failure." $ do
         evaluate (
             kContextPushDef
                 (KP.Defs
@@ -648,7 +648,7 @@ spec = do
                     (KP.PrototypeArgs [] KP.Int)
                 )
             )
-    it "kContextPushDef: One def push & One global var push with same name, simple 1, failure." $ do
+    it "kContextPushVar: One def push & One global var push with same name, simple 1, failure." $ do
         evaluate (
             kContextPushVar
                 (
@@ -691,7 +691,7 @@ spec = do
                     KP.Int
                 )
             )
-    it "kContextPushDef: One def push & One local var push with same name, simple 1, failure." $ do
+    it "kContextPushVar: One def push & One local var push with same name, simple 1, failure." $ do
         evaluate (
             kContextPushVar
                 (
