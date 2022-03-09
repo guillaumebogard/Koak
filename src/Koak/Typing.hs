@@ -35,11 +35,11 @@ import Koak.Typing.Exception        ( KoakTypingException(..) )
 
 data EvaluationResult = EvaluationResult BaseType Kcontext
 
-checkKoakTyping :: [KP.Kdefs] -> ()
-checkKoakTyping = checkKoakTyping' getDefaultKContext
+checkKoakTyping :: Kcontext -> [KP.Kdefs] -> Kcontext
+checkKoakTyping = checkKoakTyping'
 
-checkKoakTyping' :: Kcontext -> [KP.Kdefs] -> ()
-checkKoakTyping' context defs = foldl checkKdefTyping context defs --> ()
+checkKoakTyping' :: Kcontext -> [KP.Kdefs] -> Kcontext
+checkKoakTyping' = foldl checkKdefTyping
 
 checkKdefTyping :: Kcontext -> KP.Kdefs -> Kcontext
 checkKdefTyping context (KP.KdefDef defs@(KP.Defs proto _)) = checkDefsTyping (kContextEnterFunctionCall proto context) defs --> context
@@ -190,7 +190,7 @@ findUnaryMatchingFunction' func_name arg_type (Just (PrimitiveFunction func_list
     (Just matching_func) -> matching_func
 findUnaryMatchingFunction' func_name arg_type (Just (Function func))
     | isUnaryFunctionParamMatchingFunction arg_type func                           = func
-    | otherwise                                                                    = throw $ MismatchedArgumentType func_name [baseTypeToType arg_type] 
+    | otherwise                                                                    = throw $ MismatchedArgumentType func_name [baseTypeToType arg_type]
 findUnaryMatchingFunction' func_name _        (Just _)                             = throw $ NotAUnaryFunction func_name
 
 evaluatePostfixTyping :: Kcontext -> KP.Postfix -> EvaluationResult
