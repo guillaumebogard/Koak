@@ -218,3 +218,27 @@ spec = do
                 KP.Double
             )
         )
+    it "Unknown var" $
+        evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+            "a = a;"
+        ))
+        `shouldThrow`
+        (== KTE.UnknownDefinition (KP.Identifier "a"))
+    it "Unknown function" $
+        evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+            "foo(1);"
+        ))
+        `shouldThrow`
+        (== KTE.UnknownDefinition (KP.Identifier "foo") )
+    it "Unknown binary function" $
+        evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+            "1 <-> 2;"
+        ))
+        `shouldThrow`
+        (== KTE.UnknownDefinition (KP.Identifier "<-->") )
+    it "Unknown unary function" $
+        evaluate (KT.checkKoakTyping (KP.getKdefsFromStmt $ KP.parseKoak
+            ">>> 2;"
+        ))
+        `shouldThrow`
+        (== KTE.UnknownDefinition (KP.Identifier ">>>") )
