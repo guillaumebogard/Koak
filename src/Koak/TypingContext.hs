@@ -14,7 +14,7 @@ module Koak.TypingContext           ( Kcontext(..)
                                     , TypeSignature(..)
                                     , getDefaultKContext
                                     , getEmptyKContext
-                                    , kContextPushDef
+                                    , kContextPushFunction
                                     , kContextPushVar
                                     , kContextFind
                                     , globalContextFind
@@ -95,16 +95,22 @@ data Kcontext           = Kcontext GlobalContext DefContext (Maybe LocalContext)
 
 
 instance Identify KP.Defs where
-    toIdentifier (KP.Defs (KP.PrototypeUnary      (KP.UnaryOp  i) _) _) = i
-    toIdentifier (KP.Defs (KP.PrototypeBinary   _ (KP.BinaryOp i) _) _) = i
-    toIdentifier (KP.Defs (KP.PrototypeFunction   i               _) _) = i
+    toIdentifier (KP.Defs p _) = toIdentifier p
 
 instance Type KP.Defs where
-    toTypeSignature (KP.Defs   (KP.PrototypeUnary        _ (KP.PrototypeArgs [x]        return_type)) _) = Function $ UnaryFunctionTyping (prototypeIdToBaseType x) (typeToBaseType return_type)
-    toTypeSignature (KP.Defs p@(KP.PrototypeUnary        u (KP.PrototypeArgs args       _          )) _) = throw    $ MismatchedArgumentNumber (toIdentifier u)  (length args)
-    toTypeSignature (KP.Defs   (KP.PrototypeBinary   pre _ (KP.PrototypeArgs [x,y]      return_type)) _) = Function $ BinaryFunctionTyping pre (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
-    toTypeSignature (KP.Defs p@(KP.PrototypeBinary   _   b (KP.PrototypeArgs args       _          )) _) = throw    $ MismatchedArgumentNumber (toIdentifier b) (length args)
-    toTypeSignature (KP.Defs   (KP.PrototypeFunction _     (KP.PrototypeArgs args       return_type)) _) = Function $ FunctionTyping (map prototypeIdToBaseType args) (typeToBaseType return_type)
+    toTypeSignature (KP.Defs p _) = toTypeSignature p
+
+instance Identify KP.Prototype where
+    toIdentifier (KP.PrototypeUnary      (KP.UnaryOp  i) _) = i
+    toIdentifier (KP.PrototypeBinary   _ (KP.BinaryOp i) _) = i
+    toIdentifier (KP.PrototypeFunction   i               _) = i
+
+instance Type KP.Prototype where
+    toTypeSignature (KP.PrototypeUnary        _ (KP.PrototypeArgs [x]        return_type)) = Function $ UnaryFunctionTyping (prototypeIdToBaseType x) (typeToBaseType return_type)
+    toTypeSignature (KP.PrototypeUnary        u (KP.PrototypeArgs args       _          )) = throw    $ MismatchedArgumentNumber (toIdentifier u)  (length args)
+    toTypeSignature (KP.PrototypeBinary   pre _ (KP.PrototypeArgs [x,y]      return_type)) = Function $ BinaryFunctionTyping pre (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
+    toTypeSignature (KP.PrototypeBinary   _   b (KP.PrototypeArgs args       _          )) = throw    $ MismatchedArgumentNumber (toIdentifier b) (length args)
+    toTypeSignature (KP.PrototypeFunction _     (KP.PrototypeArgs args       return_type)) = Function $ FunctionTyping (map prototypeIdToBaseType args) (typeToBaseType return_type)
 
 instance Identify KP.UnaryOp where
     toIdentifier (KP.UnaryOp i) = i
@@ -158,8 +164,8 @@ getDefaultKContext = Kcontext
 getEmptyKContext :: Kcontext
 getEmptyKContext = Kcontext (GlobalContext HM.empty) (DefContext HM.empty) Nothing
 
-kContextPushDef :: KP.Defs -> Kcontext -> Kcontext
-kContextPushDef def@(KP.Defs p _) = kContextPushDef' p (toIdentifier def) (toTypeSignature def)
+kContextPushFunction :: KP.Prototype -> Kcontext -> Kcontext
+kContextPushFunction p = kContextPushDef' p (toIdentifier p) (toTypeSignature p)
 
 kContextPushDef' :: KP.Prototype  -> KP.Identifier -> TypeSignature -> Kcontext -> Kcontext
 kContextPushDef' p i ts (Kcontext (GlobalContext gc) (DefContext dc) lc)
