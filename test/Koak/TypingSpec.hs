@@ -27,13 +27,11 @@ import Data.HashMap.Strict  as HM               ( HashMap
                                                 , member
                                                 , insert
                                                 )
-import qualified Koak.TypingContext as KTC
+
 spec :: Spec
 spec = do
     it "Basic assign" $
-        KT.checkKoakTyping
-            KTC.getDefaultKContext
-            (KP.getKdefsFromStmt $ KP.parseKoak "i = 1;")
+        KT.checkKoakTyping KTC.getDefaultKContext (KP.getKdefsFromStmt $ KP.parseKoak "i = 1;")
             ==
             KTC.kContextPushVar
                 (
@@ -470,3 +468,50 @@ spec = do
                                 KTC.getDefaultKContext
                         )
                 )
+    it "Assignment of a RValue 1" $
+        evaluate
+            (
+                KT.checkKoakTyping
+                    KTC.getDefaultKContext
+                    (KP.getKdefsFromStmt $ KP.parseKoak
+                        "1 = 1;"
+                    )
+            )
+        `shouldThrow`
+        (== KTE.AssignmentToRValue)
+    it "Assignment of a RValue 2" $
+        evaluate
+            (
+                KT.checkKoakTyping
+                    KTC.getDefaultKContext
+                    (KP.getKdefsFromStmt $ KP.parseKoak
+                        "-a = 1;"
+                    )
+            )
+        `shouldThrow`
+        (== KTE.AssignmentToRValue)
+    it "Assignment of a RValue 3" $
+        evaluate
+            (
+                KT.checkKoakTyping
+                    KTC.getDefaultKContext
+                    (KP.getKdefsFromStmt $ KP.parseKoak
+                        "2 * a = 1;"
+                    )
+            )
+        `shouldThrow`
+        (== KTE.AssignmentToRValue)
+    it "Assignment of a RValue 3" $
+        evaluate
+            (
+                KT.checkKoakTyping
+                    KTC.getDefaultKContext
+                    (KP.getKdefsFromStmt $ KP.parseKoak
+                        (
+                            "def foo() : int 1;" ++
+                            "foo() = 1;"
+                        )
+                    )
+            )
+        `shouldThrow`
+        (== KTE.AssignmentToRValue)

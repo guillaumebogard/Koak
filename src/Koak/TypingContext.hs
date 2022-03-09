@@ -6,9 +6,8 @@
 --
 
 module Koak.TypingContext           ( Kcontext(..)
-                                    , GlobalContext(..)
                                     , DefContext(..)
-                                    , LocalContext(..)
+                                    , VarContext(..)
                                     , BaseType(..)
                                     , FunctionTyping(..)
                                     , TypeSignature(..)
@@ -17,9 +16,6 @@ module Koak.TypingContext           ( Kcontext(..)
                                     , kContextPushFunction
                                     , kContextPushVar
                                     , kContextFind
-                                    , globalContextFind
-                                    , defContextFind
-                                    , localContextFind
                                     , kContextEnterLocalContext
                                     , kContextEnterFunctionCall
                                     , isUnaryFunctionParamMatchingFunction
@@ -81,16 +77,13 @@ class Type a where
 
 type Context            = HashMap KP.Identifier TypeSignature
 
-newtype GlobalContext   = GlobalContext Context
+newtype VarContext      = VarContext Context
     deriving (Eq, Show)
 
 newtype DefContext      = DefContext    Context
     deriving (Eq, Show)
 
-newtype LocalContext    = LocalContext  Context
-    deriving (Eq, Show)
-
-data Kcontext           = Kcontext GlobalContext DefContext (Maybe LocalContext)
+data Kcontext           = Kcontext DefContext VarContext
     deriving (Eq, Show)
 
 
@@ -131,47 +124,38 @@ instance Hashable KP.Identifier where
 getDefaultKContext :: Kcontext
 getDefaultKContext = Kcontext
                         (
-                            GlobalContext
-                            HM.empty
-                        )
-                        (
                             DefContext $
                                 HM.fromList [
-                                    (
-                                        KP.Identifier "+",
-                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
-                                    ),
-                                    (
-                                        KP.Identifier "-",
-                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
-                                    ),
-                                    (
-                                        KP.Identifier "*",
-                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
-                                    ),
-                                    (
-                                        KP.Identifier "/",
-                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
-                                    ),
-                                    (
-                                        KP.Identifier "%",
-                                        PrimitiveFunction [FunctionTyping [Int, Int] Int, FunctionTyping [Double, Double] Double, FunctionTyping [Double, Int] Double, FunctionTyping [Int, Double] Double]
-                                    )
+                                        (KP.Identifier "=", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 1)  Int Int Int, BinaryFunctionTyping (KP.Precedence 1)  Double Double Double, BinaryFunctionTyping (KP.Precedence 1)  Double Int Double, BinaryFunctionTyping (KP.Precedence 1)  Int Double Double]),
+                                        (KP.Identifier "==", PrimitiveFunction [BinaryFunctionTyping (KP.Precedence 8)  Int Int Int, BinaryFunctionTyping (KP.Precedence 8)  Double Double Double, BinaryFunctionTyping (KP.Precedence 8)  Double Int Double, BinaryFunctionTyping (KP.Precedence 8)  Int Double Double]),
+                                        (KP.Identifier "!=", PrimitiveFunction [BinaryFunctionTyping (KP.Precedence 8)  Int Int Int, BinaryFunctionTyping (KP.Precedence 8)  Double Double Double, BinaryFunctionTyping (KP.Precedence 8)  Double Int Double, BinaryFunctionTyping (KP.Precedence 8)  Int Double Double]),
+                                        (KP.Identifier ">", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 9)  Int Int Int, BinaryFunctionTyping (KP.Precedence 9)  Double Double Double, BinaryFunctionTyping (KP.Precedence 9)  Double Int Double, BinaryFunctionTyping (KP.Precedence 9)  Int Double Double]),
+                                        (KP.Identifier "<", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 9)  Int Int Int, BinaryFunctionTyping (KP.Precedence 9)  Double Double Double, BinaryFunctionTyping (KP.Precedence 9)  Double Int Double, BinaryFunctionTyping (KP.Precedence 9)  Int Double Double]),
+                                        (KP.Identifier ">=", PrimitiveFunction [BinaryFunctionTyping (KP.Precedence 9)  Int Int Int, BinaryFunctionTyping (KP.Precedence 9)  Double Double Double, BinaryFunctionTyping (KP.Precedence 9)  Double Int Double, BinaryFunctionTyping (KP.Precedence 9)  Int Double Double]),
+                                        (KP.Identifier "<=", PrimitiveFunction [BinaryFunctionTyping (KP.Precedence 9)  Int Int Int, BinaryFunctionTyping (KP.Precedence 9)  Double Double Double, BinaryFunctionTyping (KP.Precedence 9)  Double Int Double, BinaryFunctionTyping (KP.Precedence 9)  Int Double Double]),
+                                        (KP.Identifier "+", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 11) Int Int Int, BinaryFunctionTyping (KP.Precedence 11) Double Double Double, BinaryFunctionTyping (KP.Precedence 11) Double Int Double, BinaryFunctionTyping (KP.Precedence 11) Int Double Double]),
+                                        (KP.Identifier "-", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 11) Int Int Int, BinaryFunctionTyping (KP.Precedence 11) Double Double Double, BinaryFunctionTyping (KP.Precedence 11) Double Int Double, BinaryFunctionTyping (KP.Precedence 11) Int Double Double, UnaryFunctionTyping  Int Int, UnaryFunctionTyping Double Double]),
+                                        (KP.Identifier "*", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double, BinaryFunctionTyping (KP.Precedence 12) Double Int Double, BinaryFunctionTyping (KP.Precedence 12) Int Double Double]),
+                                        (KP.Identifier "/", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double, BinaryFunctionTyping (KP.Precedence 12) Double Int Double, BinaryFunctionTyping (KP.Precedence 12) Int Double Double]),
+                                        (KP.Identifier "%", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double, BinaryFunctionTyping (KP.Precedence 12) Double Int Double, BinaryFunctionTyping (KP.Precedence 12) Int Double Double]),
+                                        (KP.Identifier "!", PrimitiveFunction  [UnaryFunctionTyping  Int Boolean, UnaryFunctionTyping Double Boolean, UnaryFunctionTyping Boolean Boolean]),
+                                        (KP.Identifier "toInt",    PrimitiveFunction  [FunctionTyping [Int] Int,    FunctionTyping [Double] Int,    FunctionTyping [Boolean] Int   ]),
+                                        (KP.Identifier "toDouble", PrimitiveFunction  [FunctionTyping [Int] Double, FunctionTyping [Double] Double, FunctionTyping [Boolean] Double])
                                 ]
                         )
-                        Nothing
+                        (VarContext HM.empty)
 
 getEmptyKContext :: Kcontext
-getEmptyKContext = Kcontext (GlobalContext HM.empty) (DefContext HM.empty) Nothing
+getEmptyKContext = Kcontext (DefContext HM.empty) (VarContext HM.empty)
 
 kContextPushFunction :: KP.Prototype -> Kcontext -> Kcontext
 kContextPushFunction p = kContextPushDef' p (toIdentifier p) (toTypeSignature p)
 
 kContextPushDef' :: KP.Prototype  -> KP.Identifier -> TypeSignature -> Kcontext -> Kcontext
-kContextPushDef' p i ts (Kcontext (GlobalContext gc) (DefContext dc) lc)
-    | HM.member i gc = throw $ ShadowedVariableByDefinition   i p
+kContextPushDef' p i ts (Kcontext (DefContext dc) v@(VarContext vc))
+    | HM.member i vc = throw $ ShadowedVariableByDefinition   i p
     | HM.member i dc = throw $ ShadowedDefinitionByDefinition i p
-    | otherwise      = Kcontext (GlobalContext gc) (DefContext $ contextPushItem i ts dc) lc
+    | otherwise      = Kcontext (DefContext $ contextPushItem i ts dc) v
 
 kContextEnterFunctionCall :: KP.Prototype -> Kcontext -> Kcontext
 kContextEnterFunctionCall (KP.PrototypeUnary    _     (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
@@ -182,38 +166,25 @@ kContextEnterFunctionCall' :: [KP.PrototypeIdentifier] -> Kcontext -> Kcontext
 kContextEnterFunctionCall' args k = foldr (kContextPushVar . prototypeIdToVarAssignment) k args
 
 kContextEnterLocalContext :: Kcontext -> Kcontext
-kContextEnterLocalContext (Kcontext (GlobalContext gc) (DefContext dc) _) = Kcontext (GlobalContext gc) (DefContext dc) (Just $ LocalContext HM.empty)
+kContextEnterLocalContext (Kcontext (DefContext dc) _) = Kcontext (DefContext dc) (VarContext HM.empty)
 
 kContextPushVar :: KP.VarAssignment -> Kcontext -> Kcontext
-kContextPushVar v@(KP.VarAssignment i t) (Kcontext (GlobalContext gc) (DefContext dc) Nothing)
+kContextPushVar v@(KP.VarAssignment i t) (Kcontext (DefContext dc) (VarContext vc))
     | HM.member i dc    = throw $ ShadowedDefinitionByVariable i v
-    | HM.member i gc    = throw $ ShadowedVariableByVariable   i v
-    | otherwise         = Kcontext (GlobalContext $ contextPushItem i (toTypeSignature v) gc) (DefContext dc) Nothing
-kContextPushVar v@(KP.VarAssignment i t) (Kcontext (GlobalContext gc) (DefContext dc) (Just (LocalContext lc)))
-    | HM.member i dc    = throw $ ShadowedDefinitionByVariable i v
-    -- | HM.member i gc    = throw $ ShadowedVariableByVariable   v -- Ignore global vars
-    | HM.member i lc    = throw $ ShadowedVariableByVariable   i v
-    | otherwise         = Kcontext (GlobalContext gc) (DefContext dc) (Just $ LocalContext $ contextPushItem i (toTypeSignature v) lc)
+    | HM.member i vc    = throw $ ShadowedVariableByVariable   i v
+    | otherwise         = Kcontext (DefContext dc) (VarContext $ contextPushItem i (toTypeSignature v) vc)
 
 kContextFind :: Kcontext -> KP.Identifier -> Maybe TypeSignature
-kContextFind k@(Kcontext gc dc Nothing  ) i
-    | let dc_res = defContextFind    dc i, isJust dc_res = dc_res
-    | let gc_res = globalContextFind gc i, isJust gc_res = gc_res
-    | otherwise                                          = Nothing
-kContextFind k@(Kcontext gc dc (Just lc)) i
-    | let lc_res = localContextFind  lc i, isJust lc_res = lc_res
-    | let dc_res = defContextFind    dc i, isJust dc_res = dc_res
-    | let gc_res = globalContextFind gc i, isJust gc_res = gc_res
-    | otherwise                                          = Nothing
-
-globalContextFind :: GlobalContext -> KP.Identifier -> Maybe TypeSignature
-globalContextFind (GlobalContext c) i = HM.lookup i c
+kContextFind k@(Kcontext dc vc) i
+    | let vc_res = varContextFind vc i, isJust vc_res = vc_res
+    | let dc_res = defContextFind dc i, isJust dc_res = dc_res
+    | otherwise                                       = Nothing
 
 defContextFind :: DefContext -> KP.Identifier -> Maybe TypeSignature
 defContextFind (DefContext c) i = HM.lookup i c
 
-localContextFind :: LocalContext -> KP.Identifier -> Maybe TypeSignature
-localContextFind (LocalContext c) i = HM.lookup i c
+varContextFind :: VarContext -> KP.Identifier -> Maybe TypeSignature
+varContextFind (VarContext c) i = HM.lookup i c
 
 contextPushItem :: KP.Identifier -> TypeSignature -> Context -> Context
 contextPushItem = insert

@@ -43,7 +43,7 @@ instance Show KoakTypingException where
     show (MismatchedArgumentType identifier arguments_type)     = "Mismatched arguments type in a function call " ++ show identifier ++ " . No matching function with these following types" ++ show arguments_type ++ "."
     show (MismatchedReturnType   identifier got expected)       = "Mismatched return type in a function called "  ++ show identifier ++ " . Got: '" ++ show got ++ "', but expected '" ++ show expected ++ "'."
     show (MismatchedThenElseType got expected)                  = "Mismatched type between then and else expression. In else, got type: '" ++ show got ++ "', but expected same type as then: '" ++ show expected ++ "'."
-    show (AssignmentToRValue)                                   = "Assignment is not allowed for RValue."
+    show AssignmentToRValue                                     = "Assignment is not allowed for RValue."
     show (ShadowedVariableByVariable     name shadowed_var)     = "New variable named "   ++ show name ++ " is shadowing previous variable: "   ++ show shadowed_var ++ " ."
     show (ShadowedVariableByDefinition   name shadowed_def)     = "New variable named "   ++ show name ++ " is shadowing previous definition: " ++ show shadowed_def ++ " ."
     show (ShadowedDefinitionByVariable   name shadowed_var)     = "New definition named " ++ show name ++ " is shadowing previous variable: "   ++ show shadowed_var ++ " ."

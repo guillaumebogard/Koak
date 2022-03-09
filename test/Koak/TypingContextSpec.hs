@@ -28,13 +28,16 @@ import Data.HashMap.Strict  as HM               ( HashMap
                                                 )
 
 import Data.Maybe (isNothing)
+import qualified Koak.TypingContext as KTC
+import qualified Koak.TypingContext as KTC
+import qualified Koak.TypingContext as KTC
 
 spec :: Spec
 spec = do
     it "getEmptyKContext basic" $
         KTC.getEmptyKContext
             ==
-            KTC.Kcontext (KTC.GlobalContext HM.empty) (KTC.DefContext HM.empty) Nothing
+            KTC.Kcontext (KTC.DefContext HM.empty) (KTC.VarContext HM.empty)
     it "kContextPushFunction: One def push, simple 1, success" $
         KTC.kContextPushFunction
             (KP.PrototypeFunction
@@ -44,11 +47,10 @@ spec = do
             KTC.getEmptyKContext
             ==
             KTC.Kcontext
-                (KTC.GlobalContext $ HM.fromList [])
                 (KTC.DefContext    $ HM.fromList [
                     (KP.Identifier "foo", KTC.Function $ KTC.FunctionTyping [] KTC.Int)
                 ])
-                Nothing
+                (KTC.VarContext HM.empty)
     it "kContextPushFunction: One def push, simple 2, success" $
         KTC.kContextPushFunction
             (KP.PrototypeFunction
@@ -60,11 +62,10 @@ spec = do
             KTC.getEmptyKContext
             ==
             KTC.Kcontext
-                (KTC.GlobalContext $ HM.fromList [])
                 (KTC.DefContext    $ HM.fromList [
                     (KP.Identifier "bar", KTC.Function $ KTC.FunctionTyping [KTC.Int] KTC.Int)
                 ])
-                Nothing
+                (KTC.VarContext HM.empty)
     it "kContextPushFunction: One def push, simple 3, success" $
         KTC.kContextPushFunction
             (KP.PrototypeFunction
@@ -76,11 +77,10 @@ spec = do
             KTC.getEmptyKContext
             ==
             KTC.Kcontext
-                (KTC.GlobalContext $ HM.fromList [])
                 (KTC.DefContext    $ HM.fromList [
                     (KP.Identifier "foobar", KTC.Function $ KTC.FunctionTyping [KTC.Double] KTC.Nil)
                 ])
-                Nothing
+                (KTC.VarContext HM.empty)
     it "kContextPushFunction: One def push, complex 1, success" $
         KTC.kContextPushFunction
             (KP.PrototypeFunction
@@ -95,11 +95,10 @@ spec = do
             KTC.getEmptyKContext
             ==
             KTC.Kcontext
-                (KTC.GlobalContext $ HM.fromList [])
                 (KTC.DefContext    $ HM.fromList [
                     (KP.Identifier "foobar", KTC.Function $ KTC.FunctionTyping [KTC.Int, KTC.Double, KTC.Boolean, KTC.Nil] KTC.Double)
                 ])
-                Nothing
+                (KTC.VarContext HM.empty)
     it "kContextPushFunction: Multiple def push, complex 1, success" $
                 KP.PrototypeFunction
                     (KP.Identifier "foo")
@@ -130,13 +129,12 @@ spec = do
             )
             ==
             KTC.Kcontext
-                (KTC.GlobalContext $ HM.fromList [])
                 (KTC.DefContext    $ HM.fromList [
                     (KP.Identifier "foo",    KTC.Function $ KTC.FunctionTyping [] KTC.Int),
                     (KP.Identifier "bar",    KTC.Function $ KTC.FunctionTyping [KTC.Int, KTC.Double, KTC.Boolean, KTC.Nil] KTC.Double),
                     (KP.Identifier "foobar", KTC.Function $ KTC.FunctionTyping [KTC.Int, KTC.Int, KTC.Boolean, KTC.Int] KTC.Boolean)
                 ])
-                Nothing
+                (KTC.VarContext HM.empty)
     it "kContextPushFunction: Two same def push, simple 1, failure" $
         evaluate (
                 KP.PrototypeFunction
@@ -194,7 +192,7 @@ spec = do
                 ] KP.Boolean)
             )
         )
-    it "kContextPushVar: One global var push, simple 1, success." $
+    it "kContextPushVar: One var push, simple 1, success." $
             KTC.kContextPushVar
         (
             KP.VarAssignment
@@ -204,12 +202,11 @@ spec = do
         KTC.getEmptyKContext
             ==
             KTC.Kcontext
-                (KTC.GlobalContext $ HM.fromList [
+                (KTC.DefContext    $ HM.fromList [])
+                (KTC.VarContext $ HM.fromList [
                     (KP.Identifier "var1", KTC.Var KTC.Int)
                 ])
-                (KTC.DefContext    $ HM.fromList [])
-                Nothing
-    it "kContextPushVar: Multiple global var push, complex 1, success." $
+    it "kContextPushVar: Multiple var push, complex 1, success." $
             KTC.kContextPushVar
         (
             KP.VarAssignment
@@ -243,15 +240,14 @@ spec = do
         )
             ==
             KTC.Kcontext
-                (KTC.GlobalContext $ HM.fromList [
+                (KTC.DefContext    $ HM.fromList [])
+                (KTC.VarContext $ HM.fromList [
                     (KP.Identifier "var1", KTC.Var KTC.Int),
                     (KP.Identifier "var2", KTC.Var KTC.Double),
                     (KP.Identifier "var3", KTC.Var KTC.Int),
                     (KP.Identifier "var4", KTC.Var KTC.Boolean)
                 ])
-                (KTC.DefContext    $ HM.fromList [])
-                Nothing
-    it "kContextPushVar: Multiple global var push & Multiple local var push, complex 1, success." $
+    it "kContextPushVar: Multiple var push & entering a localContext, success." $
             KTC.kContextPushVar
         (
             KP.VarAssignment
@@ -288,62 +284,12 @@ spec = do
         )
             ==
             KTC.Kcontext
-                (KTC.GlobalContext $ HM.fromList [
-                    (KP.Identifier "var1", KTC.Var KTC.Int),
-                    (KP.Identifier "var2", KTC.Var KTC.Double)
-                ])
-                (KTC.DefContext    $ HM.fromList [])
-                (Just $ KTC.LocalContext $ HM.fromList [
+                (KTC.DefContext $ HM.fromList [])
+                (KTC.VarContext $ HM.fromList [
                     (KP.Identifier "var3", KTC.Var KTC.Int),
                     (KP.Identifier "var4", KTC.Var KTC.Boolean)
                 ])
-    it "kContextPushVar: Multiple global var push & Multiple local var with the same name, complex 1, failure." $
-            KTC.kContextPushVar
-        (
-            KP.VarAssignment
-                (KP.Identifier "var2")
-                KP.Boolean
-        )
-        (
-            KTC.kContextPushVar
-            (
-                KP.VarAssignment
-                    (KP.Identifier "var1")
-                    KP.Int
-            )
-            (
-                KTC.kContextEnterLocalContext
-                (
-                    KTC.kContextPushVar
-                    (
-                        KP.VarAssignment
-                            (KP.Identifier "var2")
-                            KP.Double
-                    )
-                    (
-                        KTC.kContextPushVar
-                        (
-                            KP.VarAssignment
-                                (KP.Identifier "var1")
-                                KP.Int
-                        )
-                        KTC.getEmptyKContext
-                    )
-                )
-            )
-        )
-            ==
-            KTC.Kcontext
-                (KTC.GlobalContext $ HM.fromList [
-                    (KP.Identifier "var1", KTC.Var KTC.Int),
-                    (KP.Identifier "var2", KTC.Var KTC.Double)
-                ])
-                (KTC.DefContext    $ HM.fromList [])
-                (Just $ KTC.LocalContext $ HM.fromList [
-                    (KP.Identifier "var1", KTC.Var KTC.Int),
-                    (KP.Identifier "var2", KTC.Var KTC.Boolean)
-                ])
-    it "kContextPushVar: Two same global var push, simple 1, failure." $
+    it "kContextPushVar: Two same var push, simple 1, failure." $
         evaluate (
         KTC.kContextPushVar
             (
@@ -369,13 +315,13 @@ spec = do
                 KP.Int
             )
         )
-    it "kContextPushVar: Two same local var push, simple 1, failure." $
+    it "kContextPushVar: Two var push with same name & different types, simple 1, failure." $
         evaluate (
         KTC.kContextPushVar
             (
                 KP.VarAssignment
                     (KP.Identifier "var")
-                    KP.Int
+                    KP.Double
             )
             (
                 KTC.kContextPushVar
@@ -384,7 +330,7 @@ spec = do
                             (KP.Identifier "var")
                             KP.Int
                     )
-                    (KTC.kContextEnterLocalContext KTC.getEmptyKContext)
+                    KTC.getEmptyKContext
             )
         )
         `shouldThrow`
@@ -392,36 +338,10 @@ spec = do
             (KP.Identifier "var")
             (KP.VarAssignment
                 (KP.Identifier "var")
-                KP.Int
+                KP.Double
             )
         )
-    it "kContextPushVar: One global var & One def push with same name, simple 1, failure." $
-        evaluate (
-        KTC.kContextPushFunction
-            (
-                KP.PrototypeFunction
-                    (KP.Identifier "foo")
-                    (KP.PrototypeArgs [] KP.Int)
-            )
-            (
-                KTC.kContextPushVar
-                (
-                    KP.VarAssignment
-                        (KP.Identifier "foo")
-                        KP.Int
-                )
-                KTC.getEmptyKContext
-            )
-        )
-        `shouldThrow`
-        (== KTE.ShadowedVariableByDefinition
-            (KP.Identifier "foo")
-            (KP.PrototypeFunction
-                (KP.Identifier "foo")
-                (KP.PrototypeArgs [] KP.Int)
-            )
-        )
-    it "kContextPushVar: One def push & One global var push with same name, simple 1, failure." $
+    it "kContextPushVar: One def push & One var push with same name, simple 1, failure." $
         evaluate (
         KTC.kContextPushVar
             (
@@ -481,88 +401,50 @@ spec = do
         KTC.kContextFind
             (
                 KTC.Kcontext
-                    (KTC.GlobalContext $ HM.fromList [] )
                     (KTC.DefContext    $ HM.fromList
                         [
                             (KP.Identifier "func1", KTC.Function $ KTC.FunctionTyping [KTC.Boolean, KTC.Boolean] KTC.Boolean),
                             (KP.Identifier "func2", KTC.Function $ KTC.FunctionTyping [] KTC.Int)
                         ]
                     )
-                Nothing
+                    (KTC.VarContext HM.empty)
             )
             (KP.Identifier "foo")
-    it "kContextFind: Only global var context, failure." $
+    it "kContextFind: Only var context, failure." $
         isNothing $
         KTC.kContextFind
             (
                 KTC.Kcontext
-                    (KTC.GlobalContext $ HM.fromList
-                        [
-                            (KP.Identifier "var1", KTC.Var KTC.Boolean),
-                            (KP.Identifier "var2", KTC.Var KTC.Boolean),
-                            (KP.Identifier "var3", KTC.Var KTC.Boolean)
-                        ]
-                    )
                     (KTC.DefContext HM.empty)
-                Nothing
-            )
-            (KP.Identifier "foo")
-    it "kContextFind: Only local var context, failure." $
-        isNothing $
-        KTC.kContextFind
-            (
-                KTC.Kcontext
-                    (KTC.GlobalContext HM.empty)
-                    (KTC.DefContext    HM.empty)
-                    (Just $ KTC.LocalContext $ HM.fromList
-                        [
+                    (KTC.VarContext $ HM.fromList [
                             (KP.Identifier "var1", KTC.Var KTC.Boolean),
                             (KP.Identifier "var2", KTC.Var KTC.Boolean),
                             (KP.Identifier "var3", KTC.Var KTC.Boolean)
-                        ]
-                    )
+
+                    ])
             )
             (KP.Identifier "foo")
     it "kContextFind: Only def context, success." $
         KTC.kContextFind
             (
                 KTC.Kcontext
-                    (KTC.GlobalContext $ HM.fromList [] )
                     (KTC.DefContext    $ HM.fromList
                         [
                             (KP.Identifier "func1", KTC.Function $ KTC.FunctionTyping [KTC.Boolean, KTC.Boolean] KTC.Boolean),
                             (KP.Identifier "func2", KTC.Function $ KTC.FunctionTyping [] KTC.Int)
                         ]
                     )
-                Nothing
+                    (KTC.VarContext HM.empty)
             )
             (KP.Identifier "func2")
             ==
             Just  (KTC.Function $ KTC.FunctionTyping [] KTC.Int)
-    it "kContextFind: Only global var context, success." $
+    it "kContextFind: Only var context, success." $
         KTC.kContextFind
             (
                 KTC.Kcontext
-                    (KTC.GlobalContext $ HM.fromList
-                        [
-                            (KP.Identifier "var1", KTC.Var KTC.Boolean),
-                            (KP.Identifier "var2", KTC.Var KTC.Boolean),
-                            (KP.Identifier "var3", KTC.Var KTC.Boolean)
-                        ]
-                    )
                     (KTC.DefContext HM.empty)
-                Nothing
-            )
-            (KP.Identifier "var2")
-            ==
-            Just (KTC.Var KTC.Boolean)
-    it "kContextFind: Only local var context, success." $
-        KTC.kContextFind
-            (
-                KTC.Kcontext
-                    (KTC.GlobalContext HM.empty)
-                    (KTC.DefContext    HM.empty)
-                    (Just $ KTC.LocalContext $ HM.fromList
+                    (KTC.VarContext $ HM.fromList
                         [
                             (KP.Identifier "var1", KTC.Var KTC.Boolean),
                             (KP.Identifier "var2", KTC.Var KTC.Boolean),
@@ -571,51 +453,5 @@ spec = do
                     )
             )
             (KP.Identifier "var2")
-            ==
-            Just (KTC.Var KTC.Boolean)
-    it "kContextFind: Shadowed global var by local var with same type, success." $
-        KTC.kContextFind
-            (
-                KTC.Kcontext
-                    (KTC.GlobalContext       $ HM.fromList
-                        [
-                            (KP.Identifier "var1",         KTC.Var KTC.Int),
-                            (KP.Identifier "shadowed_var", KTC.Var KTC.Double),
-                            (KP.Identifier "var2",         KTC.Var KTC.Int)
-                        ]
-                    )
-                    (KTC.DefContext HM.empty)
-                    (Just $ KTC.LocalContext $ HM.fromList
-                        [
-                            (KP.Identifier "var3",         KTC.Var KTC.Int),
-                            (KP.Identifier "shadowed_var", KTC.Var KTC.Double),
-                            (KP.Identifier "var4",         KTC.Var KTC.Int)
-                        ]
-                    )
-            )
-            (KP.Identifier "shadowed_var")
-            ==
-            Just (KTC.Var KTC.Double)
-    it "kContextFind: Shadowed global var by local var with different type, success." $
-        KTC.kContextFind
-            (
-                KTC.Kcontext
-                    (KTC.GlobalContext       $ HM.fromList
-                        [
-                            (KP.Identifier "var1",         KTC.Var KTC.Int),
-                            (KP.Identifier "shadowed_var", KTC.Var KTC.Double),
-                            (KP.Identifier "var2",         KTC.Var KTC.Int)
-                        ]
-                    )
-                    (KTC.DefContext HM.empty)
-                    (Just $ KTC.LocalContext $ HM.fromList
-                        [
-                            (KP.Identifier "var3",         KTC.Var KTC.Int),
-                            (KP.Identifier "shadowed_var", KTC.Var KTC.Boolean),
-                            (KP.Identifier "var4",         KTC.Var KTC.Int)
-                        ]
-                    )
-            )
-            (KP.Identifier "shadowed_var")
             ==
             Just (KTC.Var KTC.Boolean)

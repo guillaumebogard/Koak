@@ -14,9 +14,8 @@ import Control.Exception            ( throw )
 import qualified Koak.Parser as KP
 
 import Koak.TypingContext           ( Kcontext(..)
-                                    , GlobalContext(..)
                                     , DefContext(..)
-                                    , LocalContext(..)
+                                    , VarContext(..)
                                     , BaseType(..)
                                     , FunctionTyping(..)
                                     , TypeSignature(..)
@@ -91,8 +90,10 @@ evaluateExpressionTyping context expression = evaluateExpressionTyping' context 
 -------------------evalexpr------------------
 
 data BinaryTreeExpression = ExprNode KP.BinaryOp BinaryTreeExpression BinaryTreeExpression | ExprLeaf KP.Unary
+    deriving (Show, Eq)
 
 data UnitExpression = Un KP.Unary | Bin KP.BinaryOp
+    deriving (Show, Eq)
 
 buildExpressionTree :: Kcontext -> KP.Expression -> BinaryTreeExpression
 buildExpressionTree context expression@(KP.Expression unary _) = buildExpressionTree' context (convertExpressionToList context expression) $ ExprLeaf unary
@@ -101,27 +102,26 @@ buildExpressionTree' :: Kcontext -> [UnitExpression] -> BinaryTreeExpression -> 
 buildExpressionTree' context []               tree              = tree
 buildExpressionTree' context (x:xs)           node@(ExprLeaf _) = callbackCreateBinaryNode context x xs node
 buildExpressionTree' context (bin:(Un un):xs) tree              = buildExpressionTree' context xs $ placeTokenInTree context tree bin $ ExprLeaf un
-buildExpressionTree' _       _                _                 = error ""
+buildExpressionTree' c       l                b                 = error "In buildExpressionTree"
 
 convertExpressionToList :: Kcontext -> KP.Expression -> [UnitExpression]
-convertExpressionToList context (KP.Expression unary [])                          = [Un unary]
-convertExpressionToList context expr@(KP.Expression first ((binop, second) : xs)) = Un first : convertExpressionToList' context expr
-
-convertExpressionToList' :: Kcontext -> KP.Expression -> [UnitExpression]
-convertExpressionToList' context (KP.Expression _ [])                     = []
-convertExpressionToList' context (KP.Expression _ ((binop, second) : xs)) =
-    Bin binop : Un second : convertExpressionToList' context (KP.Expression second xs)
+convertExpressionToList context (KP.Expression _ [])                     = []
+convertExpressionToList context (KP.Expression _ ((binop, second) : xs)) = Bin binop : Un second : convertExpressionToList context (KP.Expression second xs)
 
 placeTokenInTree :: Kcontext -> BinaryTreeExpression -> UnitExpression -> BinaryTreeExpression -> BinaryTreeExpression
 placeTokenInTree context node@(ExprLeaf _) (Bin newOp) tree = ExprNode newOp node tree
 placeTokenInTree context base@(ExprNode op left right) (Bin newOp) tree
     | isLessPrio context newOp op                           = ExprNode newOp base tree
     | otherwise                                             = ExprNode op left $ placeTokenInTree context right (Bin newOp) tree
-placeTokenInTree _ _ _ _                                    = error ""
+placeTokenInTree _ _ _ _                                    = error "In placeTokenInTree"
 
 callbackCreateBinaryNode :: Kcontext -> UnitExpression -> [UnitExpression] -> BinaryTreeExpression -> BinaryTreeExpression
 callbackCreateBinaryNode context (Bin binop) ((Un unRight):xs) unLeft = buildExpressionTree' context xs $ ExprNode binop unLeft (ExprLeaf unRight)
-callbackCreateBinaryNode _ _ _ _ = error "invalid expression"
+callbackCreateBinaryNode _ _ _ _ = error "In callbackCreateBinaryNode"
+
+-- Un (UnaryPostfix (Postfix (PrimaryIdentifier (Identifier "i")) Nothing)) 
+-- [Bin (BinaryOp (Identifier "=")),Un (UnaryPostfix (Postfix (PrimaryLiteral (LiteralDecimal (DecimalConst 1))) Nothing))] 
+-- ExprLeaf (UnaryPostfix (Postfix (PrimaryIdentifier (Identifier "i")) Nothing)) 0
 
 isLessPrio :: Kcontext -> KP.BinaryOp -> KP.BinaryOp -> Bool
 isLessPrio context left right
@@ -139,10 +139,9 @@ getBinOpPrecedence context binop = let signature = kContextFind context (toIdent
 -- getBinOpType = 
 
 -------------------------------------------
-
 evaluateExpressionTyping' :: Kcontext -> BinaryTreeExpression -> EvaluationResult
 evaluateExpressionTyping' context (ExprLeaf unary)                                                                = evaluateUnaryTyping context unary
-evaluateExpressionTyping' context (ExprNode binary@(KP.BinaryOp (KP.Identifier "=")) left@(ExprLeaf unary) right) = let rightResult = evaluateExpressionTyping' context left in
+evaluateExpressionTyping' context (ExprNode binary@(KP.BinaryOp (KP.Identifier "=")) left@(ExprLeaf unary) right) = let rightResult = evaluateExpressionTyping' context right in
                                                                                                                     evaluateAssignment context unary (getEvaluatedType rightResult)
 evaluateExpressionTyping' context (ExprNode binary@(KP.BinaryOp (KP.Identifier "=")) _ _ )                        = throw AssignmentToRValue
 evaluateExpressionTyping' context (ExprNode (KP.BinaryOp binary) left right)                                      = let leftResult  = evaluateExpressionTyping' context left                                   in
@@ -155,6 +154,8 @@ evaluateAssignment context (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier id
             base_type
             (kContextPushVar (KP.VarAssignment identifier (baseTypeToType base_type)) context)
 evaluateAssignment _ _ _                                                                                      = throw AssignmentToRValue
+
+-- evaluateAssignment :: Kcontext -> KP.Identifier -> BaseType -> Maybe TypeSignature -> EvaluationResult
 
 evaluateBinOperation :: Kcontext -> KP.Identifier -> BaseType -> BaseType -> EvaluationResult
 evaluateBinOperation context binary left_type right_type = EvaluationResult (getFunctionReturnType (findBinaryMatchingFunction context binary left_type right_type)) context
