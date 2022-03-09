@@ -27,6 +27,7 @@ import Data.HashMap.Strict  as HM               ( HashMap
                                                 , member
                                                 , insert
                                                 )
+import qualified Koak.TypingContext as KTC
 spec :: Spec
 spec = do
     it "Basic assign" $
@@ -34,14 +35,25 @@ spec = do
             KTC.getDefaultKContext
             (KP.getKdefsFromStmt $ KP.parseKoak "i = 1;")
             ==
-            KTC.getDefaultKContext
+            KTC.kContextPushVar
+                (
+                    KP.VarAssignment
+                        (KP.Identifier "i")
+                        KP.Int
+                )
+                KTC.getDefaultKContext
     it "Complex assign" $
         KT.checkKoakTyping
             KTC.getDefaultKContext
             (KP.getKdefsFromStmt $ KP.parseKoak "i = 8 * 3 + 4.7; i = 2.0;")
             ==
-            KTC.getDefaultKContext
-
+            KTC.kContextPushVar
+                (
+                    KP.VarAssignment
+                        (KP.Identifier "i")
+                        KP.Double
+                )
+                KTC.getDefaultKContext
     it "Bad assign, wrong type." $
         evaluate
             (
@@ -51,9 +63,9 @@ spec = do
             )
         `shouldThrow`
         (== KTE.ShadowedVariableByVariable
-            (KP.Identifier "foo")
+            (KP.Identifier "i")
             (KP.VarAssignment
-                (KP.Identifier "foo")
+                (KP.Identifier "i")
                 KP.Double
             )
         )
@@ -68,7 +80,13 @@ spec = do
             KTC.getDefaultKContext
             (KP.getKdefsFromStmt $ KP.parseKoak "def foo(): int 42; foo();")
             ==
-            KTC.getDefaultKContext
+            KTC.kContextPushFunction
+                (
+                    KP.PrototypeFunction
+                        (KP.Identifier "foo")
+                        (KP.PrototypeArgs [] KP.Int)
+                )
+                KTC.getDefaultKContext
     it "Basic function call with arguments" $
         KT.checkKoakTyping
             KTC.getDefaultKContext
@@ -79,18 +97,42 @@ spec = do
                 )
             )
             ==
-            KTC.getDefaultKContext
+            KTC.kContextPushFunction
+                (
+                    KP.PrototypeFunction
+                        (KP.Identifier "foo")
+                        (KP.PrototypeArgs
+                            [
+                                KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                                KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
+                            ]
+                            KP.Int
+                        )
+                )
+                KTC.getDefaultKContext
     it "Complex function call with arguments" $
         KT.checkKoakTyping
             KTC.getDefaultKContext
             (KP.getKdefsFromStmt $ KP.parseKoak
                 (
-                    "def foo(a:int b:double): int 42;" ++
+                    "def foo(a:int b:double): int 42;"      ++
                     "foo(foo(1, 1 * 7.8 + 3 - -1), 4.2);"
                 )
             )
             ==
-            KTC.getDefaultKContext
+            KTC.kContextPushFunction
+                (
+                    KP.PrototypeFunction
+                        (KP.Identifier "foo")
+                        (KP.PrototypeArgs
+                            [
+                                KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                                KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
+                            ]
+                            KP.Int
+                        )
+                )
+                KTC.getDefaultKContext
     it "Bad function call. Bad argument number 1." $
         evaluate
             (
@@ -152,51 +194,94 @@ spec = do
             KTC.getDefaultKContext
             (KP.getKdefsFromStmt $ KP.parseKoak
                 (
-                    "def foo(): int" ++
-                    "i = 0:" ++
-                    "while i < 42 do" ++
-                    "   i = i + 1:" ++
-                    "   i;"
+                    "def foo(): int "           ++
+                    "   i = 0:"                 ++
+                    "   ("                      ++
+                    "       while i < 42 do"    ++
+                    "           i = i + 1"      ++
+                    "   )"                      ++
+                    ";"
                 )
             )
             ==
-            KTC.getDefaultKContext
+            KTC.kContextPushFunction
+                (
+                    KP.PrototypeFunction
+                        (KP.Identifier "foo")
+                        (KP.PrototypeArgs [] KP.Int)
+                )
+                KTC.getDefaultKContext
     it "Basic function with a for" $
         KT.checkKoakTyping
             KTC.getDefaultKContext
             (KP.getKdefsFromStmt $ KP.parseKoak
                 (
-                    "def foo(): double" ++
-                    "for i = 0.0, i < 42.1, 2.0 in" ++
-                    "   i;"
+                    "def foo(): double"                 ++
+                    "   for i = 0.0, i < 42.1, 2.0 in"  ++
+                    "       i"                          ++
+                    ";"
                 )
             )
             ==
-            KTC.getDefaultKContext
+            KTC.kContextPushFunction
+                (
+                    KP.PrototypeFunction
+                        (KP.Identifier "foo")
+                        (KP.PrototypeArgs [] KP.Double)
+                )
+                KTC.getDefaultKContext
     it "Shadowing global by a local variable 1" $
         KT.checkKoakTyping
             KTC.getDefaultKContext
             (KP.getKdefsFromStmt $ KP.parseKoak
                 (
-                    "i = 0" ++
+                    "i = 0;"            ++
                     "def foo(): double" ++
-                    "   i = 2.1;"
+                    "   i = 2.1"        ++
+                    ";"
                 )
             )
             ==
-            KTC.getDefaultKContext
+            KTC.kContextPushVar
+                (KP.VarAssignment
+                    (KP.Identifier "i")
+                    KP.Int
+                )
+                (
+                    KTC.kContextPushFunction
+                        (
+                            KP.PrototypeFunction
+                                (KP.Identifier "foo")
+                                (KP.PrototypeArgs [] KP.Double)
+                        )
+                        KTC.getDefaultKContext
+                )
     it "Shadowing global by a local variable 2" $
         KT.checkKoakTyping
             KTC.getDefaultKContext
             (KP.getKdefsFromStmt $ KP.parseKoak
                 (
-                    "i = 0" ++
+                    "i = 0;"                    ++
                     "def foo(i:double): double" ++
-                    "   i + 1;"
+                    "   i + 1"                  ++
+                    ";"
                 )
             )
             ==
-            KTC.getDefaultKContext
+            KTC.kContextPushVar
+                (KP.VarAssignment
+                    (KP.Identifier "i")
+                    KP.Int
+                )
+                (
+                    KTC.kContextPushFunction
+                        (
+                            KP.PrototypeFunction
+                                (KP.Identifier "foo")
+                                (KP.PrototypeArgs [] KP.Double)
+                        )
+                        KTC.getDefaultKContext
+                )
     it "Shadowing definition by a definition 1" $
         evaluate
             (
@@ -238,7 +323,7 @@ spec = do
             (KP.Identifier "foo")
             (KP.PrototypeFunction
                 (KP.Identifier "foo")
-                (KP.PrototypeArgs [] KP.Double)
+                (KP.PrototypeArgs [] KP.Int)
             )
         )
     it "Shadowing definition by a var 1" $
@@ -258,7 +343,7 @@ spec = do
             (KP.Identifier "foo")
             (KP.VarAssignment
                 (KP.Identifier "foo")
-                KP.Double
+                KP.Int
             )
         )
     it "Shadowing definition by a var 2" $
@@ -268,10 +353,11 @@ spec = do
                     KTC.getDefaultKContext
                     (KP.getKdefsFromStmt $ KP.parseKoak
                         (
-                            "def foo(a:int b:double): double 42;" ++
-                            "def bar(): double" ++
-                            "   foo = 1:" ++
-                            "   2.1;"
+                            "def foo(a:int b:double): double 42;"   ++
+                            "def bar(): double"                     ++
+                            "   foo = 1:"                           ++
+                            "   2.1"                                ++
+                            ";"
                         )
                     )
             )
@@ -290,7 +376,7 @@ spec = do
                     KTC.getDefaultKContext
                     (KP.getKdefsFromStmt $ KP.parseKoak
                         (
-                            "a = 1;" ++
+                            "a = 1;"    ++
                             "a = 2.5;"
                         )
                     )
@@ -352,12 +438,13 @@ spec = do
             KTC.getDefaultKContext
             (KP.getKdefsFromStmt $ KP.parseKoak
                 (
+                    "def print(i:int): int i;"          ++
                     "len = 99 :"                        ++
                     "i = 0 :"                           ++
                     "("                                 ++
-                    "while i < len do"                  ++
-                    "   print(i) :"                     ++
-                    "   i = i + 1"                      ++
+                    "   while i < len do"               ++
+                    "      print(i) :"                  ++
+                    "      i = i + 1"                   ++
                     "):"                                ++
                     "print(i);"
                 )
@@ -368,5 +455,18 @@ spec = do
                 (
                     KTC.kContextPushVar
                         (KP.VarAssignment (KP.Identifier "i") KP.Int)
-                        KTC.getDefaultKContext
+                        (
+                            KTC.kContextPushFunction
+                                (
+                                    KP.PrototypeFunction
+                                        (KP.Identifier "print")
+                                        (KP.PrototypeArgs
+                                            [
+                                                KP.PrototypeIdentifier (KP.Identifier "i") KP.Int
+                                            ]
+                                            KP.Int
+                                        )
+                                )
+                                KTC.getDefaultKContext
+                        )
                 )
