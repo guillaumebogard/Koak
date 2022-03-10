@@ -531,3 +531,53 @@ spec = do
             )
         `shouldThrow`
         (== KTE.KoakTypingAssignmentToRValue)
+    it "No matching binary function" $
+            evaluate
+                (KT.checkKoakTyping
+                    (KP.parseKoak
+                            "1 + 2;"
+                    )
+                    (KTC.Kcontext
+                            (
+                                KTC.DefContext $
+                                    HM.fromList [
+                                            (KP.Identifier "+", KTC.PrimitiveFunction  [KTC.BinaryFunctionTyping (KP.Precedence 11) KTC.Double KTC.Double KTC.Double])
+                                    ]
+                            )
+                            (KTC.VarContext HM.empty)
+                    )
+                )
+            `shouldThrow`
+            (== KTE.KoakTypingMismatchedArgumentType (KP.Identifier "+") [])
+    it "Assign hell 1" $
+            evaluate (
+                KT.checkKoakTyping
+                    (KP.parseKoak "a = b = 3;")
+                    KTC.getDefaultKContext
+            )
+            `shouldThrow`
+            (== KTE.KoakTypingAssignmentToRValue)
+    it "Assign hell 2" $
+        evaluate (
+                KT.checkKoakTyping
+                    (KP.parseKoak
+                        (
+                            "def foo() : int 1;" ++
+                            "a = b = foo() * 2 + 3;"
+                        )
+                    )
+                    KTC.getDefaultKContext
+            )
+            `shouldThrow`
+            (== KTE.KoakTypingAssignmentToRValue)
+    -- it "Assign hell 2" $
+    --     evaluate
+    --         (
+    --             KT.checkKoakTyping
+    --                 (KP.parseKoak
+    --                         "a = b = c = d = e = f = g = a = 1 + 3;"
+    --                 )
+    --                 KTC.getDefaultKContext
+    --         )
+    --     `shouldThrow`
+    --     (== KTE.KoakTypingAssignmentToRValue)
