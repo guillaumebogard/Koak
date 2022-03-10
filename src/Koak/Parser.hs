@@ -45,7 +45,7 @@ import qualified Koak.Parser.Exception as KPE ( KoakParserException(..) )
 import qualified Koak.Lexer            as KL  ( Token(..)
                                               , tokenizeKoak
                                               )
-import Koak.Grammar.Utils                     ( isSpecialWord )
+import qualified Koak.Grammar.Utils    as KGU ( isSpecialWord )
 
 
 newtype Stmt   = Stmt [Kdefs]
@@ -343,7 +343,7 @@ parseExpression tokens = let (unary           , rest ) = parseUnary       tokens
 parseExpression' :: [KL.Token] -> ([(BinaryOp, Unary)], [KL.Token])
 parseExpression' []                 = ([], [])
 parseExpression' tokens@(KL.Word w:xs)
-    | isSpecialWord w               = let (unary           , rest ) = parseUnary       xs   in
+    | KGU.isSpecialWord w           = let (unary           , rest ) = parseUnary       xs   in
                                       let (binaryOpsUnaries, rest') = parseExpression' rest in
                                       ((BinaryOp $ Identifier w, unary) : binaryOpsUnaries, rest')
     | otherwise                     = ([], tokens)
@@ -358,7 +358,7 @@ parseExpressionList tokens        = ([], tokens)
 parseUnary :: [KL.Token] -> (Unary, [KL.Token])
 parseUnary []                    = throw $ KPE.KoakParserMissingTokenException "parseUnary" [] Nothing []
 parseUnary tokens@(KL.Word w:xs)
-  | isSpecialWord w              = let (unOp   , rest) = parseUnary   xs     in (Unary (UnaryOp $ Identifier w) unOp, rest)
+  | KGU.isSpecialWord w          = let (unOp   , rest) = parseUnary   xs     in (Unary (UnaryOp $ Identifier w) unOp, rest)
   | otherwise                    = let (postfix, rest) = parsePostfix tokens in (UnaryPostfix postfix               , rest)
 parseUnary tokens                = let (postfix, rest) = parsePostfix tokens in (UnaryPostfix postfix               , rest)
 

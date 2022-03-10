@@ -25,6 +25,7 @@ data KoakTypingException = KoakTypingUnknownDefinition              Identifier
                          | KoakTypingMismatchedArgumentType         Identifier [Type]
                          | KoakTypingMismatchedReturnType           Identifier Type          Type
                          | KoakTypingMismatchedThenElseType         Type       Type
+                         | KoakTypingAssignmentToRValue
                          | KoakTypingShadowedVariableByVariable     Identifier VarAssignment
                          | KoakTypingShadowedVariableByDefinition   Identifier Prototype
                          | KoakTypingShadowedDefinitionByVariable   Identifier VarAssignment
@@ -43,6 +44,7 @@ instance Show      KoakTypingException where
     show (KoakTypingMismatchedArgumentType         identifier   argumentsType         ) = "Mismatched arguments type in function call "   ++ show identifier ++ ". No matching function with the following types: "     ++ show argumentsType ++ "."
     show (KoakTypingMismatchedReturnType           identifier   got           expected) = "Mismatched return type in function called "    ++ show identifier ++ ". Got: '"                                              ++ show got           ++ "', but expected '" ++ show expected ++ "'."
     show (KoakTypingMismatchedThenElseType         got          expected              ) = "Mismatched type between 'then' and 'else' expression. In 'else', got type: '" ++ show got ++ "', but expected same type as in 'then': '" ++ show expected ++ "'."
+    show KoakTypingAssignmentToRValue                                                   = "Assignment is not allowed for RValue."
     show (KoakTypingShadowedVariableByVariable     name         shadowedVar           ) = "New variable named "   ++ show name ++ " is shadowing previous variable: '"   ++ show shadowedVar ++ "'."
     show (KoakTypingShadowedVariableByDefinition   name         shadowedDef           ) = "New variable named "   ++ show name ++ " is shadowing previous definition: '" ++ show shadowedDef ++ "'."
     show (KoakTypingShadowedDefinitionByVariable   name         shadowedVar           ) = "New definition named " ++ show name ++ " is shadowing previous variable: '"   ++ show shadowedVar ++ "'."
