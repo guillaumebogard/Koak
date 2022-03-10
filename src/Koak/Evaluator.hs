@@ -32,8 +32,14 @@ evaluateKoak :: Kcontext -> [KP.Kdefs] -> Kcontext
 evaluateKoak = foldl evaluateKdef
 
 evaluateKdef :: Kcontext -> KP.Kdefs -> Kcontext
-evaluateKdef context (KP.KdefDef        _    ) = context
+evaluateKdef context (KP.KdefDef        _    ) = context -- il faut ajouter la fonction dans le contexte
 evaluateKdef context (KP.KdefExpression exprs) = getEvaluatedKcontext $ evaluateExpressions context exprs
+
+evaluateExpressions :: Kcontext -> [KP.Expressions] -> EvaluationResult
+evaluateExpressions context (KP.ExpressionFor    for_expr  ) = evaluateFor            context for_expr
+evaluateExpressions context (KP.ExpressionIf     if_expr   ) = evaluateIf             context if_expr
+evaluateExpressions context (KP.ExpressionWhile  while_expr) = evaluateWhile          context while_expr
+evaluateExpressions context (KP.Expressions      expr exprs) = evaluateExpressionList context (expr:exprs)
 
 (<->) :: () -> () -> ()
 (<->) _ _ = ()

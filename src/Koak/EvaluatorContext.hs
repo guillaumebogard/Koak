@@ -56,25 +56,22 @@ data Function   = UnaryFunction                  KP.PrototypeArgs KP.Expressions
                 | Function                       KP.PrototypeArgs KP.Expressions
     deriving (Eq, Show)
 
-data PrimFunction   = PrimUnaryFunction                  KP.PrototypeArgs
-                    | PrimBinaryFunction KP.Precedence   KP.PrototypeArgs
-                    | PrimFunction                       KP.PrototypeArgs
+data PrimFunction   = PrimUnaryFunction                  [KP.PrototypeArgs]
+                    | PrimBinaryFunction KP.Precedence   [KP.PrototypeArgs]
+                    | PrimFunction                       [KP.PrototypeArgs]
     deriving (Eq, Show)
 
-data Signature  = PrimitiveFunction [PrimFunction]
+data Signature  = PrimitiveFunction PrimFunction
                 | RefinedFunction   Function
-                | Var               Value
     deriving (Eq, Show)
 
-type Context            = HashMap KP.Identifier Signature
-
-newtype VarContext      = VarContext Context
+newtype Definitions            = Definitions (HashMap KP.Identifier Signature)
     deriving (Eq, Show)
 
-newtype DefContext      = DefContext    Context
+newtype Variables                   = Variables (HashMap KP.Identifier Value)
     deriving (Eq, Show)
 
-data Kcontext           = Kcontext DefContext VarContext
+data Kcontext           = Kcontext Definitions Variables
     deriving (Eq, Show)
 
 class Identify a where
