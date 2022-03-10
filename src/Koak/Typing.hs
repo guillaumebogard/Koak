@@ -30,6 +30,7 @@ import Koak.TypingContext           ( Kcontext(..)
                                     , getFunctionReturnType
                                     , toIdentifier
                                     , toTypeSignature
+                                    , prototypeToBaseType
                                     )
 
 import Koak.Typing.Exception        ( KoakTypingException(..) )
@@ -44,12 +45,19 @@ checkKoakTyping' :: Kcontext -> [KP.Kdefs] -> Kcontext
 checkKoakTyping' = foldl checkKdefTyping
 
 checkKdefTyping :: Kcontext -> KP.Kdefs -> Kcontext
-checkKdefTyping context (KP.KdefDef defs@(KP.Defs proto _)) = kContextPushFunction proto context <--
-                                                              checkDefsTyping (kContextEnterFunctionCall proto context) defs
-checkKdefTyping context (KP.KdefExpression exprs          ) = getEvaluatedKcontext $ evaluateExpressionsTyping context exprs
+checkKdefTyping context (KP.KdefDef        defs ) = checkDefsTyping context defs
+checkKdefTyping context (KP.KdefExpression exprs) = getEvaluatedKcontext $ evaluateExpressionsTyping context exprs
 
 checkDefsTyping :: Kcontext -> KP.Defs -> Kcontext
-checkDefsTyping context (KP.Defs _ exprs) = getEvaluatedKcontext $ evaluateExpressionsTyping context exprs
+checkDefsTyping context def@(KP.Defs proto _) = checkDefsTyping' (kContextPushFunction proto context) def
+
+checkDefsTyping' :: Kcontext -> KP.Defs -> Kcontext
+checkDefsTyping' context (KP.Defs proto exprs) = checkDefsTyping'' context (toIdentifier proto) (prototypeToBaseType proto)  (getEvaluatedType $ evaluateExpressionsTyping (kContextEnterFunctionCall proto context) exprs)
+
+checkDefsTyping'' :: Kcontext -> KP.Identifier -> BaseType -> BaseType -> Kcontext
+checkDefsTyping'' context func_name expected_type evaluated_type
+    | expected_type == evaluated_type = context
+    | otherwise                       = throw $ MismatchedReturnType func_name (baseTypeToType expected_type) (baseTypeToType evaluated_type)
 
 evaluateExpressionsTyping :: Kcontext -> KP.Expressions -> EvaluationResult
 evaluateExpressionsTyping context (KP.ExpressionFor    for_expr  ) = evaluateForTyping            context for_expr

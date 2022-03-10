@@ -276,7 +276,7 @@ spec = do
                         (
                             KP.PrototypeFunction
                                 (KP.Identifier "foo")
-                                (KP.PrototypeArgs [] KP.Double)
+                                (KP.PrototypeArgs [KP.PrototypeIdentifier (KP.Identifier "i") KP.Double] KP.Double)
                         )
                         KTC.getDefaultKContext
                 )
@@ -311,7 +311,7 @@ spec = do
                     KTC.getDefaultKContext
                     (KP.getKdefsFromStmt $ KP.parseKoak
                         (
-                            "def foo(a:int b:double): double 42;" ++
+                            "def foo(a:int b:double): double 42.2;" ++
                             "def foo(): int 42;"
                         )
                     )
@@ -331,7 +331,7 @@ spec = do
                     KTC.getDefaultKContext
                     (KP.getKdefsFromStmt $ KP.parseKoak
                         (
-                            "def foo(a:int b:double): double 42;" ++
+                            "def foo(a:int b:double): double 42.2;" ++
                             "foo = 1;"
                         )
                     )
@@ -345,22 +345,16 @@ spec = do
                     KTC.getDefaultKContext
                     (KP.getKdefsFromStmt $ KP.parseKoak
                         (
-                            "def foo(a:int b:double): double 42;"   ++
-                            "def bar(): double"                     ++
-                            "   foo = 1:"                           ++
-                            "   2.1"                                ++
+                            "def foo(a:int b:double): double 42.2;"   ++
+                            "def bar(): double"                       ++
+                            "   foo = 1:"                             ++
+                            "   2.1"                                  ++
                             ";"
                         )
                     )
             )
         `shouldThrow`
-        (== KTE.ShadowedDefinitionByVariable
-            (KP.Identifier "foo")
-            (KP.VarAssignment
-                (KP.Identifier "foo")
-                KP.Int
-            )
-        )
+        (== KTE.NotAVar (KP.Identifier "foo"))
     it "Shadowing var by a var 1" $
         evaluate
             (
@@ -409,7 +403,7 @@ spec = do
                 KT.checkKoakTyping
                     KTC.getDefaultKContext
                     (KP.getKdefsFromStmt $ KP.parseKoak
-                        "1 <-> 2;"
+                        "1 <--> 2;"
                     )
             )
         `shouldThrow`
@@ -420,11 +414,11 @@ spec = do
                 KT.checkKoakTyping
                     KTC.getDefaultKContext
                     (KP.getKdefsFromStmt $ KP.parseKoak
-                        ">>> 2;"
+                        ">>>> 2;"
                     )
             )
         `shouldThrow`
-        (== KTE.UnknownDefinition (KP.Identifier ">>>") )
+        (== KTE.UnknownDefinition (KP.Identifier ">>>>") )
     it "Real world example: while 1" $
         KT.checkKoakTyping
             KTC.getDefaultKContext

@@ -22,6 +22,7 @@ module Koak.TypingContext           ( Kcontext(..)
                                     , isBinaryFunctionParamMatchingFunction
                                     , isFunctionParamMatchingFunction
                                     , getFunctionReturnType
+                                    , prototypeToBaseType
                                     , prototypeIdToBaseType
                                     , prototypeIdToVarAssignment
                                     , typeToBaseType
@@ -149,10 +150,10 @@ getEmptyKContext :: Kcontext
 getEmptyKContext = Kcontext (DefContext HM.empty) (VarContext HM.empty)
 
 kContextPushFunction :: KP.Prototype -> Kcontext -> Kcontext
-kContextPushFunction p = kContextPushDef' p (toIdentifier p) (toTypeSignature p)
+kContextPushFunction p = kContextPushFunction' p (toIdentifier p) (toTypeSignature p)
 
-kContextPushDef' :: KP.Prototype  -> KP.Identifier -> TypeSignature -> Kcontext -> Kcontext
-kContextPushDef' p i ts (Kcontext (DefContext dc) v@(VarContext vc))
+kContextPushFunction' :: KP.Prototype  -> KP.Identifier -> TypeSignature -> Kcontext -> Kcontext
+kContextPushFunction' p i ts (Kcontext (DefContext dc) v@(VarContext vc))
     | HM.member i vc = throw $ ShadowedVariableByDefinition   i p
     | HM.member i dc = throw $ ShadowedDefinitionByDefinition i p
     | otherwise      = Kcontext (DefContext $ contextPushItem i ts dc) v
@@ -208,6 +209,11 @@ getFunctionReturnType :: FunctionTyping -> BaseType
 getFunctionReturnType (UnaryFunctionTyping  _      return_type) = return_type 
 getFunctionReturnType (BinaryFunctionTyping _ _ _  return_type) = return_type
 getFunctionReturnType (FunctionTyping       _      return_type) = return_type
+
+prototypeToBaseType :: KP.Prototype -> BaseType
+prototypeToBaseType (KP.PrototypeUnary      _ (KP.PrototypeArgs _ return_type))  = typeToBaseType return_type
+prototypeToBaseType (KP.PrototypeBinary   _ _ (KP.PrototypeArgs _ return_type) ) = typeToBaseType return_type
+prototypeToBaseType (KP.PrototypeFunction   _ (KP.PrototypeArgs _ return_type))  = typeToBaseType return_type
 
 prototypeIdToBaseType :: KP.PrototypeIdentifier -> BaseType
 prototypeIdToBaseType (KP.PrototypeIdentifier _ t) = typeToBaseType t
