@@ -150,7 +150,6 @@ getBinOpPrecedence context binop = let signature = KTC.kContextFind context (KTC
         _                                                                                      -> error "Not a binOp"
 
 -- getBinOpType = 
-
 -------------------------------------------
 evaluateExpressionTyping' :: KTC.Kcontext -> BinaryTreeExpression -> EvaluationResult
 evaluateExpressionTyping' context (ExprLeaf unary)                                                    = evaluateUnaryTyping context unary
