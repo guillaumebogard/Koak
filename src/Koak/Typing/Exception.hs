@@ -5,44 +5,45 @@
 -- Exception
 --
 
-module Koak.Typing.Exception    ( KoakTypingException(..) ) where
+module Koak.Typing.Exception ( KoakTypingException(..) ) where
 
-import GHC.Exception            ( Exception )
+import GHC.Exception         ( Exception )
 
-import Koak.Parser              ( Type(..)
-                                , Prototype(..)
-                                , VarAssignment(..)
-                                , Identifier(..)
-                                )
+import Koak.Parser           ( Type(..)
+                             , Prototype(..)
+                             , VarAssignment(..)
+                             , Identifier(..)
+                             )
 
-data KoakTypingException    = UnknownDefinition  Identifier
-                            | NotAUnaryFunction  Identifier
-                            | NotABinaryFunction Identifier
-                            | NotAFunction       Identifier
-                            | NotAVar            Identifier
-                            | MismatchedArgumentNumber  Identifier Int
-                            | MismatchedArgumentType    Identifier [Type]
-                            | MismatchedReturnType      Identifier Type Type
-                            | MismatchedThenElseType Type Type
-                            | ShadowedVariableByVariable     Identifier VarAssignment
-                            | ShadowedVariableByDefinition   Identifier Prototype
-                            | ShadowedDefinitionByVariable   Identifier VarAssignment
-                            | ShadowedDefinitionByDefinition Identifier Prototype
-    deriving (Eq)
+
+data KoakTypingException = KoakTypingUnknownDefinition              Identifier
+                         | KoakTypingNotAUnaryFunction              Identifier
+                         | KoakTypingNotABinaryFunction             Identifier
+                         | KoakTypingNotAFunction                   Identifier
+                         | KoakTypingNotAVar                        Identifier
+                         | KoakTypingMismatchedArgumentNumber       Identifier Int
+                         | KoakTypingMismatchedArgumentType         Identifier [Type]
+                         | KoakTypingMismatchedReturnType           Identifier Type          Type
+                         | KoakTypingMismatchedThenElseType         Type       Type
+                         | KoakTypingShadowedVariableByVariable     Identifier VarAssignment
+                         | KoakTypingShadowedVariableByDefinition   Identifier Prototype
+                         | KoakTypingShadowedDefinitionByVariable   Identifier VarAssignment
+                         | KoakTypingShadowedDefinitionByDefinition Identifier Prototype
+    deriving Eq
 
 instance Exception KoakTypingException
 
-instance Show KoakTypingException where
-    show (UnknownDefinition  identifier)                        = show identifier ++ "is Undefined."
-    show (NotAUnaryFunction  identifier)                        = show identifier ++ " is not a unary function."
-    show (NotABinaryFunction identifier)                        = show identifier ++ " is not a binary function."
-    show (NotAFunction       identifier)                        = show identifier ++ " is not a function."
-    show (NotAVar            identifier)                        = show identifier ++ " is not a variable."
-    show (MismatchedArgumentNumber identifier arguments_nb)     = "Mismatched arguments number in a function call " ++ show identifier ++ " . No matching function with" ++ show arguments_nb ++ " arguments."
-    show (MismatchedArgumentType identifier arguments_type)     = "Mismatched arguments type in a function call " ++ show identifier ++ " . No matching function with these following types" ++ show arguments_type ++ "."
-    show (MismatchedReturnType   identifier got expected)       = "Mismatched return type in a function called "  ++ show identifier ++ " . Got: '" ++ show got ++ "', but expected '" ++ show expected ++ "'."
-    show (MismatchedThenElseType got expected)                  = "Mismatched type between then and else expression. In else, got type: '" ++ show got ++ "', but expected same type as then: '" ++ show expected ++ "'."
-    show (ShadowedVariableByVariable     name shadowed_var)     = "New variable named "   ++ show name ++ " is shadowing previous variable: "   ++ show shadowed_var ++ " ."
-    show (ShadowedVariableByDefinition   name shadowed_def)     = "New variable named "   ++ show name ++ " is shadowing previous definition: " ++ show shadowed_def ++ " ."
-    show (ShadowedDefinitionByVariable   name shadowed_var)     = "New definition named " ++ show name ++ " is shadowing previous variable: "   ++ show shadowed_var ++ " ."
-    show (ShadowedDefinitionByDefinition name shadowed_def)     = "New definition named " ++ show name ++ " is shadowing previous definition: " ++ show shadowed_def ++ " ."
+instance Show      KoakTypingException where
+    show (KoakTypingUnknownDefinition              identifier                         ) = '\'' : show identifier ++ "' is undefined."
+    show (KoakTypingNotAUnaryFunction              identifier                         ) = '\'' : show identifier ++ "' is not a unary function."
+    show (KoakTypingNotABinaryFunction             identifier                         ) = '\'' : show identifier ++ "' is not a binary function."
+    show (KoakTypingNotAFunction                   identifier                         ) = '\'' : show identifier ++ "' is not a function."
+    show (KoakTypingNotAVar                        identifier                         ) = '\'' : show identifier ++ "' is not a variable."
+    show (KoakTypingMismatchedArgumentNumber       identifier   argumentsNb           ) = "Mismatched arguments number in function call " ++ show identifier ++ ". No matching function with the following arguments: " ++ show argumentsNb   ++ "."
+    show (KoakTypingMismatchedArgumentType         identifier   argumentsType         ) = "Mismatched arguments type in function call "   ++ show identifier ++ ". No matching function with the following types: "     ++ show argumentsType ++ "."
+    show (KoakTypingMismatchedReturnType           identifier   got           expected) = "Mismatched return type in function called "    ++ show identifier ++ ". Got: '"                                              ++ show got           ++ "', but expected '" ++ show expected ++ "'."
+    show (KoakTypingMismatchedThenElseType         got          expected              ) = "Mismatched type between 'then' and 'else' expression. In 'else', got type: '" ++ show got ++ "', but expected same type as in 'then': '" ++ show expected ++ "'."
+    show (KoakTypingShadowedVariableByVariable     name         shadowedVar           ) = "New variable named "   ++ show name ++ " is shadowing previous variable: '"   ++ show shadowedVar ++ "'."
+    show (KoakTypingShadowedVariableByDefinition   name         shadowedDef           ) = "New variable named "   ++ show name ++ " is shadowing previous definition: '" ++ show shadowedDef ++ "'."
+    show (KoakTypingShadowedDefinitionByVariable   name         shadowedVar           ) = "New definition named " ++ show name ++ " is shadowing previous variable: '"   ++ show shadowedVar ++ "'."
+    show (KoakTypingShadowedDefinitionByDefinition name         shadowedDef           ) = "New definition named " ++ show name ++ " is shadowing previous definition: '" ++ show shadowedDef ++ "'."

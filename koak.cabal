@@ -20,7 +20,6 @@ library
       Argument.Lexer
       Argument.Parser
       Argument.Parser.Exception
-      Exception
       Koak.Grammar.Utils
       Koak.Lexer
       Koak.Lexer.Exception
