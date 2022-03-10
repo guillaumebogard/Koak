@@ -301,7 +301,8 @@ spec = do
                     [
                         KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
                         KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
-                    ] KP.Int)
+                    ] KP.Int
+                )
             )
         )
     it "Shadowing definition by a definition 2" $
@@ -321,7 +322,12 @@ spec = do
             (KP.Identifier "foo")
             (KP.PrototypeFunction
                 (KP.Identifier "foo")
-                (KP.PrototypeArgs [] KP.Int)
+                (KP.PrototypeArgs
+                    [
+                        KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                        KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
+                    ] KP.Double
+                )
             )
         )
     it "Shadowing definition by a var 1" $
@@ -337,7 +343,18 @@ spec = do
                     KTC.getDefaultKContext
             )
         `shouldThrow`
-        (== KTE.KoakTypingNotAVar (KP.Identifier "foo"))
+        (== KTE.KoakTypingShadowedVariableByDefinition
+            (KP.Identifier "foo")
+            (KP.PrototypeFunction
+                (KP.Identifier "foo")
+                (KP.PrototypeArgs
+                    [
+                        KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                        KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
+                    ] KP.Double
+                )
+            )
+        )
     it "Shadowing definition by a var 2" $
         evaluate
             (
@@ -354,7 +371,18 @@ spec = do
                     KTC.getDefaultKContext
             )
         `shouldThrow`
-        (== KTE.KoakTypingNotAVar (KP.Identifier "foo"))
+        (== KTE.KoakTypingShadowedVariableByDefinition
+            (KP.Identifier "foo")
+            (KP.PrototypeFunction
+                (KP.Identifier "foo")
+                (KP.PrototypeArgs
+                    [
+                        KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                        KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
+                    ] KP.Double
+                )
+            )
+        )
     it "Shadowing var by a var 1" $
         evaluate
             (
@@ -372,7 +400,7 @@ spec = do
             (KP.Identifier "a")
             (KP.VarAssignment
                 (KP.Identifier "a")
-                KP.Int
+                KP.Double
             )
         )
     it "Unknown var" $
