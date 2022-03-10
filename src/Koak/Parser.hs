@@ -44,6 +44,10 @@ import qualified Koak.Lexer            as KL  ( Token(..)
                                               )
 import Koak.Grammar.Utils                     ( isSpecialWord )
 
+import Data.Hashable                ( Hashable
+                                    , hashWithSalt
+                                    )
+
 
 newtype Stmt   = Stmt [Kdefs]
     deriving (Show, Eq)
@@ -136,6 +140,9 @@ data Literal = LiteralDecimal DecimalConst
 
 data VarAssignment = VarAssignment Identifier Type
     deriving (Show, Eq)
+
+instance Hashable Identifier where
+    hashWithSalt salt (Identifier string)   = salt `hashWithSalt` string
 
 
 parseKoak :: String -> Stmt

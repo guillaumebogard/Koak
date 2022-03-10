@@ -145,7 +145,7 @@ spec = do
             )
         `shouldThrow`
         (== KTE.MismatchedArgumentNumber (KP.Identifier "foo") 1)
-    it "Bad function call. Bad argument number 1." $
+    it "Bad function call. Bad argument number 2." $
         evaluate
             (
                 KT.checkKoakTyping
@@ -159,7 +159,7 @@ spec = do
             )
         `shouldThrow`
         (== KTE.MismatchedArgumentNumber (KP.Identifier "foo") 0)
-    it "Bad function call. Bad argument number 2." $
+    it "Bad function call. Bad argument number 3." $
         evaluate
             (
                 KT.checkKoakTyping

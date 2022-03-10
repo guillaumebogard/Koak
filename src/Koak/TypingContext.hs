@@ -38,10 +38,6 @@ import Koak.Typing.Exception        ( KoakTypingException(..) )
 
 import Control.Exception            ( throw )
 
-import Data.Hashable                ( Hashable
-                                    , hashWithSalt
-                                    )
-
 import Data.HashMap.Strict  as HM   ( HashMap
                                     , fromList
                                     , empty
@@ -50,9 +46,7 @@ import Data.HashMap.Strict  as HM   ( HashMap
                                     , lookup
                                     )
 
-import Data.Maybe                   ( isNothing
-                                    , isJust
-                                    )
+import Data.Maybe                   (isJust)
 
 class Identify a where
     toIdentifier :: a -> KP.Identifier
@@ -118,10 +112,6 @@ instance Identify KP.VarAssignment where
 instance Type KP.VarAssignment where
     toTypeSignature (KP.VarAssignment _ var_type) = Var $ typeToBaseType var_type
 
-instance Hashable KP.Identifier where
-    hashWithSalt salt (KP.Identifier string)   = salt `hashWithSalt` string
-
-
 getDefaultKContext :: Kcontext
 getDefaultKContext = Kcontext
                         (
@@ -170,13 +160,13 @@ kContextEnterLocalContext :: Kcontext -> Kcontext
 kContextEnterLocalContext (Kcontext (DefContext dc) _) = Kcontext (DefContext dc) (VarContext HM.empty)
 
 kContextPushVar :: KP.VarAssignment -> Kcontext -> Kcontext
-kContextPushVar v@(KP.VarAssignment i t) (Kcontext (DefContext dc) (VarContext vc))
+kContextPushVar v@(KP.VarAssignment i _) (Kcontext (DefContext dc) (VarContext vc))
     | HM.member i dc    = throw $ ShadowedDefinitionByVariable i v
     | HM.member i vc    = throw $ ShadowedVariableByVariable   i v
     | otherwise         = Kcontext (DefContext dc) (VarContext $ contextPushItem i (toTypeSignature v) vc)
 
 kContextFind :: Kcontext -> KP.Identifier -> Maybe TypeSignature
-kContextFind k@(Kcontext dc vc) i
+kContextFind (Kcontext dc vc) i
     | let vc_res = varContextFind vc i, isJust vc_res = vc_res
     | let dc_res = defContextFind dc i, isJust dc_res = dc_res
     | otherwise                                       = Nothing
@@ -191,17 +181,17 @@ contextPushItem :: KP.Identifier -> TypeSignature -> Context -> Context
 contextPushItem = insert
 
 isUnaryFunctionParamMatchingFunction :: BaseType -> FunctionTyping -> Bool
-isUnaryFunctionParamMatchingFunction arg1 (UnaryFunctionTyping func_arg1 return_type)
+isUnaryFunctionParamMatchingFunction arg1 (UnaryFunctionTyping func_arg1 _)
                                          = arg1 == func_arg1
 isUnaryFunctionParamMatchingFunction _ _ = False 
 
 isBinaryFunctionParamMatchingFunction :: BaseType -> BaseType -> FunctionTyping -> Bool
-isBinaryFunctionParamMatchingFunction arg1 arg2 (BinaryFunctionTyping _ func_arg1 func_arg2 return_type)
+isBinaryFunctionParamMatchingFunction arg1 arg2 (BinaryFunctionTyping _ func_arg1 func_arg2 _)
                                             = arg1 == func_arg1 && arg2 == func_arg2
 isBinaryFunctionParamMatchingFunction _ _ _ = False
 
 isFunctionParamMatchingFunction :: [BaseType] -> FunctionTyping -> Bool
-isFunctionParamMatchingFunction args (FunctionTyping func_args return_type)
+isFunctionParamMatchingFunction args (FunctionTyping func_args _)
                                     = args == func_args
 isFunctionParamMatchingFunction _ _ = False
 
