@@ -20,7 +20,10 @@ library
       Argument.Lexer
       Argument.Parser
       Argument.Parser.Exception
+      Evaluator
       Exception
+      Koak.Evaluator
+      Koak.EvaluatorContext
       Koak.Grammar.Utils
       Koak.Lexer
       Koak.Lexer.Exception
