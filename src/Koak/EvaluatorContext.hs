@@ -109,8 +109,17 @@ getDefaultKContext = Kcontext
 getEmptyKContext :: Kcontext
 getEmptyKContext = Kcontext (Definitions HM.empty) (Variables HM.empty)
 
-kContextEnterLocalContext :: Kcontext -> Kcontext
-kContextEnterLocalContext (Kcontext definitions _) = Kcontext definitions (Variables HM.empty)
+kContextEnterLocalContext :: Kcontext -> KP.PrototypeArgs -> [Value] -> Kcontext
+kContextEnterLocalContext (Kcontext definitions _) (KP.PrototypeArgs [] _) [] = Kcontext definitions (Variables HM.empty)
+kContextEnterLocalContext (Kcontext definitions _) (KP.PrototypeArgs args _) values =
+                            kContextEnterLocalContext' (Kcontext definitions (Variables HM.empty)) args values
+
+kContextEnterLocalContext' :: Kcontext -> [KP.PrototypeIdentifier] -> [Value] -> Kcontext
+kContextEnterLocalContext' context [] [] = context
+kContextEnterLocalContext' context ((KP.PrototypeIdentifier id _):args) (val:vals) =
+    kContextEnterLocalContext' (kContextPushVariable id val context) args vals
+kContextEnterLocalContext' _ _ _ = error "Invalid number of arguments"
+
 
 kContextPushVariable :: KP.Identifier -> Value -> Kcontext -> Kcontext
 kContextPushVariable identifier val (Kcontext ds (Variables vs)) = Kcontext ds (Variables $ insert identifier val vs)
