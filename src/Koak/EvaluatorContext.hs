@@ -56,12 +56,22 @@ data Function   = UnaryFunction                  KP.PrototypeArgs KP.Expressions
                 | Function                       KP.PrototypeArgs KP.Expressions
     deriving (Eq, Show)
 
-data PrimFunction   = PrimUnaryFunction                  KP.PrototypeArgs -- (Value -> Value)
-                    | PrimBinaryFunction KP.Precedence   KP.PrototypeArgs -- (Value -> Value -> Value)
-                    | PrimFunction                       KP.PrototypeArgs
-    deriving (Eq, Show)
+data PrimFunction   = PrimUnaryFunction                  (Value   -> Value)
+                    | PrimBinaryFunction KP.Precedence   (Value   -> Value -> Value)
+                    | PrimFunction                       ([Value] -> Value)
 
-data Signature  = PrimitiveFunction [PrimFunction]
+instance Eq PrimFunction where
+    (PrimUnaryFunction      _) == (PrimUnaryFunction       _) = True
+    (PrimBinaryFunction pre _) == (PrimBinaryFunction pre' _) = pre == pre'
+    (PrimFunction           _) == (PrimFunction            _) = True
+    _                          == _                           = False
+
+instance Show PrimFunction where
+    show (PrimUnaryFunction      _) = "PrimUnaryFunction"
+    show (PrimBinaryFunction pre _) = "PrimBinaryFunction " ++ show pre
+    show (PrimFunction           _) = "PrimFunction"
+
+data Signature  = PrimitiveFunction PrimFunction
                 | RefinedFunction   Function
     deriving (Eq, Show)
 
@@ -79,32 +89,122 @@ getDefaultKContext = Kcontext
                         (
                             Definitions $
                                 HM.fromList [
-                                        (KP.Identifier "+", PrimitiveFunction [
-                                            PrimBinaryFunction (KP.Precedence 1)  (KP.PrototypeArgs [
-                                                    KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
-                                                    KP.PrototypeIdentifier (KP.Identifier "b") KP.Int
-                                                ]
-                                                KP.Int),
-                                            PrimBinaryFunction (KP.Precedence 1)  (KP.PrototypeArgs [
-                                                    KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
-                                                    KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
-                                                ]
-                                                KP.Double),
-                                            PrimBinaryFunction (KP.Precedence 1)  (KP.PrototypeArgs [
-                                                    KP.PrototypeIdentifier (KP.Identifier "a") KP.Double,
-                                                    KP.PrototypeIdentifier (KP.Identifier "b") KP.Int
-                                                ]
-                                                KP.Double),
-                                            PrimBinaryFunction (KP.Precedence 1)  (KP.PrototypeArgs [
-                                                    KP.PrototypeIdentifier (KP.Identifier "a") KP.Double,
-                                                    KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
-                                                ]
-                                                KP.Double)
-                                            ]
-                                        )
+                                        (KP.Identifier "=" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "==", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "!=", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier ">" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "<" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier ">=", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "<=", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "+" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "-" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "*" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "/" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "%" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "!" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
+                                        (KP.Identifier "toInt",    PrimitiveFunction $ PrimFunction primitiveBinaryPlus),
+                                        (KP.Identifier "toDouble", PrimitiveFunction $ PrimFunction primitiveBinaryPlus)
                                 ]
                         )
                         (Variables HM.empty)
+
+primitiveBinaryEqual :: Value -> Value -> Value
+primitiveBinaryEqual (IntVal    lv) (IntVal    rv) = BooleanVal (lv == rv)
+primitiveBinaryEqual (DoubleVal lv) (IntVal    rv) = BooleanVal (lv == rv)
+primitiveBinaryEqual (IntVal    lv) (DoubleVal rv) = BooleanVal (lv == rv)
+primitiveBinaryEqual (DoubleVal lv) (DoubleVal rv) = BooleanVal (lv == rv)
+primitiveBinaryEqual _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryNotEqual :: Value -> Value -> Value
+primitiveBinaryNotEqual (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryNotEqual (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryNotEqual (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryNotEqual (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryNotEqual _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryLessThan :: Value -> Value -> Value
+primitiveBinaryLessThan (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryLessThan (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryLessThan (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryLessThan (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryLessThan _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryMoreThan :: Value -> Value -> Value
+primitiveBinaryMoreThan (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryMoreThan (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryMoreThan (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryMoreThan (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryMoreThan _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryLessEqThan :: Value -> Value -> Value
+primitiveBinaryLessEqThan (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryLessEqThan (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryLessEqThan (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryLessEqThan (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryLessEqThan _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryMoreEqThan :: Value -> Value -> Value
+primitiveBinaryMoreEqThan (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryMoreEqThan (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryMoreEqThan (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryMoreEqThan (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryMoreEqThan _              _              = error "primitiveBinaryPlus"
+
+
+primitiveBinaryPlus :: Value -> Value -> Value
+primitiveBinaryPlus (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryPlus (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryPlus (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryPlus (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryPlus _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryMinus :: Value -> Value -> Value
+primitiveBinaryMinus (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryMinus (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryMinus (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryMinus (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryMinus _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryMultiply :: Value -> Value -> Value
+primitiveBinaryMultiply (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryMultiply (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryMultiply (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryMultiply (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryMultiply _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryDivide :: Value -> Value -> Value
+primitiveBinaryDivide (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryDivide (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryDivide (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryDivide (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryDivide _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryModulo :: Value -> Value -> Value
+primitiveBinaryModulo (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryModulo (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryModulo (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryModulo (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryModulo _              _              = error "primitiveBinaryPlus"
+
+primitiveBinaryNot :: Value -> Value -> Value
+primitiveBinaryNot (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryNot (DoubleVal lv) (IntVal    rv) = IntVal (lv + rv)
+primitiveBinaryNot (IntVal    lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryNot (DoubleVal lv) (DoubleVal rv) = IntVal (lv + rv)
+primitiveBinaryNot _              _              = error "primitiveBinaryPlus"
+
+primitiveToInt :: [Value] -> Value
+primitiveToInt [IntVal     v] = IntVal v
+primitiveToInt [DoubleVal  v] = IntVal v
+primitiveToInt [BooleanVal v] = IntVal v
+primitiveToInt _             = error ""
+
+primitiveToDouble :: [Value] -> Value
+primitiveToDouble [IntVal     v] = DoubleVal v
+primitiveToDouble [DoubleVal  v] = DoubleVal v
+primitiveToDouble [BooleanVal v] = DoubleVal v
+primitiveToDouble _             = error ""
+
 
 getEmptyKContext :: Kcontext
 getEmptyKContext = Kcontext (Definitions HM.empty) (Variables HM.empty)
@@ -119,7 +219,6 @@ kContextEnterLocalContext' context [] [] = context
 kContextEnterLocalContext' context ((KP.PrototypeIdentifier id _):args) (val:vals) =
     kContextEnterLocalContext' (kContextPushVariable id val context) args vals
 kContextEnterLocalContext' _ _ _ = error "Invalid number of arguments"
-
 
 kContextPushVariable :: KP.Identifier -> Value -> Kcontext -> Kcontext
 kContextPushVariable identifier val (Kcontext ds (Variables vs)) = Kcontext ds (Variables $ insert identifier val vs)

@@ -111,8 +111,8 @@ isLessPrio context left right
 getBinOpPrecedence :: Kcontext -> KP.BinaryOp -> Int
 getBinOpPrecedence context binop = let signature = kContextFindFunction (KTC.toIdentifier binop) context 
     in case signature of
-        PrimitiveFunction ((PrimBinaryFunction (KP.Precedence  pre) _  ):_) -> pre
-        RefinedFunction   (BinaryFunction      (KP.Precedence  pre) _ _)    -> pre
+        PrimitiveFunction ((PrimBinaryFunction (KP.Precedence  pre) _ _):_) -> pre
+        RefinedFunction   (BinaryFunction      (KP.Precedence  pre) _ _   ) -> pre
         _                                                                   -> error "getBinOpPrecedence"
 
 
@@ -120,77 +120,70 @@ getBinOpPrecedence context binop = let signature = kContextFindFunction (KTC.toI
 
 evaluateExpression' :: Kcontext -> BinaryTreeExpression -> EvaluationResult
 evaluateExpression' context (ExprLeaf unary)                            = evaluateUnary context unary
-evaluateExpression' context (ExprNode binary@(KP.BinaryOp (KP.Identifier "=")) left@(ExprLeaf (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing) )) right)
-                                                                        = let right_result = evaluateUnary context right in right_result -- add identifier and right result value to context
-evaluateExpression' context (ExprNode (KP.BinaryOp binary) left right)  = let leftResult  = evaluateExpression' context left                                   in
-                                                                          let rightResult = evaluateExpression' (getEvaluatedKcontext leftResult)  right       in
-                                                                              evaluateBinOperation (getEvaluatedKcontext rightResult) binary (getEvaluatedType leftResult) (getEvaluatedType rightResult)
+evaluateExpression' context (ExprNode (KP.BinaryOp (KP.Identifier "=")) left@(ExprLeaf (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing) )) right)
+                                                                        = let right_result = evaluateExpression' context right in
+                                                                          evaluateAssignment identifier (getEvaluatedValue right_result) (getEvaluatedKcontext right_result)
+evaluateExpression' context (ExprNode (KP.BinaryOp binary) left right)  = let left_result  = evaluateExpression' context left                                   in
+                                                                          let right_result = evaluateExpression' (getEvaluatedKcontext left_result)  right       in
+                                                                          evaluateBinaryOperation (getEvaluatedKcontext right_result) binary (getEvaluatedValue left_result) (getEvaluatedValue right_result)
+evaluateAssignment ::  KP.Identifier -> Value -> Kcontext -> EvaluationResult
+evaluateAssignment identifier value context = EvaluationResult (kContextPushVariable identifier value context) value
 
 evaluateUnary :: Kcontext -> KP.Unary -> EvaluationResult
 evaluateUnary context (KP.Unary (KP.UnaryOp identifier) unary) =
-    let found = kContextFind context identifier     in
-    let next  = evaluateUnaryTyping context unary   in
-    EvaluationResult
-        (getFunctionReturnType $
-            findUnaryMatchingFunction
-                (getEvaluatedKcontext next)
-                identifier
-                (getEvaluatedType     next)
-        )
-        (getEvaluatedKcontext next)
-evaluateUnaryTyping context (KP.UnaryPostfix postfix) = evaluatePostfixTyping context postfix
+    let next  = evaluateUnary context unary   in
+    evaluateUnaryOperation (getEvaluatedKcontext next) identifier (getEvaluatedValue next)
+evaluateUnary context (KP.UnaryPostfix postfix) = evaluatePostfix context postfix
 
 evaluateUnaryOperation :: Kcontext -> KP.Identifier -> Value -> EvaluationResult
-evaluateUnaryOperation context func_name arg = evaluateUnaryOperation' context arg (KEC.kContextFindFunction context func_name)
+evaluateUnaryOperation context func_name arg = evaluateUnaryOperation' context arg (KEC.kContextFindFunction func_name context )
 
 evaluateUnaryOperation' :: Kcontext -> Value -> Signature -> EvaluationResult
-evaluateUnaryOperation' context arg (PrimitiveFunction func_list) =
-    let found = find (isUnaryFunctionParamMatchingFunction arg) func_list
-    in case found of
-    Nothing              -> error "evaluateUnaryOperation"
-    (Just matching_func) -> matching_func
-evaluateUnaryOperation' context arg (RefinedFunction func)        = evaluateUnaryOperationCall context arg func
+evaluateUnaryOperation' context arg (PrimitiveFunction func_list) = evaluatePrimitiveFunctionCall context [arg] func_list
+evaluateUnaryOperation' context arg (RefinedFunction func)        = evaluateRefinedFunctionCall   context [arg] func
 
-evaluateUnaryOperationCall :: Kcontext -> Value -> Function -> Value
-evaluateUnaryOperationCall context arg (KEC.UnaryFunction pargs exprs) = 
+evaluateBinaryOperation :: Kcontext -> KP.Identifier -> Value -> Value -> EvaluationResult
+evaluateBinaryOperation context func_name arg1 arg2 = evaluateBinaryOperation' context arg1 arg2 (KEC.kContextFindFunction func_name context )
 
-evaluateUnaryOperationPrimCall :: Kcontext -> Value -> PrimFunction -> Value
-
+evaluateBinaryOperation' :: Kcontext -> Value -> Value -> Signature -> EvaluationResult
+evaluateBinaryOperation' context arg1 arg2 (PrimitiveFunction func_list) = evaluatePrimitiveFunctionCall context [arg1, arg2] func_list
+evaluateBinaryOperation' context arg1 arg2 (RefinedFunction func)        = evaluateRefinedFunctionCall   context [arg1, arg2] func
 
 evaluatePostfix :: Kcontext -> KP.Postfix -> EvaluationResult
-evaluatePostfix context (KP.Postfix (KP.PrimaryLiteral    (KP.LiteralDecimal _)) Nothing)          = EvaluationResult Int    context
-evaluatePostfix context (KP.Postfix (KP.PrimaryLiteral    (KP.LiteralDouble  _)) Nothing)          = EvaluationResult Double context
-evaluatePostfix context (KP.Postfix (KP.PrimaryIdentifier identifier           ) Nothing)          = evaluatePostfixTypingVar   context identifier
-evaluatePostfix context (KP.Postfix (KP.PrimaryIdentifier identifier           ) (Just call_expr)) = evaluateFunctionCallTyping context identifier call_expr
-evaluatePostfix context (KP.Postfix (KP.PrimaryExpressions expressions         ) Nothing)          = evaluateExpressionsTyping  context expressions
+evaluatePostfix context (KP.Postfix (KP.PrimaryLiteral    (KP.LiteralDecimal (KP.DecimalConst v))) Nothing) = EvaluationResult context (IntVal v)
+evaluatePostfix context (KP.Postfix (KP.PrimaryLiteral    (KP.LiteralDouble  (KP.DoubleConst  v))) Nothing) = EvaluationResult context (DoubleVal v)
+evaluatePostfix context (KP.Postfix (KP.PrimaryIdentifier identifier           ) Nothing)                   = evaluatePostfixVar      context identifier
+evaluatePostfix context (KP.Postfix (KP.PrimaryIdentifier identifier           ) (Just call_expr))          = evaluateFunctionCall    context identifier call_expr
+evaluatePostfix context (KP.Postfix (KP.PrimaryExpressions expressions         ) Nothing)                   = evaluateExpressions     context expressions
 evaluatePostfix context _ = error ""
 
 evaluatePostfixVar :: Kcontext -> KP.Identifier -> EvaluationResult
-evaluatePostfixVar context identifier = evaluatePostfixTypingVar' context identifier $ kContextFind context identifier
-
-evaluatePostfixVar' :: Kcontext -> KP.Identifier -> Maybe TypeSignature -> EvaluationResult
-evaluatePostfixVar' context identifier Nothing               = throw $ UnknownDefinition identifier
-evaluatePostfixVar' context identifier (Just (Var var_type)) = EvaluationResult var_type context
-evaluatePostfixVar' context identifier (Just _             ) = throw $ NotAVar identifier
+evaluatePostfixVar context identifier = EvaluationResult context (kContextFindVariable identifier context)
 
 evaluateFunctionCall :: Kcontext -> KP.Identifier -> KP.CallExpression -> EvaluationResult
-evaluateFunctionCall context identifier (KP.CallExpression Nothing)                                 = evaluateFunctionCallTyping' context identifier []
-evaluateFunctionCall context identifier (KP.CallExpression (Just (KP.CallExpressionArgs arg args))) = evaluateFunctionCallTyping' context identifier []
+evaluateFunctionCall context identifier (KP.CallExpression Nothing)                                 = evaluateFunctionCall' context identifier []
+evaluateFunctionCall context identifier (KP.CallExpression (Just (KP.CallExpressionArgs arg args))) = evaluateFunctionCall' context identifier (map (getEvaluatedValue . evaluateExpression context) (arg:args))
 
-evaluateFunctionCall' :: Kcontext -> KP.Identifier -> [BaseType] -> EvaluationResult
-evaluateFunctionCall' context identifier args = evaluateFunctionCallTyping'' context identifier args (kContextFind context identifier)
+evaluateFunctionCall' :: Kcontext -> KP.Identifier -> [Value] -> EvaluationResult
+evaluateFunctionCall' context identifier args = evaluateFunctionCall'' context args (kContextFindFunction identifier context)
 
-evaluateFunctionCall'' :: Kcontext -> KP.Identifier -> [BaseType] -> Maybe TypeSignature -> EvaluationResult
-evaluateFunctionCall'' context identifier args Nothing             = throw $ UnknownDefinition identifier
-evaluateFunctionCall'' context identifier args (Just (Function _)) = error ""
-evaluateFunctionCall'' context identifier args (Just _)            = error ""
+evaluateFunctionCall'' :: Kcontext -> [Value] -> Signature -> EvaluationResult
+evaluateFunctionCall'' context args (RefinedFunction   function)  = evaluateRefinedFunctionCall   context args function
+evaluateFunctionCall'' context args (PrimitiveFunction functions) = evaluatePrimitiveFunctionCall context args functions
 
+evaluateRefinedFunctionCall :: Kcontext -> [Value] -> Function -> EvaluationResult
+evaluateRefinedFunctionCall context args (UnaryFunction    pargs exprs) = evaluateExpressions (kContextEnterLocalContext context pargs args) exprs
+evaluateRefinedFunctionCall context args (BinaryFunction _ pargs exprs) = evaluateExpressions (kContextEnterLocalContext context pargs args) exprs
+evaluateRefinedFunctionCall context args (Function         pargs exprs) = evaluateExpressions (kContextEnterLocalContext context pargs args) exprs
+
+evaluatePrimitiveFunctionCall :: Kcontext -> [Value] -> [PrimFunction] -> EvaluationResult
+evaluatePrimitiveFunctionCall = 
 
 isConditionTrue :: EvaluationResult -> Bool
 isConditionTrue (EvaluationResult _ NilVal           )  = False
 isConditionTrue (EvaluationResult _ (BooleanVal False)) = False
 isConditionTrue (EvaluationResult _ (IntVal     0    )) = False
-isConditionTrue (EvaluationResult _ (BooleanVal 0.0  )) = False
+isConditionTrue (EvaluationResult _ (DoubleVal  0.0  )) = False
 isConditionTrue _                                       = True
 
 (<->) :: () -> () -> ()
