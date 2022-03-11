@@ -17,13 +17,18 @@ import Koak.EvaluatorContext        as KEC
 
 data EvaluationResult = EvaluationResult Kcontext Value
 
-evaluateKoak :: Kcontext -> [KP.Kdefs] -> Kcontext
-evaluateKoak = foldl evaluateKdef
+data KoakEvaluation = KoakEvaluation [Value] Kcontext
+    deriving (Eq, Show)
 
-evaluateKdef :: Kcontext -> KP.Kdefs -> Kcontext
- -- il faut ajouter la fonction dans le contextes 
-evaluateKdef context (KP.KdefDef        _    ) = 
-evaluateKdef context (KP.KdefExpression exprs) = getEvaluatedKcontext $ evaluateExpressions context exprs
+evaluateKoak :: Kcontext -> [KP.Kdefs] -> KoakEvaluation
+evaluateKoak context = foldl evaluateKdef (KoakEvaluation [] context)
+
+evaluateKdef :: KoakEvaluation -> KP.Kdefs -> KoakEvaluation
+evaluateKdef (KoakEvaluation evaluations context) (KP.KdefDef        def  ) = KoakEvaluation evaluations $ kContextPushFunction def context
+evaluateKdef (KoakEvaluation evaluations context) (KP.KdefExpression exprs) = let evaluation = evaluateExpressions context exprs in
+                                                                              KoakEvaluation
+                                                                                (getEvaluatedValue    evaluation:evaluations)
+                                                                                (getEvaluatedKcontext evaluation)
 
 evaluateExpressions :: Kcontext -> KP.Expressions -> EvaluationResult
 evaluateExpressions context (KP.ExpressionFor    for_expr  ) = evaluateFor            context for_expr
@@ -112,21 +117,21 @@ isLessPrio context left right
 getBinOpPrecedence :: Kcontext -> KP.BinaryOp -> Int
 getBinOpPrecedence context binop = let signature = kContextFindFunction (KTC.toIdentifier binop) context
     in case signature of
-        PrimitiveFunction ((PrimBinaryFunction (KP.Precedence  pre) _ _):_) -> pre
-        RefinedFunction   (BinaryFunction      (KP.Precedence  pre) _ _   ) -> pre
-        _                                                                   -> error "getBinOpPrecedence"
-
+        PrimitiveFunction (PrimBinaryFunction (KP.Precedence  pre) _  ) -> pre
+        RefinedFunction   (BinaryFunction     (KP.Precedence  pre) _ _) -> pre
+        _                                                               -> error "getBinOpPrecedence"
 
 ------------------------------------------
 
 evaluateExpression' :: Kcontext -> BinaryTreeExpression -> EvaluationResult
 evaluateExpression' context (ExprLeaf unary)                            = evaluateUnary context unary
 evaluateExpression' context (ExprNode (KP.BinaryOp (KP.Identifier "=")) left@(ExprLeaf (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing) )) right)
-                                                                        = let right_result = evaluateExpression' context right in
+                                                                        = let right_result = evaluateExpression' context right                             in
                                                                           evaluateAssignment identifier (getEvaluatedValue right_result) (getEvaluatedKcontext right_result)
-evaluateExpression' context (ExprNode (KP.BinaryOp binary) left right)  = let left_result  = evaluateExpression' context left                                   in
-                                                                          let right_result = evaluateExpression' (getEvaluatedKcontext left_result)  right       in
+evaluateExpression' context (ExprNode (KP.BinaryOp binary) left right)  = let left_result  = evaluateExpression' context left                              in
+                                                                          let right_result = evaluateExpression' (getEvaluatedKcontext left_result)  right in
                                                                           evaluateBinaryOperation (getEvaluatedKcontext right_result) binary (getEvaluatedValue left_result) (getEvaluatedValue right_result)
+
 evaluateAssignment ::  KP.Identifier -> Value -> Kcontext -> EvaluationResult
 evaluateAssignment identifier value context = EvaluationResult (kContextPushVariable identifier value context) value
 
@@ -177,8 +182,11 @@ evaluateRefinedFunctionCall context args (UnaryFunction    pargs exprs) = evalua
 evaluateRefinedFunctionCall context args (BinaryFunction _ pargs exprs) = evaluateExpressions (kContextEnterLocalContext context pargs args) exprs
 evaluateRefinedFunctionCall context args (Function         pargs exprs) = evaluateExpressions (kContextEnterLocalContext context pargs args) exprs
 
-evaluatePrimitiveFunctionCall :: Kcontext -> [Value] -> [PrimFunction] -> EvaluationResult
-evaluatePrimitiveFunctionCall = 
+evaluatePrimitiveFunctionCall :: Kcontext -> [Value] -> PrimFunction -> EvaluationResult
+evaluatePrimitiveFunctionCall context (x:_)    (PrimUnaryFunction    f) = EvaluationResult context $ f x
+evaluatePrimitiveFunctionCall context (x:x':_) (PrimBinaryFunction _ f) = EvaluationResult context $ f x x'
+evaluatePrimitiveFunctionCall context args     (PrimFunction         f) = EvaluationResult context $ f args
+evaluatePrimitiveFunctionCall _       _        _                        = error "evaluatePrimitiveFunctionCall"
 
 isConditionTrue :: EvaluationResult -> Bool
 isConditionTrue (EvaluationResult _ NilVal           )  = False

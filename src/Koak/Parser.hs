@@ -36,13 +36,16 @@ module Koak.Parser                            ( Stmt(..)
                                               ) where
 
 import Control.Exception                      ( throw )
+import Data.Hashable                          ( Hashable
+                                              , hashWithSalt
+                                              )
 
-import Exception                              ( KoakException( KoakKPE ) )
 import qualified Koak.Parser.Exception as KPE ( KoakParserException(..) )
+
 import qualified Koak.Lexer            as KL  ( Token(..)
                                               , tokenizeKoak
                                               )
-import Koak.Grammar.Utils                     ( isSpecialWord )
+import qualified Koak.Grammar.Utils    as KGU ( isSpecialWord )
 
 
 newtype Stmt   = Stmt [Kdefs]
@@ -137,6 +140,8 @@ data Literal = LiteralDecimal DecimalConst
 data VarAssignment = VarAssignment Identifier Type
     deriving (Show, Eq)
 
+instance Hashable Identifier where
+    hashWithSalt salt (Identifier string)   = salt `hashWithSalt` string
 
 parseKoak :: String -> Stmt
 parseKoak = parseTokenizedKoak . KL.tokenizeKoak
@@ -148,48 +153,45 @@ parseStmt :: [KL.Token] -> Stmt
 parseStmt []     = Stmt []
 parseStmt tokens = let (kdefs, rest) = parseKdefs tokens in Stmt $ kdefs : getKdefsFromStmt (parseStmt rest)
 
-createParsingException :: String -> [KL.Token] -> Maybe KL.Token -> [KL.Token] -> KoakException
-createParsingException at expected actual rest = KoakKPE $ KPE.KoakParserMissingTokenException at (show expected) (show actual) $ show rest
-
 getKdefsFromStmt :: Stmt -> [Kdefs]
 getKdefsFromStmt (Stmt kdefs) = kdefs
 
 parseKdefs :: [KL.Token] -> (Kdefs, [KL.Token])
-parseKdefs []                 = throw $ createParsingException "parseKdefs" [KL.Word "def"] Nothing []
+parseKdefs []                 = throw $ KPE.KoakParserMissingTokenException "parseKdefs" [KL.Word "def"] Nothing []
 parseKdefs (KL.Word "def":xs) = let (def , rest) = parseDefs xs            in (KdefDef def, rest)
 parseKdefs tokens             = let (expr, rest) = parseExpressions tokens in (KdefExpression expr, parseKdefsCheckSemiColon rest)
 
 parseDefs :: [KL.Token] -> (Defs, [KL.Token])
-parseDefs []     = throw $ createParsingException "parseDefs" [] Nothing []
+parseDefs []     = throw $ KPE.KoakParserMissingTokenException "parseDefs" [] Nothing []
 parseDefs tokens = let (prototype  , rest ) = parsePrototype   tokens in
                    let (expressions, rest') = parseExpressions rest   in
                    (Defs prototype expressions, parseKdefsCheckSemiColon rest')
 
 parseKdefsCheckSemiColon :: [KL.Token] -> [KL.Token]
-parseKdefsCheckSemiColon []                = throw $ createParsingException "parseKdefs" [KL.SemiColon] Nothing []
+parseKdefsCheckSemiColon []                = throw $ KPE.KoakParserMissingTokenException "parseKdefs" [KL.SemiColon] Nothing []
 parseKdefsCheckSemiColon (KL.SemiColon:xs) = xs
-parseKdefsCheckSemiColon (x:xs)            = throw $ createParsingException "parseKdefs" [KL.SemiColon] (Just x) xs
+parseKdefsCheckSemiColon (x:xs)            = throw $ KPE.KoakParserMissingTokenException "parseKdefs" [KL.SemiColon] (Just x) xs
 
 parsePrototype :: [KL.Token] -> (Prototype, [KL.Token])
-parsePrototype []                    = throw $ createParsingException "parsePrototype" [KL.Word "unary", KL.Word "binary", KL.Word "{function name}"] Nothing []
+parsePrototype []                    = throw $ KPE.KoakParserMissingTokenException "parsePrototype" [KL.Word "unary", KL.Word "binary", KL.Word "{function name}"] Nothing []
 parsePrototype (KL.Word "unary":xs)  = parsePrototypeUnary    xs
 parsePrototype (KL.Word "binary":xs) = parsePrototypeBinary   xs
 parsePrototype tokens@(KL.Word _:_)  = parsePrototypeFunction tokens
-parsePrototype (x:xs)                = throw $ createParsingException "parsePrototype" [KL.Word "unary", KL.Word "binary", KL.Word "{function name}"] (Just x) xs
+parsePrototype (x:xs)                = throw $ KPE.KoakParserMissingTokenException "parsePrototype" [KL.Word "unary", KL.Word "binary", KL.Word "{function name}"] (Just x) xs
 
 parsePrototypeUnary :: [KL.Token] -> (Prototype, [KL.Token])
-parsePrototypeUnary []     = throw $ createParsingException "parsePrototypeUnary" [] Nothing []
+parsePrototypeUnary []     = throw $ KPE.KoakParserMissingTokenException "parsePrototypeUnary" [] Nothing []
 parsePrototypeUnary tokens = let (unop         , rest ) = parseUnaryOp         tokens in
                              let (prototypeArgs, rest') = parsePrototypeArgs   rest   in
                              (PrototypeUnary unop prototypeArgs, rest')
 
 parseUnaryOp :: [KL.Token] -> (UnaryOp, [KL.Token])
-parseUnaryOp []              = throw $ createParsingException "parseUnaryOp" [KL.Word "{any}"] Nothing []
+parseUnaryOp []              = throw $ KPE.KoakParserMissingTokenException "parseUnaryOp" [KL.Word "{any}"] Nothing []
 parseUnaryOp (KL.Word op:xs) = (UnaryOp $ Identifier op, xs)
-parseUnaryOp (x:xs)          = throw $ createParsingException "parseUnaryOp" [KL.Word "{any}"] (Just x) xs
+parseUnaryOp (x:xs)          = throw $ KPE.KoakParserMissingTokenException "parseUnaryOp" [KL.Word "{any}"] (Just x) xs
 
 parsePrototypeBinary :: [KL.Token] -> (Prototype, [KL.Token])
-parsePrototypeBinary []     = throw $ createParsingException "parsePrototypeBinary" [] Nothing []
+parsePrototypeBinary []     = throw $ KPE.KoakParserMissingTokenException "parsePrototypeBinary" [] Nothing []
 parsePrototypeBinary tokens = let (precedence   , rest  ) = parseMaybePrecedence tokens in
                               let (binaryOp     , rest' ) = parseBinaryOp        rest   in
                               let (prototypeArgs, rest'') = parsePrototypeArgs   rest'  in
@@ -200,12 +202,12 @@ parsePrototypeBinary' Nothing           binaryOp prototypeArgs tokens = (Prototy
 parsePrototypeBinary' (Just precedence) binaryOp prototypeArgs tokens = (PrototypeBinary precedence binaryOp prototypeArgs, tokens)
 
 parseBinaryOp :: [KL.Token] -> (BinaryOp, [KL.Token])
-parseBinaryOp []              = throw $ createParsingException "parseBinaryOp" [KL.Word "{any}"] Nothing []
+parseBinaryOp []              = throw $ KPE.KoakParserMissingTokenException "parseBinaryOp" [KL.Word "{any}"] Nothing []
 parseBinaryOp (KL.Word op:xs) = (BinaryOp $ Identifier op, xs)
-parseBinaryOp (x:xs)          = throw $ createParsingException "parseBinaryOp" [KL.Word "{any}"] (Just x) xs
+parseBinaryOp (x:xs)          = throw $ KPE.KoakParserMissingTokenException "parseBinaryOp" [KL.Word "{any}"] (Just x) xs
 
 parsePrototypeArgs :: [KL.Token] -> (PrototypeArgs, [KL.Token])
-parsePrototypeArgs []     = throw $ createParsingException "parsePrototypeArgs" [] Nothing []
+parsePrototypeArgs []     = throw $ KPE.KoakParserMissingTokenException "parsePrototypeArgs" [] Nothing []
 parsePrototypeArgs tokens = let rest                            = parsePrototypeArgsCheckOpenedParenthesis tokens  in
                             let (prototypeIdentifiers, rest'  ) = parsePrototypeArgsList                   rest    in
                             let rest''                          = parsePrototypeArgsCheckClosedParenthesis rest'   in
@@ -213,9 +215,9 @@ parsePrototypeArgs tokens = let rest                            = parsePrototype
                             (PrototypeArgs prototypeIdentifiers returnType, rest''')
 
 parsePrototypeArgsCheckOpenedParenthesis :: [KL.Token] -> [KL.Token]
-parsePrototypeArgsCheckOpenedParenthesis []                        = throw $ createParsingException "parsePrototypeArgs" [] Nothing []
+parsePrototypeArgsCheckOpenedParenthesis []                        = throw $ KPE.KoakParserMissingTokenException "parsePrototypeArgs" [] Nothing []
 parsePrototypeArgsCheckOpenedParenthesis (KL.OpenedParenthesis:xs) = xs
-parsePrototypeArgsCheckOpenedParenthesis (x:xs)                    = throw $ createParsingException "parsePrototypeArgs" [KL.OpenedParenthesis] (Just x) xs
+parsePrototypeArgsCheckOpenedParenthesis (x:xs)                    = throw $ KPE.KoakParserMissingTokenException "parsePrototypeArgs" [KL.OpenedParenthesis] (Just x) xs
 
 parsePrototypeArgsList :: [KL.Token] -> ([PrototypeIdentifier], [KL.Token])
 parsePrototypeArgsList tokens = parsePrototypeArgsList' tokens []
@@ -225,49 +227,49 @@ parsePrototypeArgsList' tokens@(KL.Word _:_) protoIds = let (protoId, rest) = pa
 parsePrototypeArgsList' tokens               protoIds = (reverse protoIds, tokens)
 
 parsePrototypeIdentifier :: [KL.Token] -> (PrototypeIdentifier, [KL.Token])
-parsePrototypeIdentifier []     = throw $ createParsingException "parsePrototypeIdentifier" [] Nothing []
+parsePrototypeIdentifier []     = throw $ KPE.KoakParserMissingTokenException "parsePrototypeIdentifier" [] Nothing []
 parsePrototypeIdentifier tokens = let (identifier, rest) = parseIdentifier tokens in parsePrototypeIdentifier' rest identifier
 
 parsePrototypeIdentifier' :: [KL.Token] -> Identifier -> (PrototypeIdentifier, [KL.Token])
-parsePrototypeIdentifier' []         _             = throw $ createParsingException "parsePrototypeIdentifier" [KL.Colon] Nothing []
+parsePrototypeIdentifier' []         _             = throw $ KPE.KoakParserMissingTokenException "parsePrototypeIdentifier" [KL.Colon] Nothing []
 parsePrototypeIdentifier' (KL.Colon:xs) identifier = let (prototypeType, rest) = parseType xs in (PrototypeIdentifier identifier prototypeType, rest)
-parsePrototypeIdentifier' (x:xs)     _             = throw $ createParsingException "parsePrototypeIdentifier" [KL.Colon] (Just x) xs
+parsePrototypeIdentifier' (x:xs)     _             = throw $ KPE.KoakParserMissingTokenException "parsePrototypeIdentifier" [KL.Colon] (Just x) xs
 
 parseIdentifier :: [KL.Token] -> (Identifier, [KL.Token])
-parseIdentifier []                      = throw $ createParsingException "parseIdentifier" [KL.Word "{any}"] Nothing []
+parseIdentifier []                      = throw $ KPE.KoakParserMissingTokenException "parseIdentifier" [KL.Word "{any}"] Nothing []
 parseIdentifier (KL.Word identifier:xs) = (Identifier identifier, xs)
-parseIdentifier (x:xs)                  = throw $ createParsingException "parseIdentifier" [KL.Word "{any}"] (Just x) xs
+parseIdentifier (x:xs)                  = throw $ KPE.KoakParserMissingTokenException "parseIdentifier" [KL.Word "{any}"] (Just x) xs
 
 parseType :: [KL.Token] -> (Type, [KL.Token])
-parseType []                    = throw $ createParsingException "parseType" [KL.Word "int", KL.Word "double", KL.Word "bool", KL.Word "void"] Nothing []
+parseType []                    = throw $ KPE.KoakParserMissingTokenException "parseType" [KL.Word "int", KL.Word "double", KL.Word "bool", KL.Word "void"] Nothing []
 parseType (KL.Word "int":xs)    = (Int    , xs)
 parseType (KL.Word "double":xs) = (Double , xs)
 parseType (KL.Word "bool":xs)   = (Boolean, xs)
 parseType (KL.Word "void":xs)   = (Void   , xs)
-parseType (x:xs)                = throw $ createParsingException "parseType" [KL.Word "int", KL.Word "double", KL.Word "bool", KL.Word "void"] (Just x) xs
+parseType (x:xs)                = throw $ KPE.KoakParserMissingTokenException "parseType" [KL.Word "int", KL.Word "double", KL.Word "bool", KL.Word "void"] (Just x) xs
 
 parsePrototypeArgsReturnType :: [KL.Token] -> (Type, [KL.Token])
-parsePrototypeArgsReturnType []            = throw $ createParsingException "parsePrototypeArgsReturnType" [KL.Colon] Nothing []
+parsePrototypeArgsReturnType []            = throw $ KPE.KoakParserMissingTokenException "parsePrototypeArgsReturnType" [KL.Colon] Nothing []
 parsePrototypeArgsReturnType (KL.Colon:xs) = parseType xs
-parsePrototypeArgsReturnType (x:xs)        = throw $ createParsingException "parsePrototypeArgsReturnType" [KL.Colon] (Just x) xs
+parsePrototypeArgsReturnType (x:xs)        = throw $ KPE.KoakParserMissingTokenException "parsePrototypeArgsReturnType" [KL.Colon] (Just x) xs
 
 parsePrototypeArgsCheckClosedParenthesis :: [KL.Token] -> [KL.Token]
-parsePrototypeArgsCheckClosedParenthesis []                        = throw $ createParsingException "parsePrototypeArgs" [] Nothing []
+parsePrototypeArgsCheckClosedParenthesis []                        = throw $ KPE.KoakParserMissingTokenException "parsePrototypeArgs" [] Nothing []
 parsePrototypeArgsCheckClosedParenthesis (KL.ClosedParenthesis:xs) = xs
-parsePrototypeArgsCheckClosedParenthesis (x:xs)                    = throw $ createParsingException "parsePrototypeArgs" [KL.ClosedParenthesis] (Just x) xs
+parsePrototypeArgsCheckClosedParenthesis (x:xs)                    = throw $ KPE.KoakParserMissingTokenException "parsePrototypeArgs" [KL.ClosedParenthesis] (Just x) xs
 
 parseMaybePrecedence :: [KL.Token] -> (Maybe Precedence, [KL.Token])
 parseMaybePrecedence (KL.IntegerNumber value:xs) = (Just $ Precedence value, xs)
 parseMaybePrecedence tokens                      = (Nothing, tokens)
 
 parsePrototypeFunction :: [KL.Token] -> (Prototype, [KL.Token])
-parsePrototypeFunction []     = throw $ createParsingException "parsePrototypeFunction" [] Nothing []
+parsePrototypeFunction []     = throw $ KPE.KoakParserMissingTokenException "parsePrototypeFunction" [] Nothing []
 parsePrototypeFunction tokens = let (identifier   , rest ) = parseIdentifier    tokens in
                                 let (prototypeArgs, rest') = parsePrototypeArgs rest   in
                                 (PrototypeFunction identifier prototypeArgs, rest')
 
 parseExpressions :: [KL.Token] -> (Expressions, [KL.Token])
-parseExpressions []                         = throw $ createParsingException "parseExpressions" [KL.Word "for", KL.Word "if", KL.Word "while", KL.Word "{expression}"] Nothing []
+parseExpressions []                         = throw $ KPE.KoakParserMissingTokenException "parseExpressions" [KL.Word "for", KL.Word "if", KL.Word "while", KL.Word "{expression}"] Nothing []
 parseExpressions tokens@(KL.Word "for":_)   = wrapForAroundExpressions   $ parseFor   tokens
 parseExpressions tokens@(KL.Word "if":_)    = wrapIfAroundExpressions    $ parseIf    tokens
 parseExpressions tokens@(KL.Word "while":_) = wrapWhileAroundExpressions $ parseWhile tokens
@@ -285,37 +287,37 @@ wrapWhileAroundExpressions :: (While, [KL.Token]) -> (Expressions, [KL.Token])
 wrapWhileAroundExpressions (whileExpression, tokens) = (ExpressionWhile whileExpression, tokens)
 
 parseFor :: [KL.Token] -> (For, [KL.Token])
-parseFor []                 = throw $ createParsingException "parseFor" [KL.Word "for"] Nothing []
+parseFor []                 = throw $ KPE.KoakParserMissingTokenException "parseFor" [KL.Word "for"] Nothing []
 parseFor (KL.Word "for":xs) = uncurry parseFor' $ parseExpression xs
-parseFor (x:xs)             = throw $ createParsingException "parseFor" [KL.Word "for"] (Just x) xs
+parseFor (x:xs)             = throw $ KPE.KoakParserMissingTokenException "parseFor" [KL.Word "for"] (Just x) xs
 
 parseFor' :: Expression -> [KL.Token] -> (For, [KL.Token])
-parseFor' _          []            = throw $ createParsingException "parseFor" [KL.Comma] Nothing []
+parseFor' _          []            = throw $ KPE.KoakParserMissingTokenException "parseFor" [KL.Comma] Nothing []
 parseFor' assignExpr (KL.Comma:xs) = uncurry (parseFor'' assignExpr) $ parseExpression xs
-parseFor' _          (x:xs)        = throw $ createParsingException "parseFor" [KL.Comma] (Just x) xs
+parseFor' _          (x:xs)        = throw $ KPE.KoakParserMissingTokenException "parseFor" [KL.Comma] (Just x) xs
 
 parseFor'' :: Expression -> Expression -> [KL.Token] -> (For, [KL.Token])
-parseFor'' _          _        []            = throw $ createParsingException "parseFor" [KL.Comma] Nothing []
+parseFor'' _          _        []            = throw $ KPE.KoakParserMissingTokenException "parseFor" [KL.Comma] Nothing []
 parseFor'' assignExpr condExpr (KL.Comma:xs) = uncurry (parseFor''' assignExpr condExpr) $ parseExpression xs
-parseFor'' _          _        (x:xs)        = throw $ createParsingException "parseFor" [KL.Comma] (Just x) xs
+parseFor'' _          _        (x:xs)        = throw $ KPE.KoakParserMissingTokenException "parseFor" [KL.Comma] (Just x) xs
 
 parseFor''' :: Expression -> Expression -> Expression -> [KL.Token] -> (For, [KL.Token])
-parseFor''' _          _        _       []                = throw $ createParsingException "parseFor" [KL.Word "in"] Nothing []
+parseFor''' _          _        _       []                = throw $ KPE.KoakParserMissingTokenException "parseFor" [KL.Word "in"] Nothing []
 parseFor''' assignExpr condExpr incExpr (KL.Word "in":xs) = uncurry (parseFor'''' assignExpr condExpr incExpr) $ parseExpressions xs
-parseFor''' _          _        _       (x:xs)            = throw $ createParsingException "parseFor" [KL.Word "in"] (Just x) xs
+parseFor''' _          _        _       (x:xs)            = throw $ KPE.KoakParserMissingTokenException "parseFor" [KL.Word "in"] (Just x) xs
 
 parseFor'''' :: Expression -> Expression -> Expression -> Expressions -> [KL.Token] -> (For, [KL.Token])
 parseFor'''' assignExpr condExpr incExpr exprs tokens = (For assignExpr condExpr incExpr exprs, tokens)
 
 parseIf :: [KL.Token] -> (If, [KL.Token])
-parseIf []                = throw $ createParsingException "parseIf" [KL.Word "if"] Nothing []
+parseIf []                = throw $ KPE.KoakParserMissingTokenException "parseIf" [KL.Word "if"] Nothing []
 parseIf (KL.Word "if":xs) = uncurry parseIf' $ parseExpression xs
-parseIf (x:xs)            = throw $ createParsingException "parseIf" [KL.Word "if"] (Just x) xs
+parseIf (x:xs)            = throw $ KPE.KoakParserMissingTokenException "parseIf" [KL.Word "if"] (Just x) xs
 
 parseIf' :: Expression -> [KL.Token] -> (If, [KL.Token])
-parseIf' _      []                  = throw $ createParsingException "parseIf" [KL.Word "then"] Nothing []
+parseIf' _      []                  = throw $ KPE.KoakParserMissingTokenException "parseIf" [KL.Word "then"] Nothing []
 parseIf' ifExpr (KL.Word "then":xs) = uncurry (parseIf'' ifExpr) $ parseExpressions xs
-parseIf' _      (x:xs)              = throw $ createParsingException "parseIf" [KL.Word "then"] (Just x) xs
+parseIf' _      (x:xs)              = throw $ KPE.KoakParserMissingTokenException "parseIf" [KL.Word "then"] (Just x) xs
 
 parseIf'' :: Expression -> Expressions -> [KL.Token] -> (If, [KL.Token])
 parseIf'' ifExpr thenExprs (KL.Word "else":xs) = let (elseExprs, rest) = parseExpressions xs in
@@ -323,17 +325,17 @@ parseIf'' ifExpr thenExprs (KL.Word "else":xs) = let (elseExprs, rest) = parseEx
 parseIf'' ifExpr thenExprs tokens              = (If ifExpr thenExprs Nothing         , tokens)
 
 parseWhile :: [KL.Token] -> (While, [KL.Token])
-parseWhile []                   = throw $ createParsingException "parseWhile" [KL.Word "while"] Nothing []
+parseWhile []                   = throw $ KPE.KoakParserMissingTokenException "parseWhile" [KL.Word "while"] Nothing []
 parseWhile (KL.Word "while":xs) = uncurry parseWhile' $ parseExpression xs
-parseWhile (x:xs)               = throw $ createParsingException "parseWhile" [KL.Word "while"] (Just x) xs
+parseWhile (x:xs)               = throw $ KPE.KoakParserMissingTokenException "parseWhile" [KL.Word "while"] (Just x) xs
 
 parseWhile' :: Expression -> [KL.Token] -> (While, [KL.Token])
-parseWhile' _         []                = throw $ createParsingException "parseWhile" [KL.Word "do"] Nothing []
+parseWhile' _         []                = throw $ KPE.KoakParserMissingTokenException "parseWhile" [KL.Word "do"] Nothing []
 parseWhile' whileExpr (KL.Word "do":xs) = let (doExprs, rest) = parseExpressions xs in (While whileExpr doExprs, rest)
-parseWhile' _         (x:xs)            = throw $ createParsingException "parseWhile" [KL.Word "do"] (Just x) xs
+parseWhile' _         (x:xs)            = throw $ KPE.KoakParserMissingTokenException "parseWhile" [KL.Word "do"] (Just x) xs
 
 parseExpression :: [KL.Token] -> (Expression, [KL.Token])
-parseExpression []     = throw $ createParsingException "parseExpression" [] Nothing []
+parseExpression []     = throw $ KPE.KoakParserMissingTokenException "parseExpression" [] Nothing []
 parseExpression tokens = let (unary           , rest ) = parseUnary       tokens in
                          let (binaryOpsUnaries, rest') = parseExpression' rest   in
                          (Expression unary binaryOpsUnaries, rest')
@@ -341,7 +343,7 @@ parseExpression tokens = let (unary           , rest ) = parseUnary       tokens
 parseExpression' :: [KL.Token] -> ([(BinaryOp, Unary)], [KL.Token])
 parseExpression' []                 = ([], [])
 parseExpression' tokens@(KL.Word w:xs)
-    | isSpecialWord w               = let (unary           , rest ) = parseUnary       xs   in
+    | KGU.isSpecialWord w           = let (unary           , rest ) = parseUnary       xs   in
                                       let (binaryOpsUnaries, rest') = parseExpression' rest in
                                       ((BinaryOp $ Identifier w, unary) : binaryOpsUnaries, rest')
     | otherwise                     = ([], tokens)
@@ -354,14 +356,14 @@ parseExpressionList (KL.Colon:xs) = let (first, rest ) = parseExpression     xs 
 parseExpressionList tokens        = ([], tokens)
 
 parseUnary :: [KL.Token] -> (Unary, [KL.Token])
-parseUnary []                    = throw $ createParsingException "parseUnary" [] Nothing []
+parseUnary []                    = throw $ KPE.KoakParserMissingTokenException "parseUnary" [] Nothing []
 parseUnary tokens@(KL.Word w:xs)
-  | isSpecialWord w              = let (unOp   , rest) = parseUnary   xs     in (Unary (UnaryOp $ Identifier w) unOp, rest)
+  | KGU.isSpecialWord w          = let (unOp   , rest) = parseUnary   xs     in (Unary (UnaryOp $ Identifier w) unOp, rest)
   | otherwise                    = let (postfix, rest) = parsePostfix tokens in (UnaryPostfix postfix               , rest)
 parseUnary tokens                = let (postfix, rest) = parsePostfix tokens in (UnaryPostfix postfix               , rest)
 
 parsePostfix :: [KL.Token] -> (Postfix, [KL.Token])
-parsePostfix []     = throw $ createParsingException "parsePostfix" [] Nothing []
+parsePostfix []     = throw $ KPE.KoakParserMissingTokenException "parsePostfix" [] Nothing []
 parsePostfix tokens = let (primary , rest)  = parsePrimary             tokens in
                       let (callExpr, rest') = parseMaybeCallExpression rest   in
                       (Postfix primary callExpr, rest')
@@ -372,13 +374,13 @@ parseMaybeCallExpression tokens@(KL.OpenedParenthesis:_) = let (callExpr, rest) 
 parseMaybeCallExpression tokens                          = (Nothing, tokens)
 
 parseCallExpression :: [KL.Token] -> (CallExpression, [KL.Token])
-parseCallExpression []                                             = throw $ createParsingException "parseCallExpr" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing []
+parseCallExpression []                                             = throw $ KPE.KoakParserMissingTokenException "parseCallExpr" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing []
 parseCallExpression (KL.OpenedParenthesis:KL.ClosedParenthesis:xs) = (CallExpression Nothing, xs)
 parseCallExpression (KL.OpenedParenthesis:xs)                      = let (callExpr, rest) = parseCallExpressionArg xs in (CallExpression (Just callExpr), rest)
-parseCallExpression (x:xs)                                         = throw $ createParsingException "parseCallExpression" [KL.OpenedParenthesis, KL.ClosedParenthesis] (Just x) xs
+parseCallExpression (x:xs)                                         = throw $ KPE.KoakParserMissingTokenException "parseCallExpression" [KL.OpenedParenthesis, KL.ClosedParenthesis] (Just x) xs
 
 parseCallExpressionArg :: [KL.Token] -> (CallExpressionArgs, [KL.Token])
-parseCallExpressionArg []     = throw $ createParsingException "parseCallExpressionArg" [] Nothing []
+parseCallExpressionArg []     = throw $ KPE.KoakParserMissingTokenException "parseCallExpressionArg" [] Nothing []
 parseCallExpressionArg tokens = let (first, others, rest) = parseCallExpressionArg' tokens in (CallExpressionArgs first others, rest)
 
 parseCallExpressionArg' :: [KL.Token] -> (Expression, [Expression], [KL.Token])
@@ -387,24 +389,24 @@ parseCallExpressionArg' tokens = let (expr    , rest ) = parseExpression        
                                  (expr, exprList, rest')
 
 parseCallExpressionArg'' :: [KL.Token] -> ([Expression], [KL.Token])
-parseCallExpressionArg'' []                        = throw $ createParsingException "parseCallExpressionArg" [KL.Comma, KL.ClosedParenthesis] Nothing []
+parseCallExpressionArg'' []                        = throw $ KPE.KoakParserMissingTokenException "parseCallExpressionArg" [KL.Comma, KL.ClosedParenthesis] Nothing []
 parseCallExpressionArg'' (KL.ClosedParenthesis:xs) = ([], xs)
 parseCallExpressionArg'' (KL.Comma:xs)             = let (expr, rest ) = parseExpression          xs   in
                                                      let (next, rest') = parseCallExpressionArg'' rest in
                                                      (expr : next, rest')
-parseCallExpressionArg'' (x:xs)                    = throw $ createParsingException "parseCallExpressionArg" [KL.Comma, KL.ClosedParenthesis] (Just x) xs
+parseCallExpressionArg'' (x:xs)                    = throw $ KPE.KoakParserMissingTokenException "parseCallExpressionArg" [KL.Comma, KL.ClosedParenthesis] (Just x) xs
 
 parsePrimary :: [KL.Token] -> (Primary, [KL.Token])
-parsePrimary []                        = throw $ createParsingException "parsePrimary" [KL.Word "{variable}", KL.IntegerNumber 0, KL.OpenedParenthesis] Nothing []
+parsePrimary []                        = throw $ KPE.KoakParserMissingTokenException "parsePrimary" [KL.Word "{variable}", KL.IntegerNumber 0, KL.OpenedParenthesis] Nothing []
 parsePrimary (KL.Word w:xs)            = (PrimaryIdentifier $ Identifier w, xs)
 parsePrimary (KL.IntegerNumber n:xs)   = (PrimaryLiteral $ LiteralDecimal $ DecimalConst n, xs)
 parsePrimary (KL.FloatingNumber n:xs)  = (PrimaryLiteral $ LiteralDouble  $ DoubleConst  n, xs)
 parsePrimary (KL.OpenedParenthesis:xs) = let (exprs, rest) = parseExpressions xs in parsePrimaryExpressions (KL.OpenedParenthesis : rest) exprs
-parsePrimary (x:xs)                    = throw $ createParsingException "parsePrimary" [KL.Word "{variable}", KL.IntegerNumber 0, KL.OpenedParenthesis] (Just x) xs
+parsePrimary (x:xs)                    = throw $ KPE.KoakParserMissingTokenException "parsePrimary" [KL.Word "{variable}", KL.IntegerNumber 0, KL.OpenedParenthesis] (Just x) xs
 
 parsePrimaryExpressions :: [KL.Token] -> Expressions -> (Primary, [KL.Token])
-parsePrimaryExpressions []                                             _     = throw $ createParsingException "parsePrimaryExpressions" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing []
+parsePrimaryExpressions []                                             _     = throw $ KPE.KoakParserMissingTokenException "parsePrimaryExpressions" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing []
 parsePrimaryExpressions (KL.OpenedParenthesis:KL.ClosedParenthesis:xs) exprs = (PrimaryExpressions exprs, xs)
-parsePrimaryExpressions (x                   :KL.ClosedParenthesis:xs) _     = throw $ createParsingException "parsePrimaryExpressions" [KL.OpenedParenthesis] (Just x) xs
-parsePrimaryExpressions (KL.OpenedParenthesis:x                   :xs) _     = throw $ createParsingException "parsePrimaryExpressions" [KL.ClosedParenthesis] (Just x) xs
-parsePrimaryExpressions tokens                                         _     = throw $ createParsingException "parsePrimaryExpressions" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing tokens
+parsePrimaryExpressions (x                   :KL.ClosedParenthesis:xs) _     = throw $ KPE.KoakParserMissingTokenException "parsePrimaryExpressions" [KL.OpenedParenthesis] (Just x) xs
+parsePrimaryExpressions (KL.OpenedParenthesis:x                   :xs) _     = throw $ KPE.KoakParserMissingTokenException "parsePrimaryExpressions" [KL.ClosedParenthesis] (Just x) xs
+parsePrimaryExpressions tokens                                         _     = throw $ KPE.KoakParserMissingTokenException "parsePrimaryExpressions" [KL.OpenedParenthesis, KL.ClosedParenthesis] Nothing tokens
