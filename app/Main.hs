@@ -40,7 +40,7 @@ handleExecution :: AP.KoakArguments -> IO ()
 handleExecution (AP.KoakArguments (AP.Filepath file)) = readFile file >>= launchExecution
 
 launchExecution :: String -> IO ()
-launchExecution file = print (KT.checkKoakTyping KTC.getDefaultKContext (KP.parseKoak file))
+launchExecution file = print (KT.checkKoakTyping (KP.parseKoak file) KTC.getDefaultKContext)
 
 exceptionHandlerAPE :: APE.KoakArgumentParserException -> IO ()
 exceptionHandlerAPE APE.KoakHelpException   = print APE.KoakHelpException >> exitSuccess
