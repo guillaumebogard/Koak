@@ -25,6 +25,9 @@ import qualified Argument.Parser           as AP  ( KoakArguments(..)
                                                   , Filepath(..)
                                                   , parseArguments
                                                   )
+import qualified Koak.Parser               as KP  (parseKoak)
+import qualified Koak.Typing        as KT
+import qualified Koak.TypingContext as KTC
 
 main :: IO ()
 main = (getArgs >>= handleExecution . AP.parseArguments) `catches` [ Handler exceptionHandlerAPE
@@ -34,10 +37,13 @@ main = (getArgs >>= handleExecution . AP.parseArguments) `catches` [ Handler exc
                                                                    ]
 
 handleExecution :: AP.KoakArguments -> IO ()
-handleExecution (AP.KoakArguments (AP.Filepath file)) = readFile file >>= putStrLn
+handleExecution (AP.KoakArguments (AP.Filepath file)) = readFile file >>= launchExecution
+
+launchExecution :: String -> IO ()
+launchExecution file = print (KT.checkKoakTyping (KP.parseKoak file) KTC.getDefaultKContext)
 
 exceptionHandlerAPE :: APE.KoakArgumentParserException -> IO ()
-exceptionHandlerAPE (APE.KoakHelpException) = print APE.KoakHelpException >> exitSuccess
+exceptionHandlerAPE APE.KoakHelpException   = print APE.KoakHelpException >> exitSuccess
 exceptionHandlerAPE exception               = print exception             >> exitWith (ExitFailure 84)
 
 exceptionHandlerKLE :: KLE.KoakLexerException -> IO ()

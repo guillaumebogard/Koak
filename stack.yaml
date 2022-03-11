@@ -34,6 +34,7 @@ packages:
 extra-deps:
 - hashable-1.4.0.1
 - unordered-containers-0.2.16.0
+- deepseq-1.4.4.0
 
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
