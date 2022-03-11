@@ -14,6 +14,7 @@ import System.Exit                                ( ExitCode(ExitFailure)
                                                   )
 import Control.Exception                          ( Handler(..)
                                                   , catches
+                                                  , throw
                                                   )
 
 import qualified Argument.Parser.Exception as APE ( KoakArgumentParserException( KoakHelpException ) )
@@ -25,10 +26,11 @@ import qualified Argument.Parser           as AP  ( KoakArguments(..)
                                                   , Filepath(..)
                                                   , parseArguments
                                                   )
-import qualified Koak.Parser               as KP  (parseKoak)
-import qualified Koak.Typing        as KT
-import qualified Koak.TypingContext as KTC
-import qualified Koak.Evaluator     as KE
+import qualified Koak.Parser               as KP
+import qualified Koak.Typing               as KT
+import qualified Koak.TypingContext        as KTC
+import qualified Koak.Evaluator            as KE
+import qualified Koak.EvaluatorContext     as KEC
 
 main :: IO ()
 main = (getArgs >>= handleExecution . AP.parseArguments) `catches` [ Handler exceptionHandlerAPE
@@ -41,7 +43,17 @@ handleExecution :: AP.KoakArguments -> IO ()
 handleExecution (AP.KoakArguments (AP.Filepath file)) = readFile file >>= launchExecution
 
 launchExecution :: String -> IO ()
-launchExecution file = print (KT.checkKoakTyping (KP.parseKoak file) KTC.getDefaultKContext)
+launchExecution file = launchExecution' $ KP.parseKoak file
+
+launchExecution' :: KP.Stmt -> IO ()
+launchExecution' stmt = launchExecution'' stmt $ KT.checkKoakTyping stmt KTC.getDefaultKContext
+
+launchExecution'' :: KP.Stmt -> Either KTE.KoakTypingException KTC.Kcontext -> IO ()
+launchExecution'' _    (Left value) = throw value
+launchExecution'' stmt (Right _)    = launchExecution''' $ KE.evaluateKoak $ KP.getKdefsFromStmt stmt
+
+launchExecution''' :: KE.KoakEvaluation -> IO ()
+launchExecution''' (KE.KoakEvaluation values _) = print $ last values
 
 exceptionHandlerAPE :: APE.KoakArgumentParserException -> IO ()
 exceptionHandlerAPE APE.KoakHelpException   = print APE.KoakHelpException >> exitSuccess

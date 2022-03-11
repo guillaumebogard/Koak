@@ -4,7 +4,8 @@
 -- File description:
 -- Koak.Evaluator
 --
-module Koak.Evaluator                  ( evaluateKoak
+module Koak.Evaluator                  ( KoakEvaluation(..)
+                                       , evaluateKoak
                                        ) where
 
 import qualified Koak.Parser          as KP
