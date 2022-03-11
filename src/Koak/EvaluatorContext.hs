@@ -22,13 +22,6 @@ module Koak.EvaluatorContext        (
                                     , valueToType
                                     ) where
 
-
-import Control.Exception            ( throw )
-
-import Data.Hashable                ( Hashable
-                                    , hashWithSalt
-                                    )
-
 import Data.HashMap.Strict  as HM   ( HashMap
                                     , fromList
                                     , empty
@@ -37,13 +30,7 @@ import Data.HashMap.Strict  as HM   ( HashMap
                                     , lookup
                                     )
 
-import Data.Maybe                   ( isNothing
-                                    , isJust
-                                    )
-
-import qualified Koak.Lexer         as KL
 import qualified Koak.Parser        as KP
-import qualified Koak.Typing        as KT
 import qualified Koak.TypingContext as KTC
 
 data Value      = IntVal Int
@@ -102,7 +89,7 @@ getDefaultKContext = Kcontext
                                         (KP.Identifier "*" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryMultiply),
                                         (KP.Identifier "/" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryDivide),
                                         (KP.Identifier "%" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryModulo),
-                                        (KP.Identifier "-'" , PrimitiveFunction $ PrimUnaryFunction                    primitiveUnaryNeg),
+                                        (KP.Identifier "-'" , PrimitiveFunction $ PrimUnaryFunction                    primitiveUnaryMinus),
                                         (KP.Identifier "!" ,  PrimitiveFunction $ PrimUnaryFunction                    primitiveUnaryNot),
                                         (KP.Identifier "show",    PrimitiveFunction $ PrimFunction primitiveShow)
                                 ]
@@ -114,81 +101,70 @@ primitiveBinaryAssign _ _ = NilVal
 
 primitiveBinaryEqual :: Value -> Value -> Value
 primitiveBinaryEqual (IntVal    lv) (IntVal    rv) = BooleanVal (lv == rv)
-primitiveBinaryEqual (DoubleVal lv) (IntVal    rv) = BooleanVal (toInteger lv == toInteger rv)
-primitiveBinaryEqual (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv == toInteger rv)
+primitiveBinaryEqual (DoubleVal lv) (IntVal    rv) = BooleanVal (floor lv == toInteger rv)
+primitiveBinaryEqual (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv == floor rv)
 primitiveBinaryEqual (DoubleVal lv) (DoubleVal rv) = BooleanVal (lv == rv)
 primitiveBinaryEqual _              _              = error "primitiveBinaryPlus"
 
 primitiveBinaryNotEqual :: Value -> Value -> Value
 primitiveBinaryNotEqual (IntVal    lv) (IntVal    rv) = BooleanVal $ lv /= rv
-primitiveBinaryNotEqual (DoubleVal lv) (IntVal    rv) = BooleanVal (toInteger lv /= toInteger rv)
-primitiveBinaryNotEqual (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv /= toInteger rv)
+primitiveBinaryNotEqual (DoubleVal lv) (IntVal    rv) = BooleanVal (floor lv /= toInteger rv)
+primitiveBinaryNotEqual (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv /= floor rv)
 primitiveBinaryNotEqual (DoubleVal lv) (DoubleVal rv) = BooleanVal $ lv /= rv
 primitiveBinaryNotEqual _              _              = error "primitiveBinaryPlus"
 
 primitiveBinaryLessThan :: Value -> Value -> Value
 primitiveBinaryLessThan (IntVal    lv) (IntVal    rv) = BooleanVal $ lv < rv
-primitiveBinaryLessThan (DoubleVal lv) (IntVal    rv) = BooleanVal (toInteger lv < toInteger rv)
-primitiveBinaryLessThan (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv < toInteger rv)
+primitiveBinaryLessThan (DoubleVal lv) (IntVal    rv) = BooleanVal (floor lv < toInteger rv)
+primitiveBinaryLessThan (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv < floor rv)
 primitiveBinaryLessThan (DoubleVal lv) (DoubleVal rv) = BooleanVal $ lv < rv
 primitiveBinaryLessThan _              _              = error "primitiveBinaryPlus"
 
 primitiveBinaryMoreThan :: Value -> Value -> Value
 primitiveBinaryMoreThan (IntVal    lv) (IntVal    rv) = BooleanVal $ lv > rv
-primitiveBinaryMoreThan (DoubleVal lv) (IntVal    rv) = BooleanVal (toInteger lv > toInteger rv)
-primitiveBinaryMoreThan (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv > toInteger rv)
+primitiveBinaryMoreThan (DoubleVal lv) (IntVal    rv) = BooleanVal (floor lv > toInteger rv)
+primitiveBinaryMoreThan (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv > floor rv)
 primitiveBinaryMoreThan (DoubleVal lv) (DoubleVal rv) = BooleanVal $ lv > rv
 primitiveBinaryMoreThan _              _              = error "primitiveBinaryPlus"
 
 
 primitiveBinaryLessEqThan :: Value -> Value -> Value
 primitiveBinaryLessEqThan (IntVal    lv) (IntVal    rv) = BooleanVal $ lv <= rv
-primitiveBinaryLessEqThan (DoubleVal lv) (IntVal    rv) = BooleanVal (toInteger lv <= toInteger rv)
-primitiveBinaryLessEqThan (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv <= toInteger rv)
+primitiveBinaryLessEqThan (DoubleVal lv) (IntVal    rv) = BooleanVal (floor lv <= toInteger rv)
+primitiveBinaryLessEqThan (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv <= floor rv)
 primitiveBinaryLessEqThan (DoubleVal lv) (DoubleVal rv) = BooleanVal $ lv <= rv
 primitiveBinaryLessEqThan _              _              = error "primitiveBinaryPlus"
 
 primitiveBinaryMoreEqThan :: Value -> Value -> Value
 primitiveBinaryMoreEqThan (IntVal    lv) (IntVal    rv) = BooleanVal $ lv >= rv
-primitiveBinaryMoreEqThan (DoubleVal lv) (IntVal    rv) = BooleanVal (toInteger lv >= toInteger rv)
-primitiveBinaryMoreEqThan (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv >= toInteger rv)
+primitiveBinaryMoreEqThan (DoubleVal lv) (IntVal    rv) = BooleanVal (floor lv >= toInteger rv)
+primitiveBinaryMoreEqThan (IntVal    lv) (DoubleVal rv) = BooleanVal (toInteger lv >= floor rv)
 primitiveBinaryMoreEqThan (DoubleVal lv) (DoubleVal rv) = BooleanVal $ lv >= rv
 primitiveBinaryMoreEqThan _              _              = error "primitiveBinaryPlus"
 
 primitiveBinaryPlus :: Value -> Value -> Value
 primitiveBinaryPlus (IntVal    lv) (IntVal    rv) = IntVal (lv + rv)
-primitiveBinaryPlus (DoubleVal lv) (IntVal    rv) = DoubleVal (lv + floor rv)
-primitiveBinaryPlus (IntVal    lv) (DoubleVal rv) = DoubleVal (floor lv + rv)
 primitiveBinaryPlus (DoubleVal lv) (DoubleVal rv) = DoubleVal (lv + rv)
 primitiveBinaryPlus _              _              = error "primitiveBinaryPlus"
 
 primitiveBinaryMinus :: Value -> Value -> Value
 primitiveBinaryMinus (IntVal    lv) (IntVal    rv) = IntVal (lv - rv)
-primitiveBinaryMinus (DoubleVal lv) (IntVal    rv) = DoubleVal (lv - floor rv)
-primitiveBinaryMinus (IntVal    lv) (DoubleVal rv) = DoubleVal (floor lv - rv)
 primitiveBinaryMinus (DoubleVal lv) (DoubleVal rv) = DoubleVal (lv - rv)
 primitiveBinaryMinus _              _              = error "primitivebatlescouilles"
 
 primitiveBinaryMultiply :: Value -> Value -> Value
 primitiveBinaryMultiply (IntVal    lv) (IntVal    rv) = IntVal (lv * rv)
-primitiveBinaryMultiply (DoubleVal lv) (IntVal    rv) = DoubleVal (lv * floor rv)
-primitiveBinaryMultiply (IntVal    lv) (DoubleVal rv) = DoubleVal (floor lv * rv)
 primitiveBinaryMultiply (DoubleVal lv) (DoubleVal rv) = DoubleVal (lv * rv)
 primitiveBinaryMultiply _              _              = error "primitiveBinaryPMultiply"
 
 primitiveBinaryDivide :: Value -> Value -> Value
-primitiveBinaryDivide (IntVal    lv) (IntVal    rv) = IntVal (lv / rv)
-primitiveBinaryDivide (DoubleVal lv) (IntVal    rv) = DoubleVal (lv / floor rv)
-primitiveBinaryDivide (IntVal    lv) (DoubleVal rv) = DoubleVal (floor lv / rv)
+primitiveBinaryDivide (IntVal    lv) (IntVal    rv) = IntVal (lv `div` rv)
 primitiveBinaryDivide (DoubleVal lv) (DoubleVal rv) = DoubleVal (lv / rv)
-primitiveBinaryDivide _              _              = error "pute"
+primitiveBinaryDivide _              _              = error "primitiveBinaryDivide"
 
 primitiveBinaryModulo :: Value -> Value -> Value
 primitiveBinaryModulo (IntVal    lv) (IntVal    rv) = IntVal (lv `mod` rv)
-primitiveBinaryModulo (DoubleVal lv) (IntVal    rv) = DoubleVal (lv `mod` floor rv)
-primitiveBinaryModulo (IntVal    lv) (DoubleVal rv) = DoubleVal (floor lv `mod` rv)
-primitiveBinaryModulo (DoubleVal lv) (DoubleVal rv) = DoubleVal (lv `mod` rv)
-primitiveBinaryModulo _              _              = error "pute2"
+primitiveBinaryModulo _              _              = error "primitiveBinaryModulo"
 
 primitiveUnaryNot :: Value -> Value
 primitiveUnaryNot (IntVal    0)      = IntVal 1
@@ -198,7 +174,7 @@ primitiveUnaryNot (DoubleVal 1.0)    = DoubleVal 0.0
 primitiveUnaryNot (BooleanVal True)  = BooleanVal False
 primitiveUnaryNot (BooleanVal False) = BooleanVal True
 primitiveUnaryNot NilVal             = NilVal
-primitiveUnaryNot  _                 = error "pute1"
+primitiveUnaryNot  _                 = error "primitiveUnaryNot"
 
 primitiveUnaryMinus :: Value -> Value
 primitiveUnaryMinus (IntVal    x)      = IntVal (-x)
@@ -207,14 +183,11 @@ primitiveUnaryMinus (BooleanVal True)  = BooleanVal False
 primitiveUnaryMinus (BooleanVal False) = BooleanVal True
 primitiveUnaryMinus NilVal             = NilVal
 
-primitiveShow :: Value -> Value
-primitiveShow x = show x --> NilVal
+primitiveShow :: [Value] -> Value
+primitiveShow = foldr ((-->) . show) NilVal
 
 (-->) :: b -> a -> a
 (-->) _ a = a
-
-getEmptyKContext :: Kcontext
-getEmptyKContext = Kcontext (Definitions HM.empty) (Variables HM.empty)
 
 kContextEnterLocalContext :: Kcontext -> KP.PrototypeArgs -> [Value] -> Kcontext
 kContextEnterLocalContext (Kcontext definitions _) (KP.PrototypeArgs [] _) [] = Kcontext definitions (Variables HM.empty)
@@ -223,8 +196,8 @@ kContextEnterLocalContext (Kcontext definitions _) (KP.PrototypeArgs args _) val
 
 kContextEnterLocalContext' :: Kcontext -> [KP.PrototypeIdentifier] -> [Value] -> Kcontext
 kContextEnterLocalContext' context [] [] = context
-kContextEnterLocalContext' context ((KP.PrototypeIdentifier id _):args) (val:vals) =
-    kContextEnterLocalContext' (kContextPushVariable id val context) args vals
+kContextEnterLocalContext' context ((KP.PrototypeIdentifier identifier _):args) (val:vals) =
+    kContextEnterLocalContext' (kContextPushVariable identifier val context) args vals
 kContextEnterLocalContext' _ _ _ = error "Invalid number of arguments"
 
 kContextPushVariable :: KP.Identifier -> Value -> Kcontext -> Kcontext
