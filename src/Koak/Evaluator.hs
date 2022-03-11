@@ -7,9 +7,6 @@
 module Koak.Evaluator                  ( evaluateKoak
                                        ) where
 
-import Data.Foldable                ( find )
-import Control.Exception            ( throw )
-
 import qualified Koak.Parser        as KP
 import qualified Koak.TypingContext as KTC
 import Koak.EvaluatorContext        as KEC
@@ -62,13 +59,15 @@ evaluateWhile :: Kcontext -> KP.While -> EvaluationResult
 evaluateWhile context = evaluateWhile' (EvaluationResult context NilVal)
 
 evaluateWhile' :: EvaluationResult -> KP.While -> EvaluationResult
-evaluateWhile' result@(EvaluationResult context _) while_expr@(KP.While cond_expr exprs) = let cond_result = evaluateExpression context cond_expr in
-                                                                                            if isConditionTrue cond_result
-                                                                                                then evaluateWhile' (EvaluationResult (getEvaluatedKcontext cond_result) NilVal) while_expr
-                                                                                                else result
+evaluateWhile' result@(EvaluationResult context _) while_expr@(KP.While cond_expr exprs) = let cond_result = evaluateExpression context cond_expr
+                                                                                               exprs_result = evaluateExpressions (getEvaluatedKcontext cond_result) exprs
+                                                                                           in
+                                                                                           if isConditionTrue cond_result
+                                                                                              then evaluateWhile' (EvaluationResult (getEvaluatedKcontext exprs_result) NilVal) while_expr
+                                                                                              else result
 
 evaluateExpressionList :: Kcontext -> [KP.Expression] -> EvaluationResult
-evaluateExpressionList context [] = error "this should never happend :)"
+evaluateExpressionList _ []           = error "this should never happend :)"
 evaluateExpressionList context [expr] = evaluateExpression context expr
 evaluateExpressionList context (x:xs) = let expr_result = evaluateExpression context x
                                         in evaluateExpressionList (getEvaluatedKcontext expr_result) xs
@@ -89,17 +88,17 @@ buildExpressionTree :: Kcontext -> KP.Expression -> BinaryTreeExpression
 buildExpressionTree context expression@(KP.Expression unary _) = buildExpressionTree' context (convertExpressionToList context expression) $ ExprLeaf unary
 
 buildExpressionTree' :: Kcontext -> [UnitExpression] -> BinaryTreeExpression -> BinaryTreeExpression
-buildExpressionTree' context []               tree              = tree
+buildExpressionTree' _ []                     tree              = tree
 buildExpressionTree' context (x:xs)           node@(ExprLeaf _) = callbackCreateBinaryNode context x xs node
 buildExpressionTree' context (bin:(Un un):xs) tree              = buildExpressionTree' context xs $ placeTokenInTree context tree bin $ ExprLeaf un
-buildExpressionTree' c       l                b                 = error "In buildExpressionTree"
+buildExpressionTree' _       _                _                 = error "In buildExpressionTree"
 
 convertExpressionToList :: Kcontext -> KP.Expression -> [UnitExpression]
-convertExpressionToList context (KP.Expression _ [])                     = []
+convertExpressionToList _       (KP.Expression _ [])                     = []
 convertExpressionToList context (KP.Expression _ ((binop, second) : xs)) = Bin binop : Un second : convertExpressionToList context (KP.Expression second xs)
 
 placeTokenInTree :: Kcontext -> BinaryTreeExpression -> UnitExpression -> BinaryTreeExpression -> BinaryTreeExpression
-placeTokenInTree context node@(ExprLeaf _) (Bin newOp) tree = ExprNode newOp node tree
+placeTokenInTree _       node@(ExprLeaf _) (Bin newOp) tree = ExprNode newOp node tree
 placeTokenInTree context base@(ExprNode op left right) (Bin newOp) tree
     | isLessPrio context newOp op                           = ExprNode newOp base tree
     | otherwise                                             = ExprNode op left $ placeTokenInTree context right (Bin newOp) tree
@@ -125,7 +124,7 @@ getBinOpPrecedence context binop = let signature = kContextFindFunction (KTC.toI
 
 evaluateExpression' :: Kcontext -> BinaryTreeExpression -> EvaluationResult
 evaluateExpression' context (ExprLeaf unary)                            = evaluateUnary context unary
-evaluateExpression' context (ExprNode (KP.BinaryOp (KP.Identifier "=")) left@(ExprLeaf (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing) )) right)
+evaluateExpression' context (ExprNode (KP.BinaryOp (KP.Identifier "=")) (ExprLeaf (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing) )) right)
                                                                         = let right_result = evaluateExpression' context right                             in
                                                                           evaluateAssignment identifier (getEvaluatedValue right_result) (getEvaluatedKcontext right_result)
 evaluateExpression' context (ExprNode (KP.BinaryOp binary) left right)  = let left_result  = evaluateExpression' context left                              in
@@ -161,7 +160,7 @@ evaluatePostfix context (KP.Postfix (KP.PrimaryLiteral    (KP.LiteralDouble  (KP
 evaluatePostfix context (KP.Postfix (KP.PrimaryIdentifier identifier           ) Nothing)                   = evaluatePostfixVar      context identifier
 evaluatePostfix context (KP.Postfix (KP.PrimaryIdentifier identifier           ) (Just call_expr))          = evaluateFunctionCall    context identifier call_expr
 evaluatePostfix context (KP.Postfix (KP.PrimaryExpressions expressions         ) Nothing)                   = evaluateExpressions     context expressions
-evaluatePostfix context _ = error ""
+evaluatePostfix _ _                                                                                         = error ""
 
 evaluatePostfixVar :: Kcontext -> KP.Identifier -> EvaluationResult
 evaluatePostfixVar context identifier = EvaluationResult context (kContextFindVariable identifier context)
@@ -194,15 +193,6 @@ isConditionTrue (EvaluationResult _ (BooleanVal False)) = False
 isConditionTrue (EvaluationResult _ (IntVal     0    )) = False
 isConditionTrue (EvaluationResult _ (DoubleVal  0.0  )) = False
 isConditionTrue _                                       = True
-
-(<->) :: () -> () -> ()
-(<->) _ _ = ()
-
-(<--) :: a -> b -> a
-(<--) a _ = a
-
-(-->) :: b -> a -> a
-(-->) _ a = a
 
 getEvaluatedValue :: EvaluationResult -> Value
 getEvaluatedValue (EvaluationResult _ value) = value
