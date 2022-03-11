@@ -129,6 +129,7 @@ getDefaultKContext = Kcontext
                                         (KP.Identifier "%", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double, BinaryFunctionTyping (KP.Precedence 12) Double Int Double, BinaryFunctionTyping (KP.Precedence 12) Int Double Double]),
                                         (KP.Identifier "!", PrimitiveFunction  [UnaryFunctionTyping  Int Boolean, UnaryFunctionTyping Double Boolean, UnaryFunctionTyping Boolean Boolean]),
                                         (KP.Identifier "toInt",    PrimitiveFunction  [FunctionTyping [Int] Int,    FunctionTyping [Double] Int,    FunctionTyping [Boolean] Int   ]),
+                                        (KP.Identifier "show",    PrimitiveFunction  [FunctionTyping [Int] Nil,    FunctionTyping [Double] Nil,    FunctionTyping [Boolean] Nil   ]),
                                         (KP.Identifier "toDouble", PrimitiveFunction  [FunctionTyping [Int] Double, FunctionTyping [Double] Double, FunctionTyping [Boolean] Double])
                                 ]
                         )
