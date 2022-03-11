@@ -28,6 +28,7 @@ import qualified Argument.Parser           as AP  ( KoakArguments(..)
 import qualified Koak.Parser               as KP  (parseKoak)
 import qualified Koak.Typing        as KT
 import qualified Koak.TypingContext as KTC
+import qualified Koak.Evaluator     as KE
 
 main :: IO ()
 main = (getArgs >>= handleExecution . AP.parseArguments) `catches` [ Handler exceptionHandlerAPE
