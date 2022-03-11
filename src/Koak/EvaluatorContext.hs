@@ -19,6 +19,7 @@ module Koak.EvaluatorContext        (
                                     , kContextHasVariable
                                     , kContextFindVariable
                                     , kContextFindFunction
+                                    , valueToType
                                     ) where
 
 
@@ -125,7 +126,7 @@ kContextPushVariable :: KP.Identifier -> Value -> Kcontext -> Kcontext
 kContextPushVariable identifier val (Kcontext ds (Variables vs)) = Kcontext ds (Variables $ insert identifier val vs)
 
 kContextPushFunction :: KP.Defs -> Kcontext -> Kcontext
-kContextPushFunction (KP.Defs (KP.PrototypeUnary        unop       args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert (KTC.toIdentifier unop)  (RefinedFunction $ UnaryFunction      args expr) ds) vs 
+kContextPushFunction (KP.Defs (KP.PrototypeUnary        unop       args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert (KTC.toIdentifier unop)  (RefinedFunction $ UnaryFunction      args expr) ds) vs
 kContextPushFunction (KP.Defs (KP.PrototypeBinary   pre binop      args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert (KTC.toIdentifier binop) (RefinedFunction $ BinaryFunction pre args expr) ds) vs
 kContextPushFunction (KP.Defs (KP.PrototypeFunction     identifier args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert identifier           (RefinedFunction $ Function           args expr) ds) vs
 
@@ -143,3 +144,10 @@ kContextFindFunction identifier (Kcontext (Definitions ds) _) = let found = HM.l
                                                                 in case found of
                                                                     Nothing  -> error "kContextFindFunction"
                                                                     (Just s) -> s
+
+valueToType :: Value -> KP.Type
+valueToType (IntVal _) = KP.Int
+valueToType (DoubleVal _) = KP.Double
+valueToType (BooleanVal _) = KP.Boolean
+valueToType NilVal = KP.Void
+

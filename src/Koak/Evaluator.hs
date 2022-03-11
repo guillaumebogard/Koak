@@ -109,7 +109,7 @@ isLessPrio context left right
     | otherwise                                                           = False
 
 getBinOpPrecedence :: Kcontext -> KP.BinaryOp -> Int
-getBinOpPrecedence context binop = let signature = kContextFindFunction (KTC.toIdentifier binop) context 
+getBinOpPrecedence context binop = let signature = kContextFindFunction (KTC.toIdentifier binop) context
     in case signature of
         PrimitiveFunction ((PrimBinaryFunction (KP.Precedence  pre) _  ):_) -> pre
         RefinedFunction   (BinaryFunction      (KP.Precedence  pre) _ _)    -> pre
@@ -121,24 +121,60 @@ getBinOpPrecedence context binop = let signature = kContextFindFunction (KTC.toI
 evaluateExpression' :: Kcontext -> BinaryTreeExpression -> EvaluationResult
 evaluateExpression' context (ExprLeaf unary)                            = evaluateUnary context unary
 evaluateExpression' context (ExprNode binary@(KP.BinaryOp (KP.Identifier "=")) left@(ExprLeaf (KP.UnaryPostfix (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing) )) right)
-                                                                        = let right_result = evaluateUnary context right in right_result -- add identifier and right result value to context
-evaluateExpression' context (ExprNode (KP.BinaryOp binary) left right)  = let leftResult  = evaluateExpression' context left                                   in
-                                                                          let rightResult = evaluateExpression' (getEvaluatedKcontext leftResult)  right       in
-                                                                              evaluateBinOperation (getEvaluatedKcontext rightResult) binary (getEvaluatedType leftResult) (getEvaluatedType rightResult)
+                                                                        = let right_result = evaluateUnary context right
+                                                                          in kContextPushVariable identifier (getEvaluatedValue right_result) (getEvaluatedKcontext right_value)
+evaluateExpression' context (ExprNode (KP.BinaryOp binary) left right)  =
+                let leftResult  = evaluateExpression' context left
+                    rightResult = evaluateExpression' (getEvaluatedKcontext leftResult)  right
+                in  EvaluationResult context $ evaluateBinOperation (getEvaluatedKcontext rightResult) binary (getEvaluatedValue leftResult) (getEvaluatedValue rightResult)
 
-evaluateUnary :: Kcontext -> KP.Unary -> EvaluationResult
-evaluateUnary context (KP.Unary (KP.UnaryOp identifier) unary) =
-    let found = kContextFind context identifier     in
-    let next  = evaluateUnaryTyping context unary   in
-    EvaluationResult
-        (getFunctionReturnType $
-            findUnaryMatchingFunction
-                (getEvaluatedKcontext next)
-                identifier
-                (getEvaluatedType     next)
-        )
-        (getEvaluatedKcontext next)
-evaluateUnaryTyping context (KP.UnaryPostfix postfix) = evaluatePostfixTyping context postfix
+evaluateBinOperation :: Kcontext -> KP.BinaryOp -> Value -> Value -> Value
+evaluateBinOperation context (KP.BinaryOp id) leftv rightv = let signature = kContextFindFunction id context
+    in case signature of
+        PrimitiveFunction functions -> f leftv rightv
+        RefinedFunction   function  -> f leftv rightv
+        _                                               -> error "evaluateBinOperation"
+
+-- evaluateUnary :: Kcontext -> KP.Unary -> EvaluationResult
+-- evaluateUnary context (KP.Unary (KP.UnaryOp identifier) unary) =
+--     let signature = kContextFindFunction context identifier
+--         next      = evaluateUnary context unary
+--     in case signature of
+--             PrimitiveFunction (functions) -> findMatchingUnary functions valueToType . getEvaluatedValue next
+--             RefinedFunction   (function)  -> evaluateUnary' context (KP.Unary (KP.UnaryOp identifier) unary)
+--             _                                              -> error "evaluateUnary"
+--
+--
+--
+-- findMatchingUnary :: [Signature] -> Value -> Signature
+--
+
+    --     next      = evaluateUnaryTyping context unary   in
+    -- EvaluationResult
+    --     (getFunctionReturnType $
+    --         findUnaryMatchingFunction
+    --             (getEvaluatedKcontext next)
+    --             identifier
+    --             (getEvaluatedType     next)
+    --     )
+    --     (getEvaluatedKcontext next)
+-- evaluateUnaryTyping context (KP.UnaryPostfix postfix) = evaluatePostfix context postfix
+
+evaluatePostfix :: Kcontext -> KP.Postfix -> EvaluationResult
+evaluatePostix _ _ = error " bite"
+-- proposé par copilot:
+-- evaluatePostfix context (KP.Postfix (KP.PrimaryIdentifier identifier) Nothing) =
+--     let signature = kContextFindFunction context identifier
+--     in case signature of
+--         PrimitiveFunction ((PrimUnaryFunction _ _):_) -> EvaluationResult (getFunctionReturnType signature) context
+--         RefinedFunction   (UnaryFunction      _ _ _)    -> EvaluationResult (getFunctionReturnType signature) context
+--         _                                                -> error "evaluatePostfix"
+-- evaluatePostfix context (KP.Postfix (KP.PrimaryIdentifier identifier) (Just (KP.Expression _ []))) =
+--     let signature = kContextFindFunction context identifier
+--     in case signature of
+--         PrimitiveFunction ((PrimUnaryFunction _ _):_) -> EvaluationResult (getFunctionReturnType signature) context
+--         RefinedFunction   (UnaryFunction      _ _ _)    -> EvaluationResult (getFunctionReturnType signature) context
+--         _                                                -> error "evaluatePostfix"
 
 evaluateUnaryOperation :: Kcontext -> KP.Identifier -> Value -> EvaluationResult
 evaluateUnaryOperation context func_name arg = evaluateUnaryOperation' context arg (KEC.kContextFindFunction context func_name)
