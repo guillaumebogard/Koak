@@ -87,7 +87,7 @@ buildExpressionTree :: KEC.Kcontext -> KP.Expression -> BinaryTreeExpression
 buildExpressionTree context expression@(KP.Expression unary _) = buildExpressionTree' context (convertExpressionToList context expression) $ ExprLeaf unary
 
 buildExpressionTree' :: KEC.Kcontext -> [UnitExpression] -> BinaryTreeExpression -> BinaryTreeExpression
-buildExpressionTree' context []               tree              = tree
+buildExpressionTree' _       []               tree              = tree
 buildExpressionTree' context (x:xs)           node@(ExprLeaf _) = callbackCreateBinaryNode context x xs node
 buildExpressionTree' context (bin:(Un un):xs) tree              = buildExpressionTree' context xs $ placeTokenInTree context tree bin $ ExprLeaf un
 buildExpressionTree' _       _                _                 = error "In buildExpressionTree"
