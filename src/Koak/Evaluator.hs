@@ -21,7 +21,7 @@ evaluateKoak :: Kcontext -> [KP.Kdefs] -> Kcontext
 evaluateKoak = foldl evaluateKdef
 
 evaluateKdef :: Kcontext -> KP.Kdefs -> Kcontext
-evaluateKdef context (KP.KdefDef        _    ) = context -- il faut ajouter la fonction dans le contextes
+evaluateKdef context (KP.KdefDef        def  ) = kContextPushFunction def context
 evaluateKdef context (KP.KdefExpression exprs) = getEvaluatedKcontext $ evaluateExpressions context exprs
 
 evaluateExpressions :: Kcontext -> KP.Expressions -> EvaluationResult
