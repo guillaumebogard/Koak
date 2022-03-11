@@ -15,13 +15,9 @@ import Control.Exception            ( throw )
 import qualified Koak.Parser as KP
 
 import Koak.EvaluatorContext           ( Value(..)
-                                       , BaseType(..)
                                        , Function(..)
                                        , PrimFunction(..)
                                        , Signature(..)
-                                       , Context(..)
-                                       , DefContext(..)
-                                       , VarContext(..)
                                        , Kcontext(..)
                                        , getDefaultKContext
                                        )

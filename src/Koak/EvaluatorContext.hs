@@ -7,13 +7,10 @@
 
 module Koak.EvaluatorContext        (
                                       Value(..)
-                                    , BaseType(..)
                                     , Function(..)
                                     , PrimFunction(..)
                                     , Signature(..)
-                                    , Context(..)
-                                    , DefContext(..)
-                                    , VarContext(..)
+                                    , Variables(..)
                                     , Kcontext(..)
                                     , getDefaultKContext
                                     ) where
@@ -37,7 +34,9 @@ import Data.Maybe                   ( isNothing
                                     , isJust
                                     )
 
+import qualified Koak.Lexer  as KL
 import qualified Koak.Parser as KP
+import Koak.TypingContext (toIdentifier)
 
 data Value      = IntVal Int
                 | DoubleVal Double
@@ -45,63 +44,33 @@ data Value      = IntVal Int
                 | NilVal
     deriving (Eq, Show)
 
-data BaseType   = Int
-                | Double
-                | Boolean
-                | Nil
-    deriving (Eq, Show)
-
 data Function   = UnaryFunction                  KP.PrototypeArgs KP.Expressions
                 | BinaryFunction KP.Precedence   KP.PrototypeArgs KP.Expressions
                 | Function                       KP.PrototypeArgs KP.Expressions
     deriving (Eq, Show)
 
-data PrimFunction   = PrimUnaryFunction                  [KP.PrototypeArgs]
-                    | PrimBinaryFunction KP.Precedence   [KP.PrototypeArgs]
-                    | PrimFunction                       [KP.PrototypeArgs]
+data PrimFunction   = PrimUnaryFunction                  KP.PrototypeArgs -- (Value -> Value)
+                    | PrimBinaryFunction KP.Precedence   KP.PrototypeArgs -- (Value -> Value -> Value)
+                    | PrimFunction                       KP.PrototypeArgs
     deriving (Eq, Show)
 
-data Signature  = PrimitiveFunction PrimFunction
+data Signature  = PrimitiveFunction [PrimFunction]
                 | RefinedFunction   Function
     deriving (Eq, Show)
 
-newtype Definitions            = Definitions (HashMap KP.Identifier Signature)
+newtype Definitions         = Definitions (HashMap KP.Identifier Signature)
     deriving (Eq, Show)
 
-newtype Variables                   = Variables (HashMap KP.Identifier Value)
+newtype Variables           = Variables (HashMap KP.Identifier Value)
     deriving (Eq, Show)
 
-data Kcontext           = Kcontext Definitions Variables
+data Kcontext               = Kcontext Definitions Variables
     deriving (Eq, Show)
-
-class Identify a where
-    toIdentifier :: a -> KP.Identifier
-
-instance Identify KP.Defs where
-    toIdentifier (KP.Defs p _) = toIdentifier p
-
-instance Identify KP.Prototype where
-    toIdentifier (KP.PrototypeUnary      (KP.UnaryOp  i) _) = i
-    toIdentifier (KP.PrototypeBinary   _ (KP.BinaryOp i) _) = i
-    toIdentifier (KP.PrototypeFunction   i               _) = i
-
-instance Identify KP.UnaryOp where
-    toIdentifier (KP.UnaryOp i) = i
-
-instance Identify KP.BinaryOp where
-    toIdentifier (KP.BinaryOp i) = i
-
-instance Identify KP.VarAssignment where
-    toIdentifier (KP.VarAssignment i _) = i
-
-
-instance Hashable KP.Identifier where
-    hashWithSalt salt (KP.Identifier string)   = salt `hashWithSalt` string
 
 getDefaultKContext :: Kcontext
 getDefaultKContext = Kcontext
                         (
-                            DefContext $
+                            Definitions $
                                 HM.fromList [
                                         (KP.Identifier "+", PrimitiveFunction [
                                             PrimBinaryFunction (KP.Precedence 1)  (KP.PrototypeArgs [
@@ -128,4 +97,30 @@ getDefaultKContext = Kcontext
                                         )
                                 ]
                         )
-                        (VarContext HM.empty)
+                        (Variables HM.empty)
+
+getEmptyKContext :: Kcontext
+getEmptyKContext = Kcontext (Definitions HM.empty) (Variables HM.empty)
+
+kContextEnterLocalContext :: Kcontext -> Kcontext
+kContextEnterLocalContext (Kcontext definitions _) = Kcontext definitions (Variables HM.empty)
+
+kContextPushFunction :: KP.Defs -> Kcontext -> Kcontext
+kContextPushFunction (KP.Defs (KP.PrototypeUnary        unop       args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert (toIdentifier unop)  (RefinedFunction $ UnaryFunction      args expr) ds) vs 
+kContextPushFunction (KP.Defs (KP.PrototypeBinary   pre binop      args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert (toIdentifier binop) (RefinedFunction $ BinaryFunction pre args expr) ds) vs
+kContextPushFunction (KP.Defs (KP.PrototypeFunction     identifier args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert identifier           (RefinedFunction $ Function           args expr) ds) vs
+
+kContextHasVariable :: KP.Identifier -> Kcontext -> Bool
+kContextHasVariable identifier (Kcontext _ (Variables vs)) = HM.member identifier vs
+
+kContextFindVariable :: KP.Identifier -> Kcontext -> Value
+kContextFindVariable identifier (Kcontext _ (Variables vs)) = let found = HM.lookup identifier vs
+                                                              in case found of
+                                                                Nothing  -> error "kContextFindVar"
+                                                                (Just v) -> v
+
+kContextFindFunction :: KP.Identifier -> Kcontext -> Signature
+kContextFindFunction identifier (Kcontext (Definitions ds) _) = let found = HM.lookup identifier ds
+                                                                in case found of
+                                                                    Nothing  -> error "kContextFindFunction"
+                                                                    (Just s) -> s
