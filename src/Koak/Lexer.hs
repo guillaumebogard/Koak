@@ -5,102 +5,81 @@
 -- Koak.Lexer
 --
 
-module Koak.Lexer           ( Token(..)
-                            , tokenizeKoak
-                            ) where
+module Koak.Lexer                            ( Token(..)
+                                             , tokenizeKoak
+                                             ) where
 
-import Data.Char            ( isAlphaNum
-                            , isAlpha
-                            , isSpace
-                            , isDigit
-                            )
-import Text.Read            ( readMaybe )
-import Control.Exception    ( throw )
+import Data.Char                             ( isDigit
+                                             , isSpace
+                                             )
+import Control.Exception                     ( throw )
 
-import Exception            ( KoakException(KoakUnknownTokenException, KoakInvalidNumberException) )
+import qualified Koak.Lexer.Exception as KLE ( KoakLexerException( KoakLexerInvalidNumberException ) )
 
-data Token  = Word String               -- 'if', 'def', 'foobar', 'i'
-            | Number Double             -- '0', '0123456789', '3.14159265', '.01'
-            | OpenParenthesis           -- '('
-            | ClosedParenthesis         -- ')'
-            | Plus                      -- '+'
-            | Minus                     -- '-'
-            | Multiply                  -- '*'
-            | Divide                    -- '/'
-            | Modulo                    -- '%'
-            | Power                     -- '^'
-            | GreaterEqual              -- '>='
-            | Greater                   -- '>'
-            | LowerEqual                -- '<='
-            | Lower                     -- '<'
-            | Equal                     -- '=='
-            | NotEqual                  -- '!='
-            | LogicalNot                -- '!'
-            | Assign                    -- '='
-            | Comma                     -- ','
-            | Colon                     -- ':'
-            | Semicolon                 -- ';'
-            | Dot                       -- '.'
+import qualified Koak.Grammar.Utils   as KGU ( isAlphaWordChar
+                                             , isAlphaNumWordChar
+                                             , isSpecialWordChar
+                                             )
+
+data Token  = Word              String -- 'if', 'def', 'foobar', 'i'
+            | FloatingNumber    Double -- '3.14159265', '.01'
+            | IntegerNumber     Int    -- '0', '0123456789'
+            | OpenedParenthesis        -- '('
+            | ClosedParenthesis        -- ')'
+            | SemiColon                -- ';'
+            | Colon                    -- ':'
+            | Comma                    -- ','
             deriving (Show, Eq)
 
 tokenizeKoak :: String -> [Token]
-tokenizeKoak []            = []
-tokenizeKoak ('('     :xs) = OpenParenthesis   : tokenizeKoak xs
-tokenizeKoak (')'     :xs) = ClosedParenthesis : tokenizeKoak xs
-tokenizeKoak ('+'     :xs) = Plus              : tokenizeKoak xs
-tokenizeKoak ('-'     :xs) = Minus             : tokenizeKoak xs
-tokenizeKoak ('*'     :xs) = Multiply          : tokenizeKoak xs
-tokenizeKoak ('/'     :xs) = Divide            : tokenizeKoak xs
-tokenizeKoak ('%'     :xs) = Modulo            : tokenizeKoak xs
-tokenizeKoak ('^'     :xs) = Power             : tokenizeKoak xs
-tokenizeKoak ('>':'=' :xs) = GreaterEqual      : tokenizeKoak xs
-tokenizeKoak ('>'     :xs) = Greater           : tokenizeKoak xs
-tokenizeKoak ('<':'=' :xs) = LowerEqual        : tokenizeKoak xs
-tokenizeKoak ('<'     :xs) = Lower             : tokenizeKoak xs
-tokenizeKoak ('=':'=' :xs) = Equal             : tokenizeKoak xs
-tokenizeKoak ('='     :xs) = Assign            : tokenizeKoak xs
-tokenizeKoak ('!':'=' :xs) = NotEqual          : tokenizeKoak xs
-tokenizeKoak ('!'     :xs) = LogicalNot        : tokenizeKoak xs
-tokenizeKoak (','     :xs) = Comma             : tokenizeKoak xs
-tokenizeKoak (':'     :xs) = Colon             : tokenizeKoak xs
-tokenizeKoak (';'     :xs) = Semicolon         : tokenizeKoak xs
-tokenizeKoak line@('.':_)  = let (token, leftover) = parseDot    line in token : tokenizeKoak leftover
-tokenizeKoak line@(x:xs)
-    | isSpace x            = tokenizeKoak xs
-    | isAlpha x            = let (token, leftover) = parseWord   line in token : tokenizeKoak leftover
-    | isDigit x            = let (token, leftover) = parseNumber line in token : tokenizeKoak leftover
-    | otherwise            = throw $ KoakUnknownTokenException x
+tokenizeKoak      []        = []
+tokenizeKoak      ('(':xs)  = OpenedParenthesis : tokenizeKoak xs
+tokenizeKoak      (')':xs)  = ClosedParenthesis : tokenizeKoak xs
+tokenizeKoak      (';':xs)  = SemiColon         : tokenizeKoak xs
+tokenizeKoak      (':':xs)  = Colon             : tokenizeKoak xs
+tokenizeKoak      (',':xs)  = Comma             : tokenizeKoak xs
+tokenizeKoak line@('.':_ )  = uncurry addToTokensAndContinueTokenize $ parseDot                     line
+tokenizeKoak line@(x  :xs)
+    | isSpace             x = tokenizeKoak xs
+    | isDigit             x = uncurry addToTokensAndContinueTokenize $ parseNumberStartingWithDigit line
+    | KGU.isAlphaWordChar x = uncurry addToTokensAndContinueTokenize $ parseAlphaWord               line
+    | otherwise             = uncurry addToTokensAndContinueTokenize $ parseSpecialWord             line
 
-parseWord :: String -> (Token, String)
-parseWord unparsed = let (parsed, rest) = parseWord' "" unparsed in (Word parsed, rest)
+addToTokensAndContinueTokenize :: Token -> String -> [Token]
+addToTokensAndContinueTokenize token rest = token : tokenizeKoak rest
 
-parseWord' :: String -> String -> (String, String)
-parseWord' parsed []          = (reverse parsed, [])
-parseWord' parsed rest@(r:rs)
-    | isAlphaNum r            = parseWord' (r:parsed) rs
-    | otherwise               = (reverse parsed, rest)
+parseAlphaWord :: String -> (Token, String)
+parseAlphaWord   unparsed = uncurry wrapParsedAroundWord $ span KGU.isAlphaNumWordChar unparsed
+
+parseSpecialWord :: String -> (Token, String)
+parseSpecialWord unparsed = uncurry wrapParsedAroundWord $ span KGU.isSpecialWordChar  unparsed
+
+wrapParsedAroundWord :: String -> String -> (Token, String)
+wrapParsedAroundWord parsed rest = (Word parsed, rest)
 
 parseDot :: String -> (Token, String)
-parseDot line@(_:x2:xs)
-    | isDigit x2 = parseNumber line
-    | otherwise  = (Dot, x2:xs)
-parseDot (_:xs)  = (Dot, xs)
-parseDot _       = (Dot, [])
+parseDot line@(_:lineWithoutDot@(x2:_))
+    | isDigit   x2 = parseNumberStartingWithDot lineWithoutDot
+    | otherwise    = parseSpecialWord           line
+parseDot line      = parseSpecialWord           line
 
-parseNumber :: String -> (Token, String)
-parseNumber unparsed = let (parsed, rest) = parseNumber' "" unparsed in (Koak.Lexer.Number $ refineNumber parsed, rest)
+parseNumberStartingWithDot :: String -> (Token, String)
+parseNumberStartingWithDot = parseNumberStartingWithDot' . span isDigit
 
-parseNumber' :: String -> String -> (String, String)
-parseNumber' parsed []          = (reverse parsed, [])
-parseNumber' parsed ('.':rs)    = parseNumber' ('.':parsed) rs
-parseNumber' parsed rest@(r:rs)
-    | isDigit r                 = parseNumber' (r:parsed) rs
-    | otherwise                 = (reverse parsed, rest)
+parseNumberStartingWithDot' :: (String, String) -> (Token, String)
+parseNumberStartingWithDot'  (fractionalPart, rest) = parseNumberStartingWithDot'' ('.' : fractionalPart, rest)
 
-refineNumber :: String -> Double
-refineNumber rawNumber@('.':_) = refineNumber' ('0':rawNumber) $ readMaybe $ '0':rawNumber
-refineNumber rawNumber         = refineNumber' rawNumber       $ readMaybe rawNumber
+parseNumberStartingWithDot'' :: (String, String) -> (Token, String)
+parseNumberStartingWithDot'' (fractionalPart, rest) = (FloatingNumber $ read $ '0' : fractionalPart, rest)
 
-refineNumber' :: String -> Maybe Double -> Double
-refineNumber' _               (Just x) = x
-refineNumber' impureRawNumber Nothing  = throw $ KoakInvalidNumberException impureRawNumber
+parseNumberStartingWithDigit :: String -> (Token, String)
+parseNumberStartingWithDigit = parseNumberStartingWithDigit' . span isDigit
+
+parseNumberStartingWithDigit' :: (String, String) -> (Token, String)
+parseNumberStartingWithDigit' (dp, '.':fp@(x2:_))
+    | isDigit   x2                       = uncurry (parseNumberStartingWithDigit'' dp) $ span isDigit fp
+    | otherwise                          = throw $ KLE.KoakLexerInvalidNumberException $ dp ++ "."
+parseNumberStartingWithDigit' (dp, rest) = (IntegerNumber $ read dp, rest)
+
+parseNumberStartingWithDigit'' :: String -> String -> String -> (Token, String)
+parseNumberStartingWithDigit'' dp fp rest = (FloatingNumber $ read $ dp ++ '.' : fp, rest)

@@ -20,6 +20,9 @@ dependencies:
 
 library:
   source-dirs: src
+  dependencies:
+    - hashable
+    - unordered-containers
 
 executables:
   koak-exe:
@@ -43,3 +46,4 @@ tests:
     dependencies:
     - koak
     - hspec
+    - unordered-containers
