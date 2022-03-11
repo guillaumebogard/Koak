@@ -33,34 +33,36 @@ spec = do
     it "Basic assign" $
         KT.checkKoakTyping (KP.parseKoak "i = 1;") KTC.getDefaultKContext
             ==
-            KTC.kContextPushVar
-                (
-                    KP.VarAssignment
-                        (KP.Identifier "i")
-                        KP.Int
-                )
-                KTC.getDefaultKContext
+            Right (
+                KTC.kContextPushVar
+                    (
+                        KP.VarAssignment
+                            (KP.Identifier "i")
+                            KP.Int
+                    )
+                    KTC.getDefaultKContext
+            )
     it "Complex assign" $
         KT.checkKoakTyping
             (KP.parseKoak "i = 8 * 3 + 4.7; i = 2.0;")
             KTC.getDefaultKContext
             ==
-            KTC.kContextPushVar
-                (
-                    KP.VarAssignment
-                        (KP.Identifier "i")
-                        KP.Double
-                )
-                KTC.getDefaultKContext
-    it "Bad assign, wrong type." $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak "i = 1: i = 42.42;")
+            Right (
+                KTC.kContextPushVar
+                    (
+                        KP.VarAssignment
+                            (KP.Identifier "i")
+                            KP.Double
+                    )
                     KTC.getDefaultKContext
             )
-        `shouldThrow`
-        (== KTE.KoakTypingShadowedVariableByVariable
+    it "Bad assign, wrong type." $
+        KT.checkKoakTyping
+            (KP.parseKoak "i = 1: i = 42.42;")
+            KTC.getDefaultKContext
+        ==
+        Left (
+            KTE.KoakTypingShadowedVariableByVariable
             (KP.Identifier "i")
             (KP.VarAssignment
                 (KP.Identifier "i")
@@ -72,19 +74,21 @@ spec = do
             (KP.parseKoak "---1 + 3 * 4 / 1 + 3.0;")
             KTC.getDefaultKContext
             ==
-            KTC.getDefaultKContext
+            Right KTC.getDefaultKContext
     it "Basic function call" $
         KT.checkKoakTyping
             (KP.parseKoak "def foo(): int 42; foo();")
             KTC.getDefaultKContext
             ==
-            KTC.kContextPushFunction
-                (
-                    KP.PrototypeFunction
-                        (KP.Identifier "foo")
-                        (KP.PrototypeArgs [] KP.Int)
-                )
-                KTC.getDefaultKContext
+            Right (
+                KTC.kContextPushFunction
+                    (
+                        KP.PrototypeFunction
+                            (KP.Identifier "foo")
+                            (KP.PrototypeArgs [] KP.Int)
+                    )
+                    KTC.getDefaultKContext
+            )
     it "Basic function call with arguments" $
         KT.checkKoakTyping
             (KP.parseKoak
@@ -95,19 +99,21 @@ spec = do
             )
             KTC.getDefaultKContext
             ==
-            KTC.kContextPushFunction
-                (
-                    KP.PrototypeFunction
-                        (KP.Identifier "foo")
-                        (KP.PrototypeArgs
-                            [
-                                KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
-                                KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
-                            ]
-                            KP.Int
-                        )
-                )
-                KTC.getDefaultKContext
+            Right (
+                KTC.kContextPushFunction
+                    (
+                        KP.PrototypeFunction
+                            (KP.Identifier "foo")
+                            (KP.PrototypeArgs
+                                [
+                                    KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                                    KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
+                                ]
+                                KP.Int
+                            )
+                    )
+                    KTC.getDefaultKContext
+            )
     it "Complex function call with arguments" $
         KT.checkKoakTyping
             (KP.parseKoak
@@ -118,75 +124,73 @@ spec = do
             )
             KTC.getDefaultKContext
             ==
-            KTC.kContextPushFunction
-                (
-                    KP.PrototypeFunction
-                        (KP.Identifier "foo")
-                        (KP.PrototypeArgs
-                            [
-                                KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
-                                KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
-                            ]
-                            KP.Int
-                        )
-                )
-                KTC.getDefaultKContext
+            Right (
+                KTC.kContextPushFunction
+                    (
+                        KP.PrototypeFunction
+                            (KP.Identifier "foo")
+                            (KP.PrototypeArgs
+                                [
+                                    KP.PrototypeIdentifier (KP.Identifier "a") KP.Int,
+                                    KP.PrototypeIdentifier (KP.Identifier "b") KP.Double
+                                ]
+                                KP.Int
+                            )
+                    )
+                    KTC.getDefaultKContext
+            )
     it "Bad function call. Bad argument number 1." $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo(a:int b:double): int 42;" ++
-                            "foo(2.2);"
-                        )
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo(a:int b:double): int 42;" ++
+                    "foo(2.2);"
+                )
             )
-        `shouldThrow`
-        (== KTE.KoakTypingMismatchedArgumentNumber (KP.Identifier "foo") 1)
+            KTC.getDefaultKContext
+            == 
+            Left (
+                KTE.KoakTypingMismatchedArgumentNumber (KP.Identifier "foo") 1
+            )
     it "Bad function call. Bad argument number 2." $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo(a:int b:double): int 42;" ++
-                            "foo();"
-                        )
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo(a:int b:double): int 42;" ++
+                    "foo();"
+                )
             )
-        `shouldThrow`
-        (== KTE.KoakTypingMismatchedArgumentNumber (KP.Identifier "foo") 0)
+            KTC.getDefaultKContext
+            ==
+            Left (
+                KTE.KoakTypingMismatchedArgumentNumber (KP.Identifier "foo") 0
+            )
     it "Bad function call. Bad argument number 3." $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo(a:int b:double): int 42;" ++
-                            "foo(2.2, 1, 3, 5);"
-                        )
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo(a:int b:double): int 42;" ++
+                    "foo(2.2, 1, 3, 5);"
+                )
             )
-        `shouldThrow`
-        (== KTE.KoakTypingMismatchedArgumentNumber (KP.Identifier "foo") 4)
+            KTC.getDefaultKContext
+        ==
+        Left (
+            KTE.KoakTypingMismatchedArgumentNumber (KP.Identifier "foo") 4
+        )
     it "Bad function call. Bad argument type." $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo(a:int b:double): int 42;" ++
-                            "foo(2.2, 4.2);"
-                        )
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo(a:int b:double): int 42;" ++
+                    "foo(2.2, 4.2);"
+                )
             )
-        `shouldThrow`
-        (== KTE.KoakTypingMismatchedArgumentType (KP.Identifier "foo") [KP.Double, KP.Double])
+            KTC.getDefaultKContext
+        ==
+        Left (
+            KTE.KoakTypingMismatchedArgumentType (KP.Identifier "foo") [KP.Double, KP.Double]
+        )
     it "Basic function with a while" $
         KT.checkKoakTyping
             (KP.parseKoak
@@ -202,13 +206,15 @@ spec = do
             )
             KTC.getDefaultKContext
             ==
-            KTC.kContextPushFunction
+            Right (
+                KTC.kContextPushFunction
                 (
                     KP.PrototypeFunction
                         (KP.Identifier "foo")
                         (KP.PrototypeArgs [] KP.Int)
                 )
                 KTC.getDefaultKContext
+            )
     it "Basic function with a for" $
         KT.checkKoakTyping
             (KP.parseKoak
@@ -221,13 +227,15 @@ spec = do
             )
             KTC.getDefaultKContext
             ==
-            KTC.kContextPushFunction
-                (
-                    KP.PrototypeFunction
-                        (KP.Identifier "foo")
-                        (KP.PrototypeArgs [] KP.Double)
-                )
-                KTC.getDefaultKContext
+            Right (
+                KTC.kContextPushFunction
+                    (
+                        KP.PrototypeFunction
+                            (KP.Identifier "foo")
+                            (KP.PrototypeArgs [] KP.Double)
+                    )
+                    KTC.getDefaultKContext
+            )
     it "Shadowing global by a local variable 1" $
         KT.checkKoakTyping
             (KP.parseKoak
@@ -240,20 +248,22 @@ spec = do
             )
             KTC.getDefaultKContext
             ==
-            KTC.kContextPushVar
-                (KP.VarAssignment
-                    (KP.Identifier "i")
-                    KP.Int
-                )
-                (
-                    KTC.kContextPushFunction
-                        (
-                            KP.PrototypeFunction
-                                (KP.Identifier "foo")
-                                (KP.PrototypeArgs [] KP.Double)
-                        )
-                        KTC.getDefaultKContext
-                )
+            Right (
+                KTC.kContextPushVar
+                    (KP.VarAssignment
+                        (KP.Identifier "i")
+                        KP.Int
+                    )
+                    (
+                        KTC.kContextPushFunction
+                            (
+                                KP.PrototypeFunction
+                                    (KP.Identifier "foo")
+                                    (KP.PrototypeArgs [] KP.Double)
+                            )
+                            KTC.getDefaultKContext
+                    )
+            )
     it "Shadowing global by a local variable 2" $
         KT.checkKoakTyping
             (KP.parseKoak
@@ -266,34 +276,34 @@ spec = do
             )
             KTC.getDefaultKContext
             ==
-            KTC.kContextPushVar
-                (KP.VarAssignment
-                    (KP.Identifier "i")
-                    KP.Int
-                )
-                (
-                    KTC.kContextPushFunction
-                        (
-                            KP.PrototypeFunction
-                                (KP.Identifier "foo")
-                                (KP.PrototypeArgs [KP.PrototypeIdentifier (KP.Identifier "i") KP.Double] KP.Double)
-                        )
-                        KTC.getDefaultKContext
-                )
-    it "Shadowing definition by a definition 1" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo(a:int b:double): int 42;" ++
-                            "def foo(a:int b:double): int 42;"
-                        )
+            Right (
+                KTC.kContextPushVar
+                    (KP.VarAssignment
+                        (KP.Identifier "i")
+                        KP.Int
                     )
-                    KTC.getDefaultKContext
+                    (
+                        KTC.kContextPushFunction
+                            (
+                                KP.PrototypeFunction
+                                    (KP.Identifier "foo")
+                                    (KP.PrototypeArgs [KP.PrototypeIdentifier (KP.Identifier "i") KP.Double] KP.Double)
+                            )
+                            KTC.getDefaultKContext
+                    )
             )
-        `shouldThrow`
-        (== KTE.KoakTypingShadowedDefinitionByDefinition
+    it "Shadowing definition by a definition 1" $
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo(a:int b:double): int 42;" ++
+                    "def foo(a:int b:double): int 42;"
+                )
+            )
+            KTC.getDefaultKContext
+        ==
+        Left (
+            KTE.KoakTypingShadowedDefinitionByDefinition
             (KP.Identifier "foo")
             (KP.PrototypeFunction
                 (KP.Identifier "foo")
@@ -306,19 +316,17 @@ spec = do
             )
         )
     it "Shadowing definition by a definition 2" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo(a:int b:double): double 42.2;" ++
-                            "def foo(): int 42;"
-                        )
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo(a:int b:double): double 42.2;" ++
+                    "def foo(): int 42;"
+                )
             )
-        `shouldThrow`
-        (== KTE.KoakTypingShadowedDefinitionByDefinition
+            KTC.getDefaultKContext
+        ==
+        Left (
+            KTE.KoakTypingShadowedDefinitionByDefinition
             (KP.Identifier "foo")
             (KP.PrototypeFunction
                 (KP.Identifier "foo")
@@ -331,19 +339,17 @@ spec = do
             )
         )
     it "Shadowing definition by a var 1" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo(a:int b:double): double 42.2;" ++
-                            "foo = 1;"
-                        )
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo(a:int b:double): double 42.2;" ++
+                    "foo = 1;"
+                )
             )
-        `shouldThrow`
-        (== KTE.KoakTypingShadowedVariableByDefinition
+            KTC.getDefaultKContext
+        ==
+        Left (
+            KTE.KoakTypingShadowedVariableByDefinition
             (KP.Identifier "foo")
             (KP.PrototypeFunction
                 (KP.Identifier "foo")
@@ -356,22 +362,20 @@ spec = do
             )
         )
     it "Shadowing definition by a var 2" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo(a:int b:double): double 42.2;"   ++
-                            "def bar(): double"                       ++
-                            "   foo = 1:"                             ++
-                            "   2.1"                                  ++
-                            ";"
-                        )
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo(a:int b:double): double 42.2;"   ++
+                    "def bar(): double"                       ++
+                    "   foo = 1:"                             ++
+                    "   2.1"                                  ++
+                    ";"
+                )
             )
-        `shouldThrow`
-        (== KTE.KoakTypingShadowedVariableByDefinition
+            KTC.getDefaultKContext
+        ==
+        Left (
+            KTE.KoakTypingShadowedVariableByDefinition
             (KP.Identifier "foo")
             (KP.PrototypeFunction
                 (KP.Identifier "foo")
@@ -384,19 +388,17 @@ spec = do
             )
         )
     it "Shadowing var by a var 1" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "a = 1;"    ++
-                            "a = 2.5;"
-                        )
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "a = 1;"    ++
+                    "a = 2.5;"
+                )
             )
-        `shouldThrow`
-        (== KTE.KoakTypingShadowedVariableByVariable
+            KTC.getDefaultKContext
+        ==
+        Left (
+            KTE.KoakTypingShadowedVariableByVariable
             (KP.Identifier "a")
             (KP.VarAssignment
                 (KP.Identifier "a")
@@ -404,49 +406,39 @@ spec = do
             )
         )
     it "Unknown var" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        "a = a;"
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                "a = a;"
             )
-        `shouldThrow`
-        (== KTE.KoakTypingUnknownDefinition (KP.Identifier "a"))
+            KTC.getDefaultKContext
+        ==
+        Left (
+            KTE.KoakTypingUnknownDefinition (KP.Identifier "a")
+        )
     it "Unknown function" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        "foo(1);"
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                "foo(1);"
             )
-        `shouldThrow`
-        (== KTE.KoakTypingUnknownDefinition (KP.Identifier "foo") )
+            KTC.getDefaultKContext
+        ==
+        Left (KTE.KoakTypingUnknownDefinition (KP.Identifier "foo") )
     it "Unknown binary function" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        "1 <--> 2;"
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                "1 <--> 2;"
             )
-        `shouldThrow`
-        (== KTE.KoakTypingUnknownDefinition (KP.Identifier "<-->") )
+            KTC.getDefaultKContext
+        ==
+        Left (KTE.KoakTypingUnknownDefinition (KP.Identifier "<-->") )
     it "Unknown unary function" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        ">>>> 2;"
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                ">>>> 2;"
             )
-        `shouldThrow`
-        (== KTE.KoakTypingUnknownDefinition (KP.Identifier ">>>>") )
+            KTC.getDefaultKContext
+        ==
+        Left (KTE.KoakTypingUnknownDefinition (KP.Identifier ">>>>") )
     it "Real world example: while 1" $
         KT.checkKoakTyping
             (KP.parseKoak
@@ -464,7 +456,8 @@ spec = do
             )
             KTC.getDefaultKContext
             ==
-            KTC.kContextPushVar
+            Right (
+                KTC.kContextPushVar
                 (KP.VarAssignment (KP.Identifier "len") KP.Int)
                 (
                     KTC.kContextPushVar
@@ -484,92 +477,75 @@ spec = do
                                 KTC.getDefaultKContext
                         )
                 )
-    it "Assignment of a RValue 1" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        "1 = 1;"
-                    )
-                    KTC.getDefaultKContext
             )
-        `shouldThrow`
-        (== KTE.KoakTypingAssignmentToRValue)
+    it "Assignment of a RValue 1" $
+        KT.checkKoakTyping
+            (KP.parseKoak
+                "1 = 1;"
+            )
+            KTC.getDefaultKContext
+        ==
+        Left (KTE.KoakTypingAssignmentToRValue)
     it "Assignment of a RValue 2" $
-        evaluate
-            (
                 KT.checkKoakTyping
                     (KP.parseKoak
                         "-a = 1;"
                     )
                     KTC.getDefaultKContext
-            )
-        `shouldThrow`
-        (== KTE.KoakTypingAssignmentToRValue)
+        ==
+        Left (KTE.KoakTypingAssignmentToRValue)
     it "Assignment of a RValue 3" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        "2 * a = 1;"
-                    )
-                    KTC.getDefaultKContext
+        KT.checkKoakTyping
+            (KP.parseKoak
+                "2 * a = 1;"
             )
-        `shouldThrow`
-        (== KTE.KoakTypingAssignmentToRValue)
+            KTC.getDefaultKContext
+        ==
+        Left (KTE.KoakTypingAssignmentToRValue)
     it "Assignment of a RValue 3" $
-        evaluate
-            (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo() : int 1;" ++
-                            "foo() = 1;"
-                        )
-                    )
-                    KTC.getDefaultKContext
-            )
-        `shouldThrow`
-        (== KTE.KoakTypingAssignmentToRValue)
-    it "No matching binary function" $
-            evaluate
-                (KT.checkKoakTyping
-                    (KP.parseKoak
-                            "1 + 2;"
-                    )
-                    (KTC.Kcontext
-                            (
-                                KTC.DefContext $
-                                    HM.fromList [
-                                            (KP.Identifier "+", KTC.PrimitiveFunction  [KTC.BinaryFunctionTyping (KP.Precedence 11) KTC.Double KTC.Double KTC.Double])
-                                    ]
-                            )
-                            (KTC.VarContext HM.empty)
-                    )
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo() : int 1;" ++
+                    "foo() = 1;"
                 )
-            `shouldThrow`
-            (== KTE.KoakTypingMismatchedArgumentType (KP.Identifier "+") [])
-    it "Assign hell 1" $
-            evaluate (
-                KT.checkKoakTyping
-                    (KP.parseKoak "a = b = 3;")
-                    KTC.getDefaultKContext
             )
-            `shouldThrow`
-            (== KTE.KoakTypingAssignmentToRValue)
-    it "Assign hell 2" $
-        evaluate (
-                KT.checkKoakTyping
-                    (KP.parseKoak
-                        (
-                            "def foo() : int 1;" ++
-                            "a = b = foo() * 2 + 3;"
-                        )
+            KTC.getDefaultKContext
+        ==
+        Left (KTE.KoakTypingAssignmentToRValue)
+    it "No matching binary function" $
+        (KT.checkKoakTyping
+            (KP.parseKoak
+                    "1 + 2;"
+            )
+            (KTC.Kcontext
+                    (
+                        KTC.DefContext $
+                            HM.fromList [
+                                    (KP.Identifier "+", KTC.PrimitiveFunction  [KTC.BinaryFunctionTyping (KP.Precedence 11) KTC.Double KTC.Double KTC.Double])
+                            ]
                     )
-                    KTC.getDefaultKContext
+                    (KTC.VarContext HM.empty)
+            ))
+            ==
+            Left (KTE.KoakTypingMismatchedArgumentType (KP.Identifier "+") [])
+    it "Assign hell 1" $
+        KT.checkKoakTyping
+            (KP.parseKoak "a = b = 3;")
+            KTC.getDefaultKContext
+        ==
+        Left (KTE.KoakTypingAssignmentToRValue)
+    it "Assign hell 2" $
+        KT.checkKoakTyping
+            (KP.parseKoak
+                (
+                    "def foo() : int 1;" ++
+                    "a = b = foo() * 2 + 3;"
+                )
             )
-            `shouldThrow`
-            (== KTE.KoakTypingAssignmentToRValue)
+            KTC.getDefaultKContext
+        ==
+        Left (KTE.KoakTypingAssignmentToRValue)
     -- it "Assign hell 2" $
     --     evaluate
     --         (
