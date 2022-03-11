@@ -249,29 +249,6 @@ findBinaryMatchingFunction' func_name left_type right_type (Just (KTC.Function f
     | otherwise                                                                                     = Left $ KTE.KoakTypingMismatchedArgumentType func_name [KTC.baseTypeToType left_type, KTC.baseTypeToType right_type]
 findBinaryMatchingFunction' func_name _        _           (Just _)                                 = Left $ KTE.KoakTypingNotABinaryFunction func_name
 
-
----------------------------------------------------
-{-
-evaluateExpressionTyping :: KTC.Kcontext -> KP.Expression -> EvaluationResult
-evaluateExpressionTyping context (KP.Expression unary [])                     = evaluateUnaryType context unary
-evaluateExpressionTyping context (KP.Expression first ((binop, second) : xs)) = EvaluationResult Nil context
-    --                                                                            checkPartialExpressionType kdefs first binop second -->
-    --                                                                               evaluateExpressionType' kdefs (Expression second xs) (getBinOpPrecedence kdefs binop, getBinOpType kdefs binop)
-                                                                               
-evaluateExpressionTyping'' :: EvaluationResult -> KP.Expression -> EvaluationResult 
-
-evaluateExpressionType' :: KTC.Kcontext -> KP.Expression -> (KP.Precedence, KP.TYPE) -> KP.TYPE
-evaluateExpressionType' context (KP.Expression _ []) (_, t) = t
-evaluateExpressionType' context (KP.Expression first ((binop, second) : xs)) (prec, t)
-    | prec > getBinOpPrecedence context binop = checkPartialExpressionType context first binop second --> evaluateExpressionType' context (KP.Expression second xs) (prec, t)
-    | otherwise = checkPartialExpressionType context first binop second -->
-                  evaluateExpressionType' context (KP.Expression second xs) (getBinOpPrecedence context binop, getBinOpType context binop)
-
-
-checkPartialExpressionType :: KP.Kdefs -> KP.Unary -> KP.BinaryOp -> KP.Unary -> ()
-checkPartialExpressionType kdefs first op second = ()
--}
-
 evaluateUnaryTyping :: KTC.Kcontext -> KP.Unary -> Either KTE.KoakTypingException EvaluationResult
 evaluateUnaryTyping context (KP.Unary (KP.UnaryOp identifier) unary) =
     let next = evaluateUnaryTyping context unary   in
@@ -288,26 +265,6 @@ evaluateUnaryTypingSub' identifier next = evaluateUnaryTypingSub'' (findUnaryMat
 evaluateUnaryTypingSub'' :: Either KTE.KoakTypingException KTC.FunctionTyping -> (KTC.FunctionTyping -> EvaluationResult) -> Either KTE.KoakTypingException EvaluationResult
 evaluateUnaryTypingSub'' (Left value) f = Left value
 evaluateUnaryTypingSub'' (Right value) f = Right $ f value
-
---evaluateUnaryTyping :: KTC.Kcontext -> KP.Unary -> Either KTE.KoakTypingException EvaluationResult
---evaluateUnaryTyping context (KP.Unary (KP.UnaryOp identifier) unary) =
---    applyOnRight (\x -> a x identifier) (evaluateUnaryTyping context unary)
---evaluateUnaryTyping context (KP.UnaryPostfix postfix) = evaluatePostfixTyping context postfix
---
---a :: EvaluationResult -> KP.Identifier -> Either KTE.KoakTypingException EvaluationResult
---a result identifier = applyOnRight (\x -> EvaluationResult x
---        (getEvaluatedKcontext result)) (applyOnRight KTC.getFunctionReturnType
---            (findUnaryMatchingFunction
---                (getEvaluatedKcontext result)
---                identifier
---                (getEvaluatedType     result)
---            )
---        )
-
-applyOnRight :: (b -> c) -> Either a b -> Either a c
-applyOnRight f (Right value) = Right $ f value
-applyOnRight _ (Left  value) = Left value
---applyOnRight = fmap
 
 composeEither :: (b -> Either a c) -> Either a b -> Either a c
 composeEither f (Right value) = f value
@@ -334,7 +291,7 @@ evaluatePostfixTyping context (KP.Postfix (KP.PrimaryLiteral    (KP.LiteralDoubl
 evaluatePostfixTyping context (KP.Postfix (KP.PrimaryIdentifier identifier           ) Nothing)          = evaluatePostfixTypingVar   context identifier
 evaluatePostfixTyping context (KP.Postfix (KP.PrimaryIdentifier identifier           ) (Just call_expr)) = evaluateFunctionCallTyping context identifier call_expr
 evaluatePostfixTyping context (KP.Postfix (KP.PrimaryExpressions expressions         ) Nothing)          = evaluateExpressionsTyping  expressions context
-evaluatePostfixTyping _       _                                                                          = error ""
+evaluatePostfixTyping _       _                                                                          = Left $ KTE.KoakTypingNotAFunction $ KP.Identifier "Undefined"
 
 evaluatePostfixTypingVar :: KTC.Kcontext -> KP.Identifier -> Either KTE.KoakTypingException EvaluationResult
 evaluatePostfixTypingVar context identifier = evaluatePostfixTypingVar' context identifier $ KTC.kContextFind context identifier
@@ -376,7 +333,7 @@ evaluateFunctionCallArgs' evaluated_types context (x:xs) = let evaluated_arg = e
                                                                 (Right value) -> evaluateFunctionCallArgs' (getEvaluatedType value:evaluated_types) (getEvaluatedKcontext value) xs
 
 evaluateFunctionCallTyping' :: KTC.Kcontext -> KP.Identifier -> [KTC.BaseType] -> Either KTE.KoakTypingException EvaluationResult
-evaluateFunctionCallTyping' context identifier args = applyOnRight (\x -> EvaluationResult (KTC.getFunctionReturnType x) context) $ findMatchingFunction context identifier args
+evaluateFunctionCallTyping' context identifier args = (\x -> EvaluationResult (KTC.getFunctionReturnType x) context) <$> findMatchingFunction context identifier args
 
 findMatchingFunction :: KTC.Kcontext -> KP.Identifier -> [KTC.BaseType] -> Either KTE.KoakTypingException KTC.FunctionTyping
 findMatchingFunction context func_name args = findMatchingFunction' func_name args (KTC.kContextFind context func_name)
@@ -392,112 +349,6 @@ findMatchingFunction' func_name args (Just (KTC.Function func))
     | KTC.isFunctionParamMatchingFunction args func                           = Right func
     | otherwise                                                               = Left $ KTE.KoakTypingMismatchedArgumentType func_name (map KTC.baseTypeToType args)
 findMatchingFunction' func_name _        (Just _)                             = Left $ KTE.KoakTypingNotAFunction func_name
-
---evaluatePostfixTypingVar :: KTC.Kcontext -> KP.Identifier -> EvaluationResult
---evaluatePostfixTypingVar context identifier = evaluatePostfixTypingVar' context identifier $ KTC.kContextFind context identifier
---
---evaluatePostfixTypingVar' :: KTC.Kcontext -> KP.Identifier -> Maybe KTC.TypeSignature -> EvaluationResult
---evaluatePostfixTypingVar' context identifier Nothing                   = throw $ KTE.KoakTypingUnknownDefinition identifier
---evaluatePostfixTypingVar' context identifier (Just (KTC.Var var_type)) = EvaluationResult var_type context
---evaluatePostfixTypingVar' context identifier (Just _                 ) = throw $ KTE.KoakTypingNotAVar identifier
---
---evaluateFunctionCallTyping :: KTC.Kcontext -> KP.Identifier -> KP.CallExpression -> EvaluationResult
---evaluateFunctionCallTyping context identifier (KP.CallExpression Nothing)                                 = evaluateFunctionCallTyping' context identifier []
---evaluateFunctionCallTyping context identifier (KP.CallExpression (Just (KP.CallExpressionArgs arg args))) = evaluateFunctionCallTyping' context identifier []
---
---evaluateFunctionCallTyping' :: KTC.Kcontext -> KP.Identifier -> [KTC.BaseType] -> EvaluationResult
---evaluateFunctionCallTyping' context identifier args = evaluateFunctionCallTyping'' context identifier args (KTC.kContextFind context identifier)
---
---evaluateFunctionCallTyping'' :: KTC.Kcontext -> KP.Identifier -> [KTC.BaseType] -> Maybe KTC.TypeSignature -> EvaluationResult
---evaluateFunctionCallTyping'' _ _ _ Nothing                 = error ""
---evaluateFunctionCallTyping'' _ _ _ (Just (KTC.Function _)) = error ""
---evaluateFunctionCallTyping'' _ _ _ (Just _)                = error ""
---
-
--- evaluateUnaryTyping' :: KTC.Kcontext -> EvaluationResult -> [FunctionTyping] -> EvaluationResult
--- evaluateUnaryTyping' context right_res []                                 = throw $ KTE.KoakTypingMismatchedArgumentType (KP.Identifier "remplacer op") []
--- evaluateUnaryTyping' context right_res (x:xs)
---     | isUnaryFunctionParamMatchingFunction x (getEvaluatedType right_res) = EvaluationResult (getFunctionReturnType x) context
---     | otherwise                                                           = evaluateUnaryTyping' context right_res xs
-
-
---     | getUnopType context op == evaluateUnaryType context unary       = evaluateUnaryType context unary
---     | otherwise                                                   = throw $ KTE.KoakTypingMismatchedUnaryType (evaluateUnaryType kdefs unary) $ getUnopType defs op
--- evaluateUnaryTyping context (KP.UNARY_POSTFIX (KP.POSTFIX primary Nothing)) = Int -- get primary type as basic type
--- evaluateUnaryTyping context (KP.UNARY_POSTFIX (KP.POSTFIX primary _))       = Int -- get primary type as function type
-
-
---------------------------------------------
-
--- -------------------échafaudages --------------- (/!\ ne pas escalader /!\)
-
--- evaluateExpressionTyping :: KTC.Kcontext -> Expression -> EvaluationResult
--- evaluateExpressionTyping kdefs (Expression unary []) = evaluateUnaryType kdefs unary
--- evaluateExpressionTyping kdefs (Expression first ((binop, second) : xs)) = checkPartialExpressionType kdefs first binop second -->
---                                                      evaluateExpressionType' kdefs (Expression second xs) (getBinOpPrecedence kdefs binop, getBinOpType kdefs binop)
--- evaluateExpressionTyping _ _ = error "bite"
-
-
--- evaluateExpressionType' :: Kdefs -> Expression -> (Precedence, TYPE) -> TYPE
--- evaluateExpressionType' kdefs (Expression _ []) (_, t) = t
--- evaluateExpressionType' kdefs (Expression first ((binop, second) : xs)) (prec, t)
---     | prec > getBinOpPrecedence kdefs binop = checkPartialExpressionType kdefs first binop second --> evaluateExpressionType' kdefs (Expression second xs) (prec, t)
---     | otherwise = checkPartialExpressionType kdefs first binop second -->
---                   evaluateExpressionType' kdefs (Expression second xs) (getBinOpPrecedence kdefs binop, getBinOpType kdefs binop)
-
--- evaluateUnaryType :: Kdefs -> Unary -> TYPE
--- evaluateUnaryType kdefs (UNARY_UN op unary)
---     | getUnopType kdefs op == evaluateUnaryType kdefs unary = evaluateUnaryType kdefs unary
---     | otherwise                            = throw $ KTE.KoakTypingMismatchedUnaryType (evaluateUnaryType kdefs unary) $ getUnopType defs op
--- evaluateUnaryType kdefs (UNARY_POSTFIX (POSTFIX primary Nothing)) = Int -- get primary type as basic type
--- evaluateUnaryType kdefs (UNARY_POSTFIX (POSTFIX primary _)) = Int -- get primary type as function type
-
-
--- --------------------------------------------
-
-
-{-
- | evaluateUnaryType first == evaluateUnaryType second == Int {-getBinOpType binop -} = ()
-    -- faudrait plutôt chopper le type des deux args du binop et les comparer aux unarys
-    | otherwise = error "Type error"
--}
-
--- evaluateExpressionType :: Kdefs -> Expression -> TYPE
--- evaluateExpressionType _ _ = Int
--- evaluateExpressionType kdefs (Expression unary []) = evaluateUnaryType kdefs unary
--- evaluateExpressionType kdefs (Expression first ((binop, second) : xs)) = checkPartialExpressionType kdefs first binop second -->
---                                                      evaluateExpressionType' kdefs (Expression second xs) (getBinOpPrecedence kdefs binop, getBinOpType kdefs binop)
-
--- evaluateExpressionType' :: Kdefs -> Expression -> (Precedence, TYPE) -> TYPE
--- evaluateExpressionType' kdefs (Expression _ []) (_, t) = t
--- evaluateExpressionType' kdefs (Expression first ((binop, second) : xs)) (prec, t)
---     | prec > getBinOpPrecedence kdefs binop = checkPartialExpressionType kdefs first binop second --> evaluateExpressionType' kdefs (Expression second xs) (prec, t)
---     | otherwise = checkPartialExpressionType kdefs first binop second -->
---                   evaluateExpressionType' kdefs (Expression second xs) (getBinOpPrecedence kdefs binop, getBinOpType kdefs binop)
-
--- evaluateUnaryType :: Kdefs -> Unary -> TYPE
--- evaluateUnaryType kdefs (UNARY_UN op unary)
---     | getUnopType kdefs op == evaluateUnaryType kdefs unary = evaluateUnaryType kdefs unary
---     | otherwise                            = throw $ KTE.KoakTypingMismatchedUnaryType (evaluateUnaryType kdefs unary) $ getUnopType defs op
--- evaluateUnaryType kdefs (UNARY_POSTFIX (POSTFIX primary Nothing)) = Int -- get primary type as basic type
--- evaluateUnaryType kdefs (UNARY_POSTFIX (POSTFIX primary _)) = Int -- get primary type as function type
-
--- getFunctionType :: [Kdefs] -> Identifier -> TYPE
--- getFunctionType (KdefDef ((PROTOTYPE identifier (PROTOTYPE_ARGS _ fnType))) :xs) functionName
---   | identifier == functionName = fnType
---   | otherwise                  = getFunctionType xs functionName
-
-
--- find :: Foldable t => (a -> Bool) -> t a -> Maybe a
-
--- (<->) :: () -> () -> ()
--- (<->) _ _ = ()
-
--- (<--) :: a -> b -> a
--- (<--) a _ = a
-
--- (-->) :: b -> a -> a
--- (-->) _ a = a
 
 getEvaluatedType :: EvaluationResult -> KTC.BaseType
 getEvaluatedType (EvaluationResult base_type _) = base_type

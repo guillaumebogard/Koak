@@ -4,6 +4,7 @@
 -- File description:
 -- Main
 --
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Main where
 
@@ -21,6 +22,7 @@ import qualified Argument.Parser.Exception as APE ( KoakArgumentParserException(
 import qualified Koak.Lexer.Exception      as KLE ( KoakLexerException(..) )
 import qualified Koak.Parser.Exception     as KPE ( KoakParserException(..) )
 import qualified Koak.Typing.Exception     as KTE ( KoakTypingException(..) )
+import qualified Koak.Evaluator.Exception  as KEE ( KoakEvaluatorException(..) )
 
 import qualified Argument.Parser           as AP  ( KoakArguments(..)
                                                   , Filepath(..)
@@ -37,6 +39,7 @@ main = (getArgs >>= handleExecution . AP.parseArguments) `catches` [ Handler exc
                                                                    , Handler exceptionHandlerKLE
                                                                    , Handler exceptionHandlerKPE
                                                                    , Handler exceptionHandlerKTE
+                                                                   , Handler exceptionHandlerKEE
                                                                    ]
 
 handleExecution :: AP.KoakArguments -> IO ()
@@ -53,17 +56,20 @@ launchExecution'' _    (Left value) = throw value
 launchExecution'' stmt (Right _)    = launchExecution''' $ KE.evaluateKoak $ KP.getKdefsFromStmt stmt
 
 launchExecution''' :: KE.KoakEvaluation -> IO ()
-launchExecution''' (KE.KoakEvaluation values _) = print $ last values
+launchExecution''' (KE.KoakEvaluation (x:_) _) = print x
 
 exceptionHandlerAPE :: APE.KoakArgumentParserException -> IO ()
-exceptionHandlerAPE APE.KoakHelpException   = print APE.KoakHelpException >> exitSuccess
-exceptionHandlerAPE exception               = print exception             >> exitWith (ExitFailure 84)
+exceptionHandlerAPE APE.KoakHelpException = print APE.KoakHelpException >> exitSuccess
+exceptionHandlerAPE exception             = print exception             >> exitWith (ExitFailure 84)
 
 exceptionHandlerKLE :: KLE.KoakLexerException -> IO ()
-exceptionHandlerKLE exception               = print exception             >> exitWith (ExitFailure 84)
+exceptionHandlerKLE exception             = print exception             >> exitWith (ExitFailure 84)
 
 exceptionHandlerKPE :: KPE.KoakParserException -> IO ()
-exceptionHandlerKPE exception               = print exception             >> exitWith (ExitFailure 84)
+exceptionHandlerKPE exception             = print exception             >> exitWith (ExitFailure 84)
 
 exceptionHandlerKTE :: KTE.KoakTypingException -> IO ()
-exceptionHandlerKTE exception               = print exception             >> exitWith (ExitFailure 84)
+exceptionHandlerKTE exception             = print exception             >> exitWith (ExitFailure 84)
+
+exceptionHandlerKEE :: KEE.KoakEvaluatorException -> IO ()
+exceptionHandlerKEE exception             = print exception             >> exitWith (ExitFailure 84)

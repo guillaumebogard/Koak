@@ -32,6 +32,8 @@ import Data.HashMap.Strict  as HM   ( HashMap
 
 import qualified Koak.Parser        as KP
 import qualified Koak.TypingContext as KTC
+import qualified Koak.Evaluator.Exception as KEE
+import Control.Exception (throw)
 
 data Value      = IntVal Int
                 | DoubleVal Double
@@ -77,19 +79,19 @@ getDefaultKContext = Kcontext
                         (
                             Definitions $
                                 HM.fromList [
-                                        (KP.Identifier "=" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryAssign),
-                                        (KP.Identifier "==", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryEqual),
-                                        (KP.Identifier "!=", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryNotEqual),
-                                        (KP.Identifier ">" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryMoreThan),
-                                        (KP.Identifier "<" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryLessThan),
-                                        (KP.Identifier ">=", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryMoreEqThan),
-                                        (KP.Identifier "<=", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryLessEqThan),
-                                        (KP.Identifier "+" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryPlus),
-                                        (KP.Identifier "-" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryMinus),
-                                        (KP.Identifier "*" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryMultiply),
-                                        (KP.Identifier "/" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryDivide),
-                                        (KP.Identifier "%" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1) primitiveBinaryModulo),
-                                        (KP.Identifier "-'" , PrimitiveFunction $ PrimUnaryFunction                    primitiveUnaryMinus),
+                                        (KP.Identifier "=" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 1)  primitiveBinaryAssign),
+                                        (KP.Identifier "==", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 8)  primitiveBinaryEqual),
+                                        (KP.Identifier "!=", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 8)  primitiveBinaryNotEqual),
+                                        (KP.Identifier ">" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 9)  primitiveBinaryMoreThan),
+                                        (KP.Identifier "<" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 9)  primitiveBinaryLessThan),
+                                        (KP.Identifier ">=", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 9)  primitiveBinaryMoreEqThan),
+                                        (KP.Identifier "<=", PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 9)  primitiveBinaryLessEqThan),
+                                        (KP.Identifier "+" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 11) primitiveBinaryPlus),
+                                        (KP.Identifier "-" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 11) primitiveBinaryMinus),
+                                        (KP.Identifier "*" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 12) primitiveBinaryMultiply),
+                                        (KP.Identifier "/" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 12) primitiveBinaryDivide),
+                                        (KP.Identifier "%" , PrimitiveFunction $ PrimBinaryFunction (KP.Precedence 12) primitiveBinaryModulo),
+                                        (KP.Identifier "--" , PrimitiveFunction $ PrimUnaryFunction                    primitiveUnaryMinus),
                                         (KP.Identifier "!" ,  PrimitiveFunction $ PrimUnaryFunction                    primitiveUnaryNot),
                                         (KP.Identifier "show",    PrimitiveFunction $ PrimFunction primitiveShow)
                                 ]
@@ -150,7 +152,7 @@ primitiveBinaryPlus _              _              = error "primitiveBinaryPlus"
 primitiveBinaryMinus :: Value -> Value -> Value
 primitiveBinaryMinus (IntVal    lv) (IntVal    rv) = IntVal (lv - rv)
 primitiveBinaryMinus (DoubleVal lv) (DoubleVal rv) = DoubleVal (lv - rv)
-primitiveBinaryMinus _              _              = error "primitivebatlescouilles"
+primitiveBinaryMinus _              _              = error "primitiveBinaryMinus"
 
 primitiveBinaryMultiply :: Value -> Value -> Value
 primitiveBinaryMultiply (IntVal    lv) (IntVal    rv) = IntVal (lv * rv)
@@ -158,11 +160,14 @@ primitiveBinaryMultiply (DoubleVal lv) (DoubleVal rv) = DoubleVal (lv * rv)
 primitiveBinaryMultiply _              _              = error "primitiveBinaryPMultiply"
 
 primitiveBinaryDivide :: Value -> Value -> Value
-primitiveBinaryDivide (IntVal    lv) (IntVal    rv) = IntVal (lv `div` rv)
-primitiveBinaryDivide (DoubleVal lv) (DoubleVal rv) = DoubleVal (lv / rv)
-primitiveBinaryDivide _              _              = error "primitiveBinaryDivide"
+primitiveBinaryDivide (IntVal    _ ) (IntVal    0)   = throw $ KEE.KoakEvaluatorException "Int Division by zero"
+primitiveBinaryDivide (IntVal    lv) (IntVal    rv)  = IntVal (lv `div` rv)
+primitiveBinaryDivide (DoubleVal lv) (DoubleVal 0.0) = throw $ KEE.KoakEvaluatorException "Double Division by zero"
+primitiveBinaryDivide (DoubleVal lv) (DoubleVal rv)  = DoubleVal (lv / rv)
+primitiveBinaryDivide _              _               = error "primitiveBinaryDivide"
 
 primitiveBinaryModulo :: Value -> Value -> Value
+primitiveBinaryModulo (IntVal    _ ) (IntVal    0 ) = throw $ KEE.KoakEvaluatorException "Int Modulo by zero"
 primitiveBinaryModulo (IntVal    lv) (IntVal    rv) = IntVal (lv `mod` rv)
 primitiveBinaryModulo _              _              = error "primitiveBinaryModulo"
 

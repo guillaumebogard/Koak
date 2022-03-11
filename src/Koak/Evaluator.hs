@@ -63,7 +63,7 @@ evaluateWhile' result@(EvaluationResult context _) while_expr@(KP.While cond_exp
                                                                                                exprs_result = evaluateExpressions (getEvaluatedKcontext cond_result) exprs
                                                                                            in
                                                                                            if isConditionTrue cond_result
-                                                                                              then evaluateWhile' (EvaluationResult (getEvaluatedKcontext exprs_result) KEC.NilVal) while_expr
+                                                                                              then evaluateWhile' exprs_result while_expr
                                                                                               else result
 
 evaluateExpressionList :: KEC.Kcontext -> [KP.Expression] -> EvaluationResult

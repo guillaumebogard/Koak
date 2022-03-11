@@ -73,7 +73,7 @@ type Context            = HashMap KP.Identifier TypeSignature
 newtype VarContext      = VarContext Context
     deriving (Eq, Show)
 
-newtype DefContext      = DefContext    Context
+newtype DefContext      = DefContext Context
     deriving (Eq, Show)
 
 data Kcontext           = Kcontext DefContext VarContext
@@ -122,11 +122,12 @@ getDefaultKContext = Kcontext
                                         (KP.Identifier "<", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 9)  Int Int Int, BinaryFunctionTyping (KP.Precedence 9)  Double Double Double, BinaryFunctionTyping (KP.Precedence 9)  Double Int Double, BinaryFunctionTyping (KP.Precedence 9)  Int Double Double]),
                                         (KP.Identifier ">=", PrimitiveFunction [BinaryFunctionTyping (KP.Precedence 9)  Int Int Int, BinaryFunctionTyping (KP.Precedence 9)  Double Double Double, BinaryFunctionTyping (KP.Precedence 9)  Double Int Double, BinaryFunctionTyping (KP.Precedence 9)  Int Double Double]),
                                         (KP.Identifier "<=", PrimitiveFunction [BinaryFunctionTyping (KP.Precedence 9)  Int Int Int, BinaryFunctionTyping (KP.Precedence 9)  Double Double Double, BinaryFunctionTyping (KP.Precedence 9)  Double Int Double, BinaryFunctionTyping (KP.Precedence 9)  Int Double Double]),
-                                        (KP.Identifier "+", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 11) Int Int Int, BinaryFunctionTyping (KP.Precedence 11) Double Double Double, BinaryFunctionTyping (KP.Precedence 11) Double Int Double, BinaryFunctionTyping (KP.Precedence 11) Int Double Double]),
-                                        (KP.Identifier "-", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 11) Int Int Int, BinaryFunctionTyping (KP.Precedence 11) Double Double Double, BinaryFunctionTyping (KP.Precedence 11) Double Int Double, BinaryFunctionTyping (KP.Precedence 11) Int Double Double, UnaryFunctionTyping  Int Int, UnaryFunctionTyping Double Double]),
-                                        (KP.Identifier "*", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double, BinaryFunctionTyping (KP.Precedence 12) Double Int Double, BinaryFunctionTyping (KP.Precedence 12) Int Double Double]),
-                                        (KP.Identifier "/", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double, BinaryFunctionTyping (KP.Precedence 12) Double Int Double, BinaryFunctionTyping (KP.Precedence 12) Int Double Double]),
-                                        (KP.Identifier "%", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double, BinaryFunctionTyping (KP.Precedence 12) Double Int Double, BinaryFunctionTyping (KP.Precedence 12) Int Double Double]),
+                                        (KP.Identifier "+", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 11) Int Int Int, BinaryFunctionTyping (KP.Precedence 11) Double Double Double]),
+                                        (KP.Identifier "-", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 11) Int Int Int, BinaryFunctionTyping (KP.Precedence 11) Double Double Double]),
+                                        (KP.Identifier "--", PrimitiveFunction  [UnaryFunctionTyping  Int Int, UnaryFunctionTyping Double Double]),
+                                        (KP.Identifier "*", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double]),
+                                        (KP.Identifier "/", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double]),
+                                        (KP.Identifier "%", PrimitiveFunction  [BinaryFunctionTyping (KP.Precedence 12) Int Int Int, BinaryFunctionTyping (KP.Precedence 12) Double Double Double]),
                                         (KP.Identifier "!", PrimitiveFunction  [UnaryFunctionTyping  Int Boolean, UnaryFunctionTyping Double Boolean, UnaryFunctionTyping Boolean Boolean]),
                                         (KP.Identifier "toInt",    PrimitiveFunction  [FunctionTyping [Int] Int,    FunctionTyping [Double] Int,    FunctionTyping [Boolean] Int   ]),
                                         (KP.Identifier "show",    PrimitiveFunction  [FunctionTyping [Int] Nil,    FunctionTyping [Double] Nil,    FunctionTyping [Boolean] Nil   ]),
@@ -221,49 +222,3 @@ baseTypeToType Int      = KP.Int
 baseTypeToType Double   = KP.Double
 baseTypeToType Boolean  = KP.Boolean
 baseTypeToType Nil      = KP.Void
-
--- sContextPushNewFrame :: SYMBOL_CONTEXT -> SYMBOL_CONTEXT
--- sContextPushNewFrame (SYMBOL_CONTEXT kdefs stack) = SYMBOL_CONTEXT kdefs (VAR_FRAME [] :stack)
-
--- sContextPushVar :: SYMBOL_CONTEXT -> VAR_SIGNATURE -> SYMBOL_CONTEXT
--- sContextPushVar context@(SYMBOL_CONTEXT _     []        ) _       = context
--- sContextPushVar (SYMBOL_CONTEXT         kdefs (frame:xs)) new_var = SYMBOL_CONTEXT kdefs (varFramePushVar frame new_var:xs)
-
--- checkPushVarShadowsDefinition :: SYMBOL_CONTEXT -> VAR_SIGNATURE -> SYMBOL_CONTEXT
--- checkPushVarShadowsDefinition context@(SYMBOL_CONTEXT []     _        ) _ = context
--- checkPushVarShadowsDefinition context@(SYMBOL_CONTEXT (x:xs) _        ) _ = context
-
--- checkPushVarShadowsDefinition' :: Kdefs -> VAR_SIGNATURE -> Kdefs
--- checkPushVarShadowsDefinition'  (Kdefs_Defs (Defs prototype e)) _  var = Kdefs_Defs (Defs prototype (checkPushVarShadowsDefinition'' def var) e)
--- checkPushVarShadowsDefinition'  kdef@(Kdefs_EXPR _)             _      = kdef
-
--- checkPushVarShadowsDefinition'' :: Prototype -> VAR_SIGNATURE -> Prototype
--- checkPushVarShadowsDefinition'' p@(Prototype_UNARY  _ _ identifier _) var = checkPushVarShadowsDefinition''' p identifier var
--- checkPushVarShadowsDefinition'' p@(Prototype_BINARY _ _ identifier _) var = checkPushVarShadowsDefinition''' p identifier var
--- checkPushVarShadowsDefinition'' p@(Prototype identifier _)            var = checkPushVarShadowsDefinition''' p identifier var 
-
--- checkPushVarShadowsDefinition''' :: Prototype -> Identifier -> VAR_SIGNATURE -> Prototype
--- checkPushVarShadowsDefinition''' p identifier v@(VAR_SIGNATURE vi _)
---     | identifier == vi = throw $ KTE.KoakTypingShadowedDefinitionByVariable p v
---     | otherwise        = p
-
--- varFramePushVar :: VAR_FRAME -> VAR_SIGNATURE -> VAR_FRAME
--- varFramePushVar (VAR_FRAME vars) var = VAR_FRAME $ varFramePushVar' vars var
-
--- varFramePushVar' :: [VAR_SIGNATURE] -> VAR_SIGNATURE -> [VAR_SIGNATURE]
--- varFramePushVar' [] var = [var]
--- varFramePushVar' vars@(x@(VAR_SIGNATURE xi xt):xs) var@(VAR_SIGNATURE vi vt)
---     | vi == xi  = throw $ KTE.KoakTypingShadowedVariableByVariable x var
---     | vi <= xi  = var : vars
---     | otherwise = x   : varFramePushVar' xs var
-
--- sContextPushVars :: SYMBOL_CONTEXT -> [VAR_SIGNATURE] -> SYMBOL_CONTEXT
--- sContextPushVars = foldl sContextPushVar
-
--- sContextPushPrototype :: SYMBOL_CONTEXT -> Prototype -> SYMBOL_CONTEXT
--- sContextPushPrototype context (Prototype_UNARY  _ _ _ prototype_args) = sContextPushPrototype' context prototype_args
--- sContextPushPrototype context (Prototype_BINARY _ _ _ prototype_args) = sContextPushPrototype' context prototype_args
--- sContextPushPrototype context (Prototype        _     prototype_args) = sContextPushPrototype' context prototype_args
-
--- sContextPushPrototype' :: SYMBOL_CONTEXT -> PrototypeArgs -> SYMBOL_CONTEXT
--- sContextPushPrototype' context (PrototypeArgs vars _) = sContextPushVars context (map prototypeIdToVarSignature vars)

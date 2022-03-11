@@ -21,6 +21,7 @@ library
       Argument.Parser
       Argument.Parser.Exception
       Koak.Evaluator
+      Koak.Evaluator.Exception
       Koak.EvaluatorContext
       Koak.Grammar.Utils
       Koak.Lexer
