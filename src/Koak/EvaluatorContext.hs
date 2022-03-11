@@ -13,6 +13,12 @@ module Koak.EvaluatorContext        (
                                     , Variables(..)
                                     , Kcontext(..)
                                     , getDefaultKContext
+                                    , kContextEnterLocalContext
+                                    , kContextPushFunction
+                                    , kContextPushVariable
+                                    , kContextHasVariable
+                                    , kContextFindVariable
+                                    , kContextFindFunction
                                     ) where
 
 
@@ -34,9 +40,10 @@ import Data.Maybe                   ( isNothing
                                     , isJust
                                     )
 
-import qualified Koak.Lexer  as KL
-import qualified Koak.Parser as KP
-import Koak.TypingContext (toIdentifier)
+import qualified Koak.Lexer         as KL
+import qualified Koak.Parser        as KP
+import qualified Koak.Typing        as KT
+import qualified Koak.TypingContext as KTC
 
 data Value      = IntVal Int
                 | DoubleVal Double
@@ -105,9 +112,12 @@ getEmptyKContext = Kcontext (Definitions HM.empty) (Variables HM.empty)
 kContextEnterLocalContext :: Kcontext -> Kcontext
 kContextEnterLocalContext (Kcontext definitions _) = Kcontext definitions (Variables HM.empty)
 
+kContextPushVariable :: KP.Identifier -> Value -> Kcontext -> Kcontext
+kContextPushVariable identifier val (Kcontext ds (Variables vs)) = Kcontext ds (Variables $ insert identifier val vs)
+
 kContextPushFunction :: KP.Defs -> Kcontext -> Kcontext
-kContextPushFunction (KP.Defs (KP.PrototypeUnary        unop       args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert (toIdentifier unop)  (RefinedFunction $ UnaryFunction      args expr) ds) vs 
-kContextPushFunction (KP.Defs (KP.PrototypeBinary   pre binop      args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert (toIdentifier binop) (RefinedFunction $ BinaryFunction pre args expr) ds) vs
+kContextPushFunction (KP.Defs (KP.PrototypeUnary        unop       args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert (KTC.toIdentifier unop)  (RefinedFunction $ UnaryFunction      args expr) ds) vs 
+kContextPushFunction (KP.Defs (KP.PrototypeBinary   pre binop      args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert (KTC.toIdentifier binop) (RefinedFunction $ BinaryFunction pre args expr) ds) vs
 kContextPushFunction (KP.Defs (KP.PrototypeFunction     identifier args) expr) (Kcontext (Definitions ds) vs) = Kcontext (Definitions $ insert identifier           (RefinedFunction $ Function           args expr) ds) vs
 
 kContextHasVariable :: KP.Identifier -> Kcontext -> Bool
