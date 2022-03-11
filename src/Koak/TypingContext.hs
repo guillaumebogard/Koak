@@ -5,54 +5,46 @@
 -- TypingContext
 --
 
-module Koak.TypingContext           ( Kcontext(..)
-                                    , DefContext(..)
-                                    , VarContext(..)
-                                    , BaseType(..)
-                                    , FunctionTyping(..)
-                                    , TypeSignature(..)
-                                    , getDefaultKContext
-                                    , getEmptyKContext
-                                    , kContextPushFunction
-                                    , kContextPushVar
-                                    , kContextFind
-                                    , kContextEnterLocalContext
-                                    , kContextEnterFunctionCall
-                                    , isUnaryFunctionParamMatchingFunction
-                                    , isBinaryFunctionParamMatchingFunction
-                                    , isFunctionParamMatchingFunction
-                                    , getFunctionReturnType
-                                    , prototypeToBaseType
-                                    , prototypeIdToBaseType
-                                    , prototypeIdToVarAssignment
-                                    , typeToBaseType
-                                    , baseTypeToType
-                                    , toIdentifier
-                                    , toTypeSignature
-                                    ) where
+module Koak.TypingContext              ( Kcontext(..)
+                                       , DefContext(..)
+                                       , VarContext(..)
+                                       , BaseType(..)
+                                       , FunctionTyping(..)
+                                       , TypeSignature(..)
+                                       , getDefaultKContext
+                                       , getEmptyKContext
+                                       , kContextPushFunction
+                                       , kContextPushVar
+                                       , kContextFind
+                                       , kContextEnterLocalContext
+                                       , kContextEnterFunctionCall
+                                       , isUnaryFunctionParamMatchingFunction
+                                       , isBinaryFunctionParamMatchingFunction
+                                       , isFunctionParamMatchingFunction
+                                       , getFunctionReturnType
+                                       , prototypeToBaseType
+                                       , prototypeIdToBaseType
+                                       , prototypeIdToVarAssignment
+                                       , typeToBaseType
+                                       , baseTypeToType
+                                       , toIdentifier
+                                       , toTypeSignature
+                                       ) where
 
+import Control.Exception               ( throw )
 
-import qualified Koak.Parser as KP
+import Data.HashMap.Strict  as HM      ( HashMap
+                                       , fromList
+                                       , empty
+                                       , member
+                                       , insert
+                                       , lookup
+                                       )
 
-import Koak.Typing.Exception        ( KoakTypingException(..) )
+import Data.Maybe                      ( isJust )
 
-import Control.Exception            ( throw )
-
-import Data.Hashable                ( Hashable
-                                    , hashWithSalt
-                                    )
-
-import Data.HashMap.Strict  as HM   ( HashMap
-                                    , fromList
-                                    , empty
-                                    , member
-                                    , insert
-                                    , lookup
-                                    )
-
-import Data.Maybe                   ( isNothing
-                                    , isJust
-                                    )
+import qualified Koak.Typing.Exception as KTE ( KoakTypingException(..) )
+import qualified Koak.Parser           as KP
 
 class Identify a where
     toIdentifier :: a -> KP.Identifier
@@ -101,9 +93,9 @@ instance Identify KP.Prototype where
 
 instance Type KP.Prototype where
     toTypeSignature (KP.PrototypeUnary        _ (KP.PrototypeArgs [x]        return_type)) = Function $ UnaryFunctionTyping (prototypeIdToBaseType x) (typeToBaseType return_type)
-    toTypeSignature (KP.PrototypeUnary        u (KP.PrototypeArgs args       _          )) = throw    $ MismatchedArgumentNumber (toIdentifier u)  (length args)
+    toTypeSignature (KP.PrototypeUnary        u (KP.PrototypeArgs args       _          )) = throw    $ KTE.KoakTypingMismatchedArgumentNumber (toIdentifier u)  (length args)
     toTypeSignature (KP.PrototypeBinary   pre _ (KP.PrototypeArgs [x,y]      return_type)) = Function $ BinaryFunctionTyping pre (prototypeIdToBaseType x) (prototypeIdToBaseType y) (typeToBaseType return_type)
-    toTypeSignature (KP.PrototypeBinary   _   b (KP.PrototypeArgs args       _          )) = throw    $ MismatchedArgumentNumber (toIdentifier b) (length args)
+    toTypeSignature (KP.PrototypeBinary   _   b (KP.PrototypeArgs args       _          )) = throw    $ KTE.KoakTypingMismatchedArgumentNumber (toIdentifier b) (length args)
     toTypeSignature (KP.PrototypeFunction _     (KP.PrototypeArgs args       return_type)) = Function $ FunctionTyping (map prototypeIdToBaseType args) (typeToBaseType return_type)
 
 instance Identify KP.UnaryOp where
@@ -117,10 +109,6 @@ instance Identify KP.VarAssignment where
 
 instance Type KP.VarAssignment where
     toTypeSignature (KP.VarAssignment _ var_type) = Var $ typeToBaseType var_type
-
-instance Hashable KP.Identifier where
-    hashWithSalt salt (KP.Identifier string)   = salt `hashWithSalt` string
-
 
 getDefaultKContext :: Kcontext
 getDefaultKContext = Kcontext
@@ -154,14 +142,14 @@ kContextPushFunction p = kContextPushFunction' p (toIdentifier p) (toTypeSignatu
 
 kContextPushFunction' :: KP.Prototype  -> KP.Identifier -> TypeSignature -> Kcontext -> Kcontext
 kContextPushFunction' p i ts (Kcontext (DefContext dc) v@(VarContext vc))
-    | HM.member i vc = throw $ ShadowedVariableByDefinition   i p
-    | HM.member i dc = throw $ ShadowedDefinitionByDefinition i p
+    | HM.member i vc = throw $ KTE.KoakTypingShadowedVariableByDefinition   i p
+    | HM.member i dc = throw $ KTE.KoakTypingShadowedDefinitionByDefinition i p
     | otherwise      = Kcontext (DefContext $ contextPushItem i ts dc) v
 
 kContextEnterFunctionCall :: KP.Prototype -> Kcontext -> Kcontext
-kContextEnterFunctionCall (KP.PrototypeUnary    _     (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
-kContextEnterFunctionCall (KP.PrototypeBinary   _ _   (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
-kContextEnterFunctionCall (KP.PrototypeFunction _     (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
+kContextEnterFunctionCall (KP.PrototypeUnary    _   (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
+kContextEnterFunctionCall (KP.PrototypeBinary   _ _ (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
+kContextEnterFunctionCall (KP.PrototypeFunction _   (KP.PrototypeArgs args _)) k = kContextEnterFunctionCall' args $ kContextEnterLocalContext k
 
 kContextEnterFunctionCall' :: [KP.PrototypeIdentifier] -> Kcontext -> Kcontext
 kContextEnterFunctionCall' args k = foldr (kContextPushVar . prototypeIdToVarAssignment) k args
@@ -170,13 +158,13 @@ kContextEnterLocalContext :: Kcontext -> Kcontext
 kContextEnterLocalContext (Kcontext (DefContext dc) _) = Kcontext (DefContext dc) (VarContext HM.empty)
 
 kContextPushVar :: KP.VarAssignment -> Kcontext -> Kcontext
-kContextPushVar v@(KP.VarAssignment i t) (Kcontext (DefContext dc) (VarContext vc))
-    | HM.member i dc    = throw $ ShadowedDefinitionByVariable i v
-    | HM.member i vc    = throw $ ShadowedVariableByVariable   i v
+kContextPushVar v@(KP.VarAssignment i _) (Kcontext (DefContext dc) (VarContext vc))
+    | HM.member i dc    = throw $ KTE.KoakTypingShadowedDefinitionByVariable i v
+    | HM.member i vc    = throw $ KTE.KoakTypingShadowedVariableByVariable   i v
     | otherwise         = Kcontext (DefContext dc) (VarContext $ contextPushItem i (toTypeSignature v) vc)
 
 kContextFind :: Kcontext -> KP.Identifier -> Maybe TypeSignature
-kContextFind k@(Kcontext dc vc) i
+kContextFind (Kcontext dc vc) i
     | let vc_res = varContextFind vc i, isJust vc_res = vc_res
     | let dc_res = defContextFind dc i, isJust dc_res = dc_res
     | otherwise                                       = Nothing
@@ -191,17 +179,17 @@ contextPushItem :: KP.Identifier -> TypeSignature -> Context -> Context
 contextPushItem = insert
 
 isUnaryFunctionParamMatchingFunction :: BaseType -> FunctionTyping -> Bool
-isUnaryFunctionParamMatchingFunction arg1 (UnaryFunctionTyping func_arg1 return_type)
+isUnaryFunctionParamMatchingFunction arg1 (UnaryFunctionTyping func_arg1 _)
                                          = arg1 == func_arg1
 isUnaryFunctionParamMatchingFunction _ _ = False 
 
 isBinaryFunctionParamMatchingFunction :: BaseType -> BaseType -> FunctionTyping -> Bool
-isBinaryFunctionParamMatchingFunction arg1 arg2 (BinaryFunctionTyping _ func_arg1 func_arg2 return_type)
+isBinaryFunctionParamMatchingFunction arg1 arg2 (BinaryFunctionTyping _ func_arg1 func_arg2 _)
                                             = arg1 == func_arg1 && arg2 == func_arg2
 isBinaryFunctionParamMatchingFunction _ _ _ = False
 
 isFunctionParamMatchingFunction :: [BaseType] -> FunctionTyping -> Bool
-isFunctionParamMatchingFunction args (FunctionTyping func_args return_type)
+isFunctionParamMatchingFunction args (FunctionTyping func_args _)
                                     = args == func_args
 isFunctionParamMatchingFunction _ _ = False
 
@@ -255,7 +243,7 @@ baseTypeToType Nil      = KP.Void
 
 -- checkPushVarShadowsDefinition''' :: Prototype -> Identifier -> VAR_SIGNATURE -> Prototype
 -- checkPushVarShadowsDefinition''' p identifier v@(VAR_SIGNATURE vi _)
---     | identifier == vi = throw $ ShadowedDefinitionByVariable p v
+--     | identifier == vi = throw $ KTE.KoakTypingShadowedDefinitionByVariable p v
 --     | otherwise        = p
 
 -- varFramePushVar :: VAR_FRAME -> VAR_SIGNATURE -> VAR_FRAME
@@ -264,7 +252,7 @@ baseTypeToType Nil      = KP.Void
 -- varFramePushVar' :: [VAR_SIGNATURE] -> VAR_SIGNATURE -> [VAR_SIGNATURE]
 -- varFramePushVar' [] var = [var]
 -- varFramePushVar' vars@(x@(VAR_SIGNATURE xi xt):xs) var@(VAR_SIGNATURE vi vt)
---     | vi == xi  = throw $ ShadowedVariableByVariable x var
+--     | vi == xi  = throw $ KTE.KoakTypingShadowedVariableByVariable x var
 --     | vi <= xi  = var : vars
 --     | otherwise = x   : varFramePushVar' xs var
 

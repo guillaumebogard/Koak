@@ -14,8 +14,8 @@ import Data.Char                             ( isDigit
                                              )
 import Control.Exception                     ( throw )
 
-import Exception                             ( KoakException( KoakKLE ) )
 import qualified Koak.Lexer.Exception as KLE ( KoakLexerException( KoakLexerInvalidNumberException ) )
+
 import qualified Koak.Grammar.Utils   as KGU ( isAlphaWordChar
                                              , isAlphaNumWordChar
                                              , isSpecialWordChar
@@ -78,7 +78,7 @@ parseNumberStartingWithDigit = parseNumberStartingWithDigit' . span isDigit
 parseNumberStartingWithDigit' :: (String, String) -> (Token, String)
 parseNumberStartingWithDigit' (dp, '.':fp@(x2:_))
     | isDigit   x2                       = uncurry (parseNumberStartingWithDigit'' dp) $ span isDigit fp
-    | otherwise                          = throw $ KoakKLE $ KLE.KoakLexerInvalidNumberException $ dp ++ "."
+    | otherwise                          = throw $ KLE.KoakLexerInvalidNumberException $ dp ++ "."
 parseNumberStartingWithDigit' (dp, rest) = (IntegerNumber $ read dp, rest)
 
 parseNumberStartingWithDigit'' :: String -> String -> String -> (Token, String)

@@ -150,7 +150,7 @@ spec = do
             )
         )
         `shouldThrow`
-        (== KTE.ShadowedDefinitionByDefinition
+        (== KTE.KoakTypingShadowedDefinitionByDefinition
             (KP.Identifier "foo")
             (KP.PrototypeFunction
                 (KP.Identifier "foo")
@@ -182,7 +182,7 @@ spec = do
             )
         )
         `shouldThrow`
-        (== KTE.ShadowedDefinitionByDefinition
+        (== KTE.KoakTypingShadowedDefinitionByDefinition
             (KP.Identifier "foo")
             (KP.PrototypeFunction
                 (KP.Identifier "foo")
@@ -308,7 +308,7 @@ spec = do
             )
         )
         `shouldThrow`
-        (== KTE.ShadowedVariableByVariable
+        (== KTE.KoakTypingShadowedVariableByVariable
             (KP.Identifier "var")
             (KP.VarAssignment
                 (KP.Identifier "var")
@@ -334,7 +334,7 @@ spec = do
             )
         )
         `shouldThrow`
-        (== KTE.ShadowedVariableByVariable
+        (== KTE.KoakTypingShadowedVariableByVariable
             (KP.Identifier "var")
             (KP.VarAssignment
                 (KP.Identifier "var")
@@ -359,7 +359,7 @@ spec = do
             )
         )
         `shouldThrow`
-        (== KTE.ShadowedDefinitionByVariable
+        (== KTE.KoakTypingShadowedDefinitionByVariable
             (KP.Identifier "foo")
             (KP.VarAssignment
                 (KP.Identifier "foo")
@@ -384,7 +384,7 @@ spec = do
             )
         )
         `shouldThrow`
-        (== KTE.ShadowedDefinitionByVariable
+        (== KTE.KoakTypingShadowedDefinitionByVariable
             (KP.Identifier "foo")
             (KP.VarAssignment
                 (KP.Identifier "foo")
