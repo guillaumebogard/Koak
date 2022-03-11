@@ -17,12 +17,18 @@ import Koak.EvaluatorContext        as KEC
 
 data EvaluationResult = EvaluationResult Kcontext Value
 
-evaluateKoak :: Kcontext -> [KP.Kdefs] -> Kcontext
-evaluateKoak = foldl evaluateKdef
+data KoakEvaluation = KoakEvaluation [Value] Kcontext
+    deriving (Eq, Show)
 
-evaluateKdef :: Kcontext -> KP.Kdefs -> Kcontext
-evaluateKdef context (KP.KdefDef        def  ) = kContextPushFunction def context
-evaluateKdef context (KP.KdefExpression exprs) = getEvaluatedKcontext $ evaluateExpressions context exprs
+evaluateKoak :: Kcontext -> [KP.Kdefs] -> KoakEvaluation
+evaluateKoak context = foldl evaluateKdef (KoakEvaluation [] context)
+
+evaluateKdef :: KoakEvaluation -> KP.Kdefs -> KoakEvaluation
+evaluateKdef (KoakEvaluation evaluations context) (KP.KdefDef        def  ) = KoakEvaluation evaluations $ kContextPushFunction def context
+evaluateKdef (KoakEvaluation evaluations context) (KP.KdefExpression exprs) = let evaluation = evaluateExpressions context exprs in
+                                                                              KoakEvaluation
+                                                                                (getEvaluatedValue    evaluation:evaluations)
+                                                                                (getEvaluatedKcontext evaluation)
 
 evaluateExpressions :: Kcontext -> KP.Expressions -> EvaluationResult
 evaluateExpressions context (KP.ExpressionFor    for_expr  ) = evaluateFor            context for_expr
